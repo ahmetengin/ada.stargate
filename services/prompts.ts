@@ -1,8 +1,10 @@
+
 // services/prompts.ts
 
 
 import { RegistryEntry, Tender, UserProfile, TenantConfig } from "../types";
-import { FEDERATION_REGISTRY } from "./config"; // Still needed for federationRegistry context
+import { FEDERATION_REGISTRY } from "./config"; 
+import { getSystemDateContext } from "./utils"; // Import the date helper
 
 export type SystemMessageKey = 'PII_MASKING_DISCLAIMER' | 'CREDIT_CARD_DISCLAIMER' | 'FINANCIAL_DATA_USAGE_DISCLAIMER';
 
@@ -15,10 +17,14 @@ export const generateComplianceSystemMessage = (key: SystemMessageKey): string =
     }
 };
 
-// 🚀 ADA AI — COST-OPTIMIZED PROMPT KERNEL v2.2 (Context & Persona Aware)
-// Compressed for maximum token efficiency while maintaining multi-agent reasoning.
+// 🚀 ADA AI — COST-OPTIMIZED PROMPT KERNEL v2.3 (Temporal Awareness Added)
 export const generateBaseSystemInstruction = (tenantConfig: TenantConfig) => `
 Role: **ADA**, AI Orchestrator for **${tenantConfig.fullName}**.
+
+### 📅 TEMPORAL ANCHOR (CURRENT TIME)
+${getSystemDateContext()}
+**CRITICAL INSTRUCTION:** use the date above to resolve ALL relative time references (e.g., "tomorrow", "next Monday", "in 3 days"). 
+*Example:* If today is Friday, Nov 24, and user says "tomorrow", you MUST understand it as Saturday, Nov 25.
 
 ### 1. ADAPTIVE PERSONA (Detect Intent & Switch)
 *   **Marina Ops:** Berthing/Traffic/Tenders -> **HarbourOps** (Strict, ATC tone).

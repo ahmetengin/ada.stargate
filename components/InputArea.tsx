@@ -29,52 +29,67 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const [isDictating, setIsDictating] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Speech Recognition Ref
+  // Speech Recognition Refs
   const recognitionRef = useRef<any>(null);
+  const finalTranscriptRef = useRef(''); // Stores the stable, committed text
 
   // Initialize Speech Recognition
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true; // Keep listening until stopped
-      recognitionRef.current.interimResults = true; // Show results as they are spoken
-      recognitionRef.current.lang = 'tr-TR'; // Default to Turkish, can be dynamic
+      recognitionRef.current.continuous = true; // Keep listening
+      recognitionRef.current.interimResults = true; // IMPORTANT: Show results while speaking
+      recognitionRef.current.lang = 'tr-TR'; 
 
       recognitionRef.current.onresult = (event: any) => {
-        let finalTranscript = '';
+        let interimTranscript = '';
+        let newFinalPart = '';
+
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+            newFinalPart += event.results[i][0].transcript;
           } else {
-             // Optional: Handle interim results if we want to show preview
+            interimTranscript += event.results[i][0].transcript;
           }
         }
-        if (finalTranscript) {
-            setText(prev => (prev ? prev + ' ' + finalTranscript : finalTranscript));
+
+        if (newFinalPart) {
+            // Append new final part to our stable ref
+            finalTranscriptRef.current += (finalTranscriptRef.current ? ' ' : '') + newFinalPart;
         }
+
+        // Update UI: Stable Text + Gray Interim Text
+        // Note: We combine them into the single textarea for simplicity
+        setText((finalTranscriptRef.current + ' ' + interimTranscript).trim());
       };
 
       recognitionRef.current.onerror = (event: any) => {
         console.error("Speech recognition error", event.error);
+        if (event.error === 'not-allowed') {
+            alert("Mikrofon erişimi engellendi. Lütfen tarayıcı ayarlarından izin verin.");
+        }
         setIsDictating(false);
       };
 
       recognitionRef.current.onend = () => {
-        // If it stops automatically but state is still dictating, restart or stop based on logic
-        // For now, we let it stop if silence logic triggers it, but update UI
-        if (isDictating) {
-             // Optional: recognitionRef.current.start(); // to force continuous
-             setIsDictating(false);
-        }
+        // Automatically ensure state sync when it stops (e.g. by silence)
+        setIsDictating(false);
       };
     }
   }, []);
 
+  // Sync ref with manual text edits
+  // If user types manually, we must update the finalTranscriptRef so dictation continues from there
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      setText(e.target.value);
+      finalTranscriptRef.current = e.target.value; 
+  };
+
   // Handle Dictation Toggle
   const toggleDictation = () => {
     if (!recognitionRef.current) {
-        alert("Tarayıcınız sesli yazdırmayı desteklemiyor.");
+        alert("Tarayıcınız sesli yazdırmayı desteklemiyor (Chrome önerilir).");
         return;
     }
 
@@ -83,6 +98,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
         setIsDictating(false);
     } else {
         try {
+            // Sync ref with current text before starting (in case user typed something)
+            finalTranscriptRef.current = text;
             recognitionRef.current.start();
             setIsDictating(true);
         } catch (e) {
@@ -104,6 +121,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if ((!text.trim()) || isLoading) return;
     onSend(text, []);
     setText('');
+    finalTranscriptRef.current = ''; // Reset dictation buffer
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     
     // Stop dictation if sending
@@ -123,7 +141,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
   return (
     <div className="w-full max-w-3xl mx-auto">
       
-      {/* Model Selector - Optimized: Removed Image Model */}
+      {/* Model Selector */}
       <div className="flex justify-center sm:justify-start mb-2">
           <div className="flex bg-zinc-100 dark:bg-[#0a121e] p-1 rounded-lg border border-zinc-200 dark:border-white/10 shadow-sm">
               <button onClick={() => onModelChange(ModelType.Flash)} className={`px-2 py-1 rounded text-[9px] font-bold flex items-center gap-1 ${selectedModel === ModelType.Flash ? 'bg-white dark:bg-white/10 shadow text-teal-600 dark:text-teal-400' : 'text-zinc-500'}`}><Zap size={10}/> FLASH</button>
@@ -140,7 +158,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
 
       {/* Main Input Capsule */}
       <div className={`relative bg-white dark:bg-[#0a121e] rounded-3xl border shadow-sm transition-all duration-300 flex items-end p-1.5 
-          ${isLoading ? 'border-teal-500/30 ring-2 ring-teal-500/10' : 'border-zinc-200 dark:border-white/10 focus-within:ring-2 focus-within:ring-teal-500/20'}`}>
+          ${isLoading ? 'border-teal-500/30 ring-2 ring-teal-500/10' : 'border-zinc-200 dark:border-white/10 focus-within:ring-2 focus-within:ring-teal-500/20'}
+          ${isDictating ? 'ring-2 ring-red-500/30 border-red-500/50' : ''}`}>
           
           {/* Tools */}
           <div className="flex items-center gap-1 pr-2 border-r border-zinc-100 dark:border-white/5 mr-2 mb-1.5">
@@ -157,15 +176,19 @@ export const InputArea: React.FC<InputAreaProps> = ({
             ref={textareaRef}
             rows={1}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Dinliyorum..." : "Komut girin..."}
-            className="flex-1 bg-transparent border-none focus:outline-none text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-3 font-mono min-w-0 max-h-[120px] resize-none"
+            className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 py-3 font-mono min-w-0 max-h-[120px] resize-none ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
             disabled={isLoading}
           />
 
           <div className="flex items-center gap-2 pl-2 mb-1">
-              <button onClick={toggleDictation} className={`p-2 rounded-full transition-all ${isDictating ? 'text-red-500 bg-red-50 animate-pulse' : 'text-zinc-400 hover:text-zinc-600'}`}>
+              <button 
+                onClick={toggleDictation} 
+                className={`p-2 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-lg scale-110 animate-pulse' : 'text-zinc-400 hover:text-zinc-600'}`}
+                title="Sesli Yazma (Dictation)"
+              >
                   <AudioWaveform size={18} />
               </button>
               <button 

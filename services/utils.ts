@@ -104,7 +104,30 @@ export const formatCoordinate = (coord: number, type: 'lat' | 'lng'): string => 
  */
 export const getCurrentMaritimeTime = (): string => {
     const now = new Date();
-    // ISO String is UTC by default (e.g., 2023-10-27T10:00:00.000Z)
-    // We extract the time part and append 'Z' explicitly.
     return now.toISOString().split('T')[1].split('.')[0] + ' Z';
+};
+
+/**
+ * Returns a detailed context object for the AI to understand the current date.
+ * Used to resolve relative dates like "tomorrow", "next Friday", etc.
+ */
+export const getSystemDateContext = (): string => {
+    const now = new Date();
+    const options: Intl.DateTimeFormatOptions = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    };
+    const humanReadable = now.toLocaleDateString('en-US', options); // e.g. "Friday, November 24, 2025, 14:30"
+    const isoDate = now.toISOString().split('T')[0]; // e.g. "2025-11-24"
+    
+    return `
+    - **Current Date:** ${humanReadable}
+    - **ISO Date:** ${isoDate}
+    - **Maritime Time:** ${getCurrentMaritimeTime()}
+    `.trim();
 };
