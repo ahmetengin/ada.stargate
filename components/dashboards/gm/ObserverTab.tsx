@@ -7,6 +7,12 @@ interface ObserverTabProps {
   traces: AgentTraceLog[];
 }
 
+interface NodeStat {
+  count: number;
+  lastActive: string;
+  status: 'IDLE' | 'ACTIVE' | 'ERROR';
+}
+
 export const ObserverTab: React.FC<ObserverTabProps> = ({ traces }) => {
   const [view, setView] = useState<'stream' | 'matrix'>('stream');
   const [filterNode, setFilterNode] = useState<string | null>(null);
@@ -14,7 +20,7 @@ export const ObserverTab: React.FC<ObserverTabProps> = ({ traces }) => {
 
   // Compute Active Nodes statistics
   const nodeStats = useMemo(() => {
-    const stats: Record<string, { count: number, lastActive: string, status: 'IDLE' | 'ACTIVE' | 'ERROR' }> = {};
+    const stats: Record<string, NodeStat> = {};
     traces.forEach(t => {
       if (!stats[t.node]) {
         stats[t.node] = { count: 0, lastActive: t.timestamp, status: 'IDLE' };
@@ -90,16 +96,18 @@ export const ObserverTab: React.FC<ObserverTabProps> = ({ traces }) => {
                   >
                       ALL NODES
                   </button>
-                  {Object.entries(nodeStats).map(([node, stat]) => (
+                  {Object.entries(nodeStats).map(([node, stat]) => {
+                      const s = stat as NodeStat;
+                      return (
                       <button 
                         key={node}
                         onClick={() => setFilterNode(node)}
                         className={`w-full text-left px-3 py-2 rounded text-[10px] font-mono transition-colors border flex justify-between items-center group ${filterNode === node ? 'bg-zinc-800 text-indigo-400 border-indigo-900' : 'text-zinc-400 border-transparent hover:bg-zinc-800/50'}`}
                       >
                           <span className="truncate">{node}</span>
-                          <span className="text-[8px] bg-zinc-900 px-1.5 py-0.5 rounded opacity-50 group-hover:opacity-100">{stat.count}</span>
+                          <span className="text-[8px] bg-zinc-900 px-1.5 py-0.5 rounded opacity-50 group-hover:opacity-100">{s.count}</span>
                       </button>
-                  ))}
+                  )})}
               </div>
           </div>
 
@@ -130,18 +138,20 @@ export const ObserverTab: React.FC<ObserverTabProps> = ({ traces }) => {
                                 <Server size={14} /> Node Topology
                             </h4>
                             <div className="grid grid-cols-2 gap-2">
-                                {Object.entries(nodeStats).map(([node, stat]) => (
+                                {Object.entries(nodeStats).map(([node, stat]) => {
+                                    const s = stat as NodeStat;
+                                    return (
                                     <div key={node} className="bg-black border border-zinc-800 p-3 rounded flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${stat.status === 'ERROR' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></div>
+                                            <div className={`w-2 h-2 rounded-full ${s.status === 'ERROR' ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></div>
                                             <div>
                                                 <div className="text-[10px] font-bold text-zinc-300 uppercase">{node}</div>
-                                                <div className="text-[9px] text-zinc-600">Last: {stat.lastActive}</div>
+                                                <div className="text-[9px] text-zinc-600">Last: {s.lastActive}</div>
                                             </div>
                                         </div>
-                                        <div className="text-xs font-mono text-zinc-500">{stat.count} ops</div>
+                                        <div className="text-xs font-mono text-zinc-500">{s.count} ops</div>
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         </div>
 

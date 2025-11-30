@@ -28,6 +28,69 @@ export const InputArea: React.FC<InputAreaProps> = ({
   const [text, setText] = useState('');
   const [isDictating, setIsDictating] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Speech Recognition Ref
+  const recognitionRef = useRef<any>(null);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true; // Keep listening until stopped
+      recognitionRef.current.interimResults = true; // Show results as they are spoken
+      recognitionRef.current.lang = 'tr-TR'; // Default to Turkish, can be dynamic
+
+      recognitionRef.current.onresult = (event: any) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+             // Optional: Handle interim results if we want to show preview
+          }
+        }
+        if (finalTranscript) {
+            setText(prev => (prev ? prev + ' ' + finalTranscript : finalTranscript));
+        }
+      };
+
+      recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
+        setIsDictating(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        // If it stops automatically but state is still dictating, restart or stop based on logic
+        // For now, we let it stop if silence logic triggers it, but update UI
+        if (isDictating) {
+             // Optional: recognitionRef.current.start(); // to force continuous
+             setIsDictating(false);
+        }
+      };
+    }
+  }, []);
+
+  // Handle Dictation Toggle
+  const toggleDictation = () => {
+    if (!recognitionRef.current) {
+        alert("Tarayıcınız sesli yazdırmayı desteklemiyor.");
+        return;
+    }
+
+    if (isDictating) {
+        recognitionRef.current.stop();
+        setIsDictating(false);
+    } else {
+        try {
+            recognitionRef.current.start();
+            setIsDictating(true);
+        } catch (e) {
+            console.error(e);
+            setIsDictating(false);
+        }
+    }
+  };
 
   // Auto-resize textarea
   useEffect(() => {
@@ -42,6 +105,12 @@ export const InputArea: React.FC<InputAreaProps> = ({
     onSend(text, []);
     setText('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    
+    // Stop dictation if sending
+    if (isDictating && recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsDictating(false);
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -96,8 +165,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
           />
 
           <div className="flex items-center gap-2 pl-2 mb-1">
-              <button onClick={() => setIsDictating(!isDictating)} className={`p-2 rounded-full transition-all ${isDictating ? 'text-red-500 bg-red-50' : 'text-zinc-400 hover:text-zinc-600'}`}>
-                  <AudioWaveform size={18} className={isDictating ? 'animate-pulse' : ''} />
+              <button onClick={toggleDictation} className={`p-2 rounded-full transition-all ${isDictating ? 'text-red-500 bg-red-50 animate-pulse' : 'text-zinc-400 hover:text-zinc-600'}`}>
+                  <AudioWaveform size={18} />
               </button>
               <button 
                 onClick={handleSend}

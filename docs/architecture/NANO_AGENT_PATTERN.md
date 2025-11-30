@@ -1,3 +1,4 @@
+
 # 🦠 The Nano Agent Pattern
 
 **Philosophy:** "As simple as possible, but no simpler."
@@ -8,7 +9,7 @@ In the **Big 3 Architecture** (Orchestrator -> Expert -> Worker), the **Experts*
 2.  Access to specific Python Functions (Skills).
 3.  A short-term memory (Conversation History).
 
-The **Nano Agent** is a minimalist class (under 100 lines of code) that satisfies these requirements without the overhead of LangChain or LangGraph.
+The **Nano Agent** is a minimalist class (under 100 lines of code) that satisfies these requirements without the overhead of LangChain or LangGraph for these specific nodes.
 
 ## 2. Why Nano?
 *   **Latency:** No overhead from complex graph traversals for simple tasks.
