@@ -1,0 +1,71 @@
+
+version: '3.9'
+
+services:
+  # 1. THE BRAIN (Python LangGraph)
+  ada-core:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ada_core_hyperscale
+    ports:
+      - "8000:8000"
+    environment:
+      - API_KEY=${API_KEY}
+      - REDIS_URL=redis://ada-redis:6379
+      - QDRANT_URL=http://ada-qdrant:6333
+    depends_on:
+      - ada-redis
+      - ada-qdrant
+    volumes:
+      - ./backend:/app
+
+  # 2. MEMORY (Vector DB)
+  ada-qdrant:
+    image: qdrant/qdrant
+    container_name: ada_qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # 3. TRUTH (Relational DB)
+  ada-postgres:
+    image: postgres:15-alpine
+    container_name: ada_postgres
+    environment:
+      POSTGRES_USER: ada
+      POSTGRES_PASSWORD: adapassword
+      POSTGRES_DB: wim_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 4. NERVOUS SYSTEM (Event Bus)
+  ada-redis:
+    image: redis:alpine
+    container_name: ada_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 5. FRONTEND (React)
+  ada-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ada_frontend_hyperscale
+    ports:
+      - "80:80"
+    environment:
+      - API_KEY=${API_KEY}
+    depends_on:
+      - ada-core
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  redis_data:
+    

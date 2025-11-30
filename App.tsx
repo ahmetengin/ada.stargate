@@ -15,7 +15,7 @@ import { marinaExpert } from './services/agents/marinaAgent';
 import { passkitExpert } from './services/agents/passkitAgent';
 import { wimMasterData } from './services/wimMasterData'; // Still needed for specific mock data
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
-import { Menu, Radio, Activity, MessageSquare, Sun, Moon, Monitor, Anchor } from 'lucide-react';
+import { Menu, Radio, Activity, MessageSquare, Sun, Moon, Monitor, Anchor, GripVertical } from 'lucide-react';
 import { FEDERATION_REGISTRY } from './services/config'; // Import FEDERATION_REGISTRY
 
 // --- SIMULATED USER DATABASE ---
@@ -150,9 +150,12 @@ export default function App() {
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
   const [theme, setTheme] = useState<ThemeMode>(() => persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
   
-  // Layout
+  // Layout Resizing State
   const [sidebarWidth, setSidebarWidth] = useState(260);
   const [opsWidth, setOpsWidth] = useState(400);
+  const [isResizingLeft, setIsResizingLeft] = useState(false);
+  const [isResizingRight, setIsResizingRight] = useState(false);
+
   const [activeMobileTab, setActiveMobileTab] = useState<'nav' | 'comms' | 'ops'>('comms');
 
   // Modals
@@ -239,6 +242,41 @@ export default function App() {
 
       return () => clearInterval(interval);
   }, [isBooting, hailedVessels]);
+
+  // --- RESIZING LOGIC ---
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft) {
+        // Limit sidebar width between 220px and 450px
+        const newWidth = Math.min(Math.max(e.clientX, 220), 450);
+        setSidebarWidth(newWidth);
+      } else if (isResizingRight) {
+        // Calculate width from the right edge
+        const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, 350), 800);
+        setOpsWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingLeft(false);
+      setIsResizingRight(false);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto'; // Re-enable selection
+    };
+
+    if (isResizingLeft || isResizingRight) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none'; // Disable text selection while dragging
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingLeft, isResizingRight]);
+
 
   // --- ACTIONS ---
   const toggleTheme = () => {
@@ -397,6 +435,7 @@ export default function App() {
 
         {/* --- DESKTOP VIEW --- */}
         <div className="hidden lg:flex h-full w-full">
+            {/* 1. LEFT SIDEBAR */}
             <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full border-r border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-[#050b14]">
                 <Sidebar 
                     nodeStates={nodeStates}
@@ -412,7 +451,16 @@ export default function App() {
                 />
             </div>
 
-            <div className="flex-1 h-full min-w-[400px] border-r border-zinc-200 dark:border-white/5">
+            {/* LEFT RESIZER */}
+            <div 
+                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group"
+                onMouseDown={() => setIsResizingLeft(true)}
+            >
+                <div className="h-8 w-0.5 bg-zinc-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
+            </div>
+
+            {/* 2. CENTER CHAT */}
+            <div className="flex-1 h-full min-w-[350px] border-r border-zinc-200 dark:border-white/5">
                 <ChatInterface 
                     messages={messages}
                     activeChannel={activeChannel}
@@ -431,6 +479,15 @@ export default function App() {
                 />
             </div>
 
+            {/* RIGHT RESIZER */}
+            <div 
+                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group"
+                onMouseDown={() => setIsResizingRight(true)}
+            >
+                <div className="h-8 w-0.5 bg-zinc-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
+            </div>
+
+            {/* 3. RIGHT OPS CANVAS */}
             <div style={{ width: opsWidth }} className="flex-shrink-0 h-full bg-zinc-100 dark:bg-black">
                 <Canvas 
                     vesselsInPort={vesselsInPort}

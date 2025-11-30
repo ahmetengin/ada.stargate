@@ -1,43 +1,46 @@
 version: '3.8'
 
 services:
-  ada-orchestrator:
-    container_name: ada_orchestrator
+  # 1. FRONTEND (Nginx + React Build)
+  ada-frontend:
+    container_name: ada_frontend
     build:
       context: .
       dockerfile: Dockerfile
-      # This matches the ARG in the Dockerfile
       args:
         - API_KEY=${API_KEY}
     ports:
-      - "3000:80"
+      - "80:80"
     restart: always
     depends_on:
-      - ada-redis-broker
-      - ada-nats-jetstream
+      - ada-backend
+    environment:
+      - API_KEY=${API_KEY}
 
-  # Simulated Redis Broker for the Distributed Node System
-  ada-redis-broker:
+  # 2. BACKEND (Python FastAPI Big 3)
+  ada-backend:
+    container_name: ada_backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    expose:
+      - "8000"
+    restart: always
+    environment:
+      - API_KEY=${API_KEY}
+      - REDIS_HOST=ada-redis
+    depends_on:
+      - ada-redis
+
+  # 3. MESSAGE BUS
+  ada-redis:
     image: redis:alpine
     container_name: ada_redis_broker
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     restart: always
     volumes:
       - redis_data:/data
 
-  # NATS JetStream - The "Light Speed" Agentic Mesh
-  ada-nats-jetstream:
-    image: nats:alpine
-    container_name: ada_nats_jetstream
-    command: "-js -m 8222" # Enable JetStream and Monitoring
-    ports:
-      - "4222:4222" # Client Port
-      - "8222:8222" # Dashboard/Monitoring Port
-    volumes:
-      - nats_data:/data
-      - ./backend/streams:/streams # Load stream definitions
-
 volumes:
   redis_data:
-  nats_data:

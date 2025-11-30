@@ -1,45 +1,50 @@
-
 // services/api.ts
 
 /**
- * Checks if the Python backend is reachable at localhost:8000.
- * Used to toggle between 'Simulation Mode' (Typescript) and 'Real Mode' (Python).
+ * Checks if the Python backend is reachable.
+ * In production (Docker/Nginx), this hits the /api/ proxy.
  */
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
-    // Set a short timeout to avoid hanging the UI if backend is down
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1000);
     
-    const response = await fetch('http://localhost:8000/', { 
+    // Use relative path to leverage Nginx proxy
+    const response = await fetch('/api/health', { 
       method: 'GET',
       signal: controller.signal 
     });
     
     clearTimeout(timeoutId);
-    return response.ok;
+    return response.ok; 
   } catch (error) {
-    // Backend is likely not running or blocked
     return false;
   }
 };
 
 /**
- * Sends a conversational prompt to the Python Orchestrator (Chat Interface).
+ * Sends a conversational prompt to the Python Orchestrator with RICH CONTEXT.
  */
-export const sendToBackend = async (prompt: string, userProfile: any): Promise<any> => {
+export const sendToBackend = async (prompt: string, userProfile: any, context: any = {}): Promise<any> => {
     try {
-        const response = await fetch('http://localhost:8000/api/v1/chat', {
+        // Relative path routed by Nginx -> ada-backend:8000
+        const response = await fetch('/api/v1/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 prompt: prompt,
                 user_role: userProfile.role,
                 context: {
-                    user_id: userProfile.id
+                    ...context,
+                    // Inject User Identity
+                    user_id: userProfile.id,
+                    user_name: userProfile.name
                 }
             })
         });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         return await response.json();
     } catch (error) {
         console.error("Backend API Call Failed:", error);
@@ -48,12 +53,29 @@ export const sendToBackend = async (prompt: string, userProfile: any): Promise<a
 }
 
 /**
+ * Triggers the Knowledge Ingestion Protocol (SEAL).
+ * This tells the backend to re-read the docs and update vectors.
+ */
+export const triggerLearningProtocol = async (): Promise<any> => {
+    try {
+        const response = await fetch('/api/v1/learn', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+        return await response.json();
+    } catch (error) {
+        console.error("Learning Trigger Failed:", error);
+        return { status: 'error', message: 'Could not trigger learning.' };
+    }
+}
+
+/**
  * Invokes a specific skill on a specific agent (RPC Style).
- * Used by Dashboard widgets to fetch raw data (e.g., Telemetry, Debt) directly.
  */
 export const invokeAgentSkill = async (agentName: string, skillName: string, params: any): Promise<any> => {
     try {
-        const response = await fetch(`http://localhost:8000/api/v1/agent/${agentName}/${skillName}`, {
+        const response = await fetch(`/api/v1/agent/${agentName}/${skillName}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(params)
@@ -62,6 +84,6 @@ export const invokeAgentSkill = async (agentName: string, skillName: string, par
         return await response.json();
     } catch (error) {
         console.warn(`Backend skill ${agentName}.${skillName} unavailable. Using local fallback.`);
-        return null; // Return null to trigger fallback logic in the frontend agent
+        return null;
     }
 }

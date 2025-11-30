@@ -32,8 +32,7 @@ export interface Message {
 
 export enum ModelType {
   Flash = 'gemini-2.5-flash',
-  Pro = 'gemini-3-pro-preview', // For complex reasoning
-  // Image = 'imagen-4.0-generate-001', // Removed per user request
+  Pro = 'gemini-3-pro-preview',
 }
 
 export interface AppState {
@@ -60,7 +59,6 @@ export interface RegistryEntry {
   status: 'AUTHORIZED' | 'PENDING' | 'DENIED';
 }
 
-// NEW: Dedicated VHF Log Type
 export interface VhfLog {
     id: string;
     timestamp: string;
@@ -139,7 +137,7 @@ export interface VesselIntelligenceProfile {
   loyaltyScore?: number;
 }
 
-export type NodeName = string | 'ada.stargate'; // Added ada.stargate for consistency
+export type NodeName = string | 'ada.stargate'; 
 
 export interface AgentTraceLog {
   id: string;
@@ -208,6 +206,13 @@ export interface Delegate {
   location: string;
 }
 
+export interface AgentAction {
+  id: string;
+  kind: 'internal' | 'external';
+  name: string;
+  params: any;
+}
+
 export interface OrchestratorResponse {
   text: string;
   actions: AgentAction[];
@@ -222,7 +227,47 @@ export interface GuestProfile {
   vesselName: string;
 }
 
-// NEW: Federated Marina and Berth Availability Types
+export interface VesselSystemsStatus {
+  battery: {
+    serviceBank: number;
+    engineBank: number;
+    status: string;
+  };
+  tanks: {
+    fuel: number;
+    freshWater: number;
+    blackWater: number;
+  };
+  bilge: {
+    forward: string;
+    aft: string;
+    pumpStatus: string;
+  };
+  shorePower: {
+    connected: boolean;
+    voltage: number;
+    amperage: number;
+  };
+  comfort: {
+    climate: {
+      zone: string;
+      setPoint: number;
+      currentTemp: number;
+      mode: string;
+      fanSpeed: string;
+    };
+    lighting: {
+      salon: boolean;
+      deck: boolean;
+      underwater: boolean;
+    };
+    security: {
+      mode: string;
+      camerasActive: boolean;
+    };
+  };
+}
+
 export interface FederatedMarina {
   id: string;
   name: string;
@@ -242,7 +287,6 @@ export interface FederatedBerthAvailability {
   message: string;
 }
 
-// NEW: Consolidated Tenant Configuration
 export interface TenantConfig {
   id: string;
   name: string;
@@ -255,10 +299,9 @@ export interface TenantConfig {
   tier?: string;
   mission: string;
   contextSources: string[];
-  rules: any; // Parsed YAML content (or similar structured data)
-  doctrine: string; // Parsed CLAUDE.md content
-  masterData: any; // Entire wimMasterData.ts or similar for other tenants
-  // Add other specific properties as needed, e.g., for Phisedelia
+  rules: any;
+  doctrine: string;
+  masterData: any;
   vesselType?: string;
   flag?: string;
   operationalLimits?: any;

@@ -250,4 +250,3 @@ CMD ["python", "main.py"]
 **Action:**
 Run `docker-compose up --build` to launch the Brain.
 The Frontend will automatically connect via `services/api.ts`.
-
