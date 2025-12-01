@@ -10,12 +10,11 @@ langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
+langchain-text-splitters
 qdrant-client
-tabpfn
-fastmcp
-asyncpg
-# Real-time Voice
-fastrtc>=0.1.0
-gradio>=5.0.0
-numpy
-scipy
+markdown
+beautifulsoup4
+pandas
+scikit-learn
+# TabPFN is optional for this demo to save build time, uncomment if needed
+# tabpfn 
