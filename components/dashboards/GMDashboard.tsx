@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { RegistryEntry, Tender, UserProfile, CongressEvent, Delegate, AgentTraceLog, VhfLog, AisTarget, TenantConfig } from '../../types';
 import { facilityExpert } from '../../services/agents/facilityAgent';
@@ -101,10 +100,10 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   ];
 
   return (
-    <div className="text-zinc-800 dark:text-zinc-200 font-sans h-full flex flex-col bg-zinc-50 dark:bg-black">
+    <div className="text-zinc-800 dark:text-zinc-200 font-sans h-full flex flex-col bg-zinc-50 dark:bg-gunmetal-950 transition-colors duration-300">
       
       {/* COMMAND DECK HEADER */}
-      <div className="bg-white dark:bg-[#0a121e] border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0 shadow-sm relative z-10">
+      <div className="bg-white dark:bg-gunmetal-900 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0 shadow-sm relative z-10 transition-colors duration-300">
         <div className="flex items-center justify-between p-4 pb-2">
             
             {/* Left: Title & Status (CLEAN - NO ICON) */}

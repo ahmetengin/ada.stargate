@@ -11,25 +11,27 @@
         theme: {
           extend: {
             colors: {
-              // Deep Gunmetal Palette
+              // Deep Gunmetal Palette (Maritime Night)
               gunmetal: {
-                950: '#0a0f18', // Main Deep Background
-                900: '#111827', // Panel Backgrounds
-                800: '#1f2937', // Lighter Panels
-                700: '#374151', // Borders/Inputs
+                950: '#020617', // Deepest Navy/Black (Night BG)
+                900: '#0f172a', // Panel Background (Night)
+                800: '#1e293b', // Lighter Panel
+              },
+              // Maritime Slate (Day Mode)
+              slate: {
+                50: '#f8fafc', // Day BG
+                100: '#f1f5f9', // Light Panels
+                200: '#e2e8f0', // Borders
+                800: '#1e293b', // Primary Text
+                900: '#0f172a', // Headings
               },
               // Electric Teal Accent
               teal: {
                 400: '#2dd4bf',
                 500: '#14b8a6',
                 600: '#0d9488',
-                900: '#134e4a', // Dark Teal Backgrounds
+                900: '#134e4a',
               },
-              // Map legacy names to new palette
-              'ocean-900': '#0a0f18', 
-              'ocean-800': '#111827',
-              'hologram-blue': '#2dd4bf', // Now Teal
-              'glass-dark': 'rgba(17, 24, 39, 0.7)',
             },
             animation: {
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -49,12 +51,27 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-primary: #f8fafc; /* Slate 50 - CLEAN WHITE LOOK */
+        --text-primary: #1e293b; /* Slate 800 - NAVY GREY TEXT */
+        --panel-bg: #ffffff;
+        --border-color: #e2e8f0;
+      }
+      :root.dark {
+        --bg-primary: #020617; /* Gunmetal 950 */
+        --text-primary: #e2e8f0; /* Slate 200 */
+        --panel-bg: #0f172a;
+        --border-color: #1e293b;
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #0a0f18; 
-        color: #e2e8f0;
+        background-color: var(--bg-primary); 
+        color: var(--text-primary);
         overflow: hidden;
+        transition: background-color 0.3s ease, color 0.3s ease;
       }
+      
       code, .font-mono {
         font-family: 'JetBrains Mono', monospace;
       }
@@ -68,29 +85,11 @@
         background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(45, 212, 191, 0.2); 
+        background: rgba(148, 163, 184, 0.5); 
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(45, 212, 191, 0.4); 
-      }
-
-      .typing-dot {
-        animation: typing 1.4s infinite ease-in-out both;
-      }
-      .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-      .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-      @keyframes typing {
-        0%, 80%, 100% { transform: scale(0); opacity: 0.5;}
-        40% { transform: scale(1); opacity: 1;}
-      }
-
-      .glass-panel {
-        background: rgba(31, 41, 55, 0.6);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        background: rgba(100, 116, 139, 0.8); 
       }
     </style>
   <script type="importmap">

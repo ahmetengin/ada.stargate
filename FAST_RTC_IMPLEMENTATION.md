@@ -1,7 +1,7 @@
 
 # 🎙️ Ada Stargate: FastRTC & Nano Agent Implementation Guide
 
-**Amaç:** Gerçek zamanlı, düşük gecikmeli (low-latency) VHF Telsiz simülasyonu.
+**Amaç:** Gerçek zamanlı, düşük gecikmeli (low-latency) VHF Telsiz simülasyonu ve Backend kurulumu.
 **Teknoloji:** FastRTC (WebRTC), Gemini 2.5 Flash, Python FastAPI.
 
 Bu dosya, sistem kısıtlamaları nedeniyle doğrudan oluşturulamayan Python backend kodlarını içerir. Lütfen aşağıdaki blokları ilgili dosyalara kopyalayın.
@@ -10,7 +10,7 @@ Bu dosya, sistem kısıtlamaları nedeniyle doğrudan oluşturulamayan Python ba
 
 ## 1. Gerekli Kütüphaneler
 
-Bu içeriği `backend/requirements.txt` dosyasına ekleyin veya güncelleyin.
+Bu içeriği `backend/requirements.txt` dosyasına ekleyin.
 
 ```text
 fastapi>=0.109.0
@@ -56,7 +56,7 @@ class NanoAgent:
     def __init__(self, name: str, system_instruction: str, tools: list = None):
         self.name = name
         self.client = genai.Client(api_key=os.getenv("API_KEY"))
-        self.model_name = "gemini-2.0-flash-exp" # Or gemini-1.5-flash depending on availability
+        self.model_name = "gemini-2.0-flash-exp" # Or gemini-1.5-flash
         self.system_instruction = system_instruction
         self.tools = tools or []
         self.history = []
@@ -77,9 +77,6 @@ class NanoAgent:
                 response_mime_type="text/plain" 
             )
 
-            # Build Request
-            # In a full implementation, we would append history here.
-            # For Nano/VHF, we keep context short to ensure speed.
             contents = [user_input]
             
             response = self.client.models.generate_content(
@@ -141,22 +138,14 @@ def vhf_handler(audio: tuple[int, np.ndarray]):
     Receives raw audio (sample_rate, numpy_array).
     Returns response audio or text to be TTS'ed.
     """
-    sample_rate, audio_data = audio
-    
-    # NOT: FastRTC'nin tam sürümünde burada 'audio_data'yı metne çeviren (STT) 
-    # bir model (Whisper) veya Gemini'nin Native Audio özelliği kullanılır.
-    # Bu örnekte, FastRTC'nin text-to-speech yeteneklerini simüle ediyoruz.
-    
-    # Mocking STT for the skeletal implementation since we need a heavy Whisper model
-    # In production: user_text = transcribe(audio_data)
+    # Note: In a full implementation, integrate a STT model like Whisper here.
+    # For this prototype, we simulate the input for the agent logic.
     user_text = "Marina, burası Phisedelia. Yanaşma izni istiyorum. Tamam." 
     
     # Agent Thinks
     response_text = vhf_agent.chat(user_text)
     
-    # FastRTC handles the TTS (Text-to-Speech) automatically if we return text 
-    # in a specific ReplyOnPause context, or we return audio bytes.
-    # For this snippet, we return the text which FastRTC's UI will display/speak.
+    # FastRTC automatically handles TTS if text is returned in this context
     return response_text
 
 # 2. Create the Stream
@@ -188,7 +177,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import gradio as gr # FastRTC uses Gradio under the hood
 
 # Import the Radio Stream
-from vhf_radio import stream as radio_stream
+# Ensure backend folder is in python path or adjust import based on structure
+try:
+    from backend.vhf_radio import stream as radio_stream
+except ImportError:
+    from vhf_radio import stream as radio_stream
 
 app = FastAPI(title="Ada Stargate Backend", version="4.0")
 
@@ -214,14 +207,3 @@ if __name__ == "__main__":
     print("📡 Radio Frequency Open on: http://localhost:8000/radio")
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
-
----
-
-## Nasıl Çalıştırılır?
-
-1.  Bu dosyaları oluşturun.
-2.  Backend klasörüne gidin: `cd backend`
-3.  Sunucuyu başlatın: `python main.py`
-4.  Tarayıcıda açın: `http://localhost:8000/radio`
-
-Artık Ada ile gerçek zamanlı, kesilebilir (interruptible) bir sesli iletişim kurabilirsiniz.

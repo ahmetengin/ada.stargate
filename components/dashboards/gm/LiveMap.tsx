@@ -30,17 +30,11 @@ export const LiveMap: React.FC = () => {
     { id: 'VIP-02', status: 'OCCUPIED', vessel: 'M/Y White Pearl', type: 'Mega', cx: 230, cy: 100, orientation: 'left' },
   ];
 
-  const getFill = (status: string) => {
-      switch(status) {
-          case 'OCCUPIED': return '#10b981'; // Emerald
-          case 'EMPTY': return '#3f3f46'; // Zinc 700
-          case 'BREACH': return '#ef4444'; // Red
-          default: return '#3f3f46';
-      }
-  };
-
+  // Colors based on CSS variables or Tailwind utility simulation
+  // Note: For SVG inside React, using CSS classes is often cleaner for theme switching
+  
   return (
-    <div className="w-full h-full relative bg-[#050b14] flex items-center justify-center overflow-hidden">
+    <div className="w-full h-full relative bg-slate-200 dark:bg-[#050b14] flex items-center justify-center overflow-hidden transition-colors">
         <style>{`
             @keyframes drift {
                 from { transform: translate(0, 0); }
@@ -53,7 +47,7 @@ export const LiveMap: React.FC = () => {
             {/* Water Background Pattern (Subtle Grid) with Animation */}
             <defs>
                 <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
-                    <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1f2937" strokeWidth="0.5" opacity="0.5"/>
+                    <path d="M 20 0 L 0 0 0 20" fill="none" className="stroke-slate-300 dark:stroke-[#1f2937]" strokeWidth="0.5" opacity="0.5"/>
                 </pattern>
             </defs>
             <rect width="400" height="400" fill="url(#grid)" opacity="0.3" style={{ animation: 'drift 60s linear infinite' }} />
@@ -61,19 +55,19 @@ export const LiveMap: React.FC = () => {
             {/* --- INFRASTRUCTURE --- */}
             
             {/* Main Pier (Spine) - Left */}
-            <rect x="10" y="10" width="15" height="130" rx="2" fill="#374151" stroke="#4b5563" strokeWidth="1" />
+            <rect x="10" y="10" width="15" height="130" rx="2" className="fill-slate-400 stroke-slate-500 dark:fill-[#374151] dark:stroke-[#4b5563]" strokeWidth="1" />
             
             {/* Pontoon A (Top) */}
-            <rect x="25" y="35" width="140" height="8" rx="1" fill="#4b5563" stroke="#6b7280" strokeWidth="0.5" /> 
-            <text x="30" y="40.5" fontSize="4" fill="#d1d5db" fontFamily="monospace" fontWeight="bold" letterSpacing="1">PONTOON A</text>
+            <rect x="25" y="35" width="140" height="8" rx="1" className="fill-slate-500 stroke-slate-600 dark:fill-[#4b5563] dark:stroke-[#6b7280]" strokeWidth="0.5" /> 
+            <text x="30" y="40.5" fontSize="4" className="fill-slate-200 dark:fill-gray-300" fontFamily="monospace" fontWeight="bold" letterSpacing="1">PONTOON A</text>
 
             {/* Pontoon B (Bottom) */}
-            <rect x="25" y="85" width="140" height="8" rx="1" fill="#4b5563" stroke="#6b7280" strokeWidth="0.5" /> 
-            <text x="30" y="90.5" fontSize="4" fill="#d1d5db" fontFamily="monospace" fontWeight="bold" letterSpacing="1">PONTOON B</text>
+            <rect x="25" y="85" width="140" height="8" rx="1" className="fill-slate-500 stroke-slate-600 dark:fill-[#4b5563] dark:stroke-[#6b7280]" strokeWidth="0.5" /> 
+            <text x="30" y="90.5" fontSize="4" className="fill-slate-200 dark:fill-gray-300" fontFamily="monospace" fontWeight="bold" letterSpacing="1">PONTOON B</text>
 
             {/* VIP Quay (Right) */}
-            <rect x="230" y="20" width="60" height="110" rx="2" fill="#1e1b4b" stroke="#4f46e5" strokeWidth="1" />
-            <text x="240" y="35" fontSize="6" fill="#818cf8" fontFamily="monospace" fontWeight="bold" transform="rotate(90, 240, 35)">VIP QUAY</text>
+            <rect x="230" y="20" width="60" height="110" rx="2" className="fill-indigo-900 stroke-indigo-700 dark:fill-[#1e1b4b] dark:stroke-[#4f46e5]" strokeWidth="1" />
+            <text x="240" y="35" fontSize="6" className="fill-indigo-300 dark:fill-[#818cf8]" fontFamily="monospace" fontWeight="bold" transform="rotate(90, 240, 35)">VIP QUAY</text>
 
             {/* --- VESSELS (STERN-TO MOORING) --- */}
             {berths.map(b => {
@@ -108,6 +102,11 @@ export const LiveMap: React.FC = () => {
                     labelX -= 20;
                 }
 
+                // Determine Fill Color Class
+                let fillClass = "fill-slate-600 dark:fill-[#3f3f46]"; // Empty
+                if (b.status === 'OCCUPIED') fillClass = "fill-emerald-500 dark:fill-[#10b981]";
+                if (b.status === 'BREACH') fillClass = "fill-red-500 dark:fill-[#ef4444]";
+
                 return (
                     <g 
                         key={b.id} 
@@ -118,23 +117,22 @@ export const LiveMap: React.FC = () => {
                         {/* Mooring Lines (Tonoz) - Only if occupied */}
                         {(b.status === 'OCCUPIED' || b.status === 'BREACH') && (
                             <>
-                                <path d={mooringLine1} stroke="#4b5563" strokeWidth="0.5" strokeDasharray="1,1" />
-                                <path d={mooringLine2} stroke="#4b5563" strokeWidth="0.5" strokeDasharray="1,1" />
+                                <path d={mooringLine1} className="stroke-slate-400 dark:stroke-[#4b5563]" strokeWidth="0.5" strokeDasharray="1,1" />
+                                <path d={mooringLine2} className="stroke-slate-400 dark:stroke-[#4b5563]" strokeWidth="0.5" strokeDasharray="1,1" />
                             </>
                         )}
 
                         {/* Boat Hull */}
                         <path 
                             d={boatPath} 
-                            fill={getFill(b.status)} 
-                            stroke="rgba(255,255,255,0.2)"
+                            className={`${fillClass} stroke-white/20 dark:stroke-white/20`}
                             strokeWidth="0.5"
                             filter={b.status === 'BREACH' ? 'drop-shadow(0 0 4px #ef4444)' : ''}
                         />
                         
                         {/* Passarelle (Gangway) */}
                         {(b.status === 'OCCUPIED' || b.status === 'BREACH') && (
-                            <line x1={passX1} y1={passY1} x2={passX2} y2={passY2} stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+                            <line x1={passX1} y1={passY1} x2={passX2} y2={passY2} className="stroke-white" strokeWidth="1.5" strokeLinecap="round" />
                         )}
 
                         {/* Breach Indicator */}
@@ -148,25 +146,25 @@ export const LiveMap: React.FC = () => {
 
         {/* Hover Tooltip */}
         {hoveredBerth && (
-            <div className="absolute top-2 left-2 bg-zinc-900/90 backdrop-blur border border-zinc-700 p-3 rounded-lg text-xs z-20 shadow-2xl pointer-events-none animate-in fade-in zoom-in duration-200 min-w-[140px]">
+            <div className="absolute top-2 left-2 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border border-slate-200 dark:border-zinc-700 p-3 rounded-lg text-xs z-20 shadow-xl pointer-events-none animate-in fade-in zoom-in duration-200 min-w-[140px]">
                 {(() => {
                     const b = berths.find(x => x.id === hoveredBerth);
                     return (
                         <div>
                             <div className="flex justify-between items-center mb-1">
-                                <span className="font-bold text-white font-mono">{b?.id}</span>
-                                <span className={`text-[9px] px-1.5 rounded ${b?.status === 'OCCUPIED' ? 'bg-emerald-900 text-emerald-400' : b?.status === 'BREACH' ? 'bg-red-900 text-red-400' : 'bg-zinc-800 text-zinc-400'}`}>{b?.status}</span>
+                                <span className="font-bold text-slate-800 dark:text-white font-mono">{b?.id}</span>
+                                <span className={`text-[9px] px-1.5 rounded ${b?.status === 'OCCUPIED' ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400' : b?.status === 'BREACH' ? 'bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'}`}>{b?.status}</span>
                             </div>
-                            <div className="text-zinc-300 font-bold text-sm mb-1">
+                            <div className="text-slate-700 dark:text-zinc-300 font-bold text-sm mb-1">
                                 {b?.vessel || 'VACANT'}
                             </div>
                             {b?.vessel && (
-                                <div className="text-[10px] text-zinc-500 flex justify-between">
+                                <div className="text-[10px] text-slate-500 dark:text-zinc-500 flex justify-between">
                                     <span>{b?.type}</span>
                                     <span>Stern-to</span>
                                 </div>
                             )}
-                            {b?.status === 'BREACH' && <div className="text-[9px] text-red-400 uppercase mt-2 font-bold border-t border-red-900 pt-1">⚠️ UNAUTHORIZED ACTIVITY DETECTED</div>}
+                            {b?.status === 'BREACH' && <div className="text-[9px] text-red-500 dark:text-red-400 uppercase mt-2 font-bold border-t border-red-100 dark:border-red-900 pt-1">⚠️ UNAUTHORIZED ACTIVITY DETECTED</div>}
                         </div>
                     )
                 })()}

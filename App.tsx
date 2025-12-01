@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AgentAction, VhfLog, AisTarget, ThemeMode, TenantConfig } from './types';
 import { Sidebar } from './components/Sidebar';
@@ -13,10 +14,10 @@ import { streamChatResponse } from './services/geminiService';
 import { orchestratorService } from './services/orchestratorService';
 import { marinaExpert } from './services/agents/marinaAgent';
 import { passkitExpert } from './services/agents/passkitAgent';
-import { wimMasterData } from './services/wimMasterData'; // Still needed for specific mock data
+import { wimMasterData } from './services/wimMasterData';
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
 import { Menu, Radio, Activity, MessageSquare, Sun, Moon, Monitor, Anchor, GripVertical } from 'lucide-react';
-import { FEDERATION_REGISTRY } from './services/config'; // Import FEDERATION_REGISTRY
+import { FEDERATION_REGISTRY } from './services/config';
 
 // --- SIMULATED USER DATABASE ---
 const MOCK_USER_DATABASE: Record<string, UserProfile> = {
@@ -45,7 +46,7 @@ interface ChatInterfaceProps {
     selectedModel: ModelType;
     userRole: any;
     theme: ThemeMode;
-    activeTenantConfig: TenantConfig; // NEW: Pass activeTenantConfig
+    activeTenantConfig: TenantConfig; 
     onModelChange: (m: ModelType) => void;
     onSend: (text: string, attachments: File[]) => void;
     onQuickAction: (text: string) => void;
@@ -62,7 +63,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     selectedModel,
     userRole,
     theme,
-    activeTenantConfig, // NEW
+    activeTenantConfig, 
     onModelChange,
     onSend,
     onQuickAction,
@@ -90,30 +91,30 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full w-full bg-zinc-50 dark:bg-[#050b14] relative">
+        <div className="flex flex-col h-full w-full bg-slate-50 dark:bg-gunmetal-950 relative transition-colors duration-300">
             {/* Header */}
-            <div className="h-14 flex items-center justify-between px-4 border-b border-zinc-200 dark:border-white/5 bg-white/80 dark:bg-[#050b14]/80 backdrop-blur-md z-10 flex-shrink-0">
+            <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200 dark:border-white/5 bg-white/80 dark:bg-gunmetal-900/80 backdrop-blur-md z-10 flex-shrink-0 transition-colors duration-300">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={onTraceClick}>
                     <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
-                    <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 tracking-[0.2em] uppercase">
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-zinc-400 tracking-[0.2em] uppercase">
                         {activeTenantConfig.id}.MARINA
                     </span>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-zinc-100 dark:bg-white/5 rounded border border-zinc-200 dark:border-white/10">
-                        <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400">VHF {activeChannel}</span>
+                    <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-slate-100 dark:bg-white/5 rounded border border-slate-200 dark:border-white/10">
+                        <span className="text-[9px] font-bold text-slate-500 dark:text-zinc-400">VHF {activeChannel}</span>
                     </div>
                     <button 
                         onClick={onToggleTheme}
-                        className="p-2 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 transition-colors"
+                        className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 transition-colors"
                     >
                         {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Monitor size={14} />}
                     </button>
                 </div>
             </div>
 
-            {/* Messages Area - Flex Grow to fill space */}
+            {/* Messages Area */}
             <div 
                 className="flex-1 overflow-y-auto px-2 sm:px-4 py-4 space-y-6 custom-scrollbar scroll-smooth" 
                 ref={scrollContainerRef}
@@ -125,8 +126,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <div ref={messagesEndRef} className="h-2" />
             </div>
 
-            {/* Input Area - Fixed at bottom of flex container */}
-            <div className="flex-shrink-0 bg-zinc-50 dark:bg-[#050b14] border-t border-zinc-200 dark:border-white/5 p-2 sm:p-4 pb-4 sm:pb-6 z-20">
+            {/* Input Area */}
+            <div className="flex-shrink-0 bg-slate-50 dark:bg-gunmetal-950 border-t border-slate-200 dark:border-white/5 p-2 sm:p-4 pb-4 sm:pb-6 z-20 transition-colors duration-300">
                 <InputArea 
                     onSend={onSend}
                     isLoading={isLoading}
@@ -185,7 +186,7 @@ export default function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    const timer = setTimeout(() => setIsBooting(false), 2000); // Faster boot
+    const timer = setTimeout(() => setIsBooting(false), 2000); 
     return () => clearTimeout(timer);
   }, []);
 
@@ -292,7 +293,7 @@ export default function App() {
       }
   };
 
-  // NEW: Handle Tenant Switch (for demo purposes)
+  // NEW: Handle Tenant Switch
   const handleTenantSwitch = (tenantId: string) => {
     const newTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === tenantId);
     if (newTenantConfig) {
@@ -316,7 +317,6 @@ export default function App() {
       const newMessages = [...messages, { id: Date.now().toString(), role: MessageRole.User, text, timestamp: Date.now() }];
       setMessages(newMessages);
 
-      // Pass the updated messages array and activeTenantConfig for context
       orchestratorService.processRequest(text, userProfile, tenders, registry, vesselsInPort, newMessages, activeTenantConfig).then(res => {
           if (res.traces) setAgentTraces(prev => [...res.traces, ...prev]);
           if (res.actions) {
@@ -350,7 +350,7 @@ export default function App() {
   if (isBooting) return <BootSequence />;
 
   return (
-    <div className="h-[100dvh] w-full bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-300 font-sans overflow-hidden flex flex-col lg:flex-row">
+    <div className="h-[100dvh] w-full bg-slate-50 dark:bg-gunmetal-950 text-slate-900 dark:text-zinc-300 font-sans overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
         
         {/* --- MOBILE VIEW --- */}
         <div className="lg:hidden flex flex-col h-full w-full relative overflow-hidden">
@@ -367,8 +367,8 @@ export default function App() {
                             onVhfClick={handleVhfClick}
                             onScannerClick={() => setIsScannerOpen(true)}
                             onPulseClick={() => setIsReportOpen(true)}
-                            onTenantSwitch={handleTenantSwitch} // NEW
-                            activeTenantId={activeTenantConfig.id} // NEW
+                            onTenantSwitch={handleTenantSwitch} 
+                            activeTenantId={activeTenantConfig.id} 
                         />
                     </div>
                 )}
@@ -381,7 +381,7 @@ export default function App() {
                         selectedModel={selectedModel}
                         userRole={userProfile.role}
                         theme={theme}
-                        activeTenantConfig={activeTenantConfig} // NEW
+                        activeTenantConfig={activeTenantConfig} 
                         onModelChange={setSelectedModel}
                         onSend={handleSendMessage}
                         onQuickAction={(text) => handleSendMessage(text, [])}
@@ -403,29 +403,29 @@ export default function App() {
                         onOpenReport={() => setIsReportOpen(true)}
                         onOpenTrace={() => setIsTraceOpen(true)}
                         agentTraces={agentTraces}
-                        activeTenantConfig={activeTenantConfig} // NEW
+                        activeTenantConfig={activeTenantConfig}
                     />
                 )}
             </div>
 
-            <div className="h-16 flex-shrink-0 bg-white dark:bg-[#0a121e] border-t border-zinc-200 dark:border-white/5 flex items-center justify-around px-2 z-50 pb-safe">
+            <div className="h-16 flex-shrink-0 bg-white dark:bg-gunmetal-900 border-t border-slate-200 dark:border-white/5 flex items-center justify-around px-2 z-50 pb-safe transition-colors duration-300">
                 <button 
                     onClick={() => setActiveMobileTab('nav')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'nav' ? 'text-teal-500' : 'text-zinc-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'nav' ? 'text-teal-600 dark:text-teal-500' : 'text-slate-400 dark:text-zinc-400'}`}
                 >
                     <Menu size={20} />
                     <span className="text-[9px] font-bold">NAV</span>
                 </button>
                 <button 
                     onClick={() => setActiveMobileTab('comms')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'comms' ? 'text-teal-500' : 'text-zinc-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'comms' ? 'text-teal-600 dark:text-teal-500' : 'text-slate-400 dark:text-zinc-400'}`}
                 >
                     <MessageSquare size={20} />
                     <span className="text-[9px] font-bold">CHAT</span>
                 </button>
                 <button 
                     onClick={() => setActiveMobileTab('ops')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'ops' ? 'text-teal-500' : 'text-zinc-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'ops' ? 'text-teal-600 dark:text-teal-500' : 'text-slate-400 dark:text-zinc-400'}`}
                 >
                     <Activity size={20} />
                     <span className="text-[9px] font-bold">OPS</span>
@@ -436,7 +436,7 @@ export default function App() {
         {/* --- DESKTOP VIEW --- */}
         <div className="hidden lg:flex h-full w-full">
             {/* 1. LEFT SIDEBAR */}
-            <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full border-r border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-[#050b14]">
+            <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full border-r border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-gunmetal-950 transition-colors duration-300">
                 <Sidebar 
                     nodeStates={nodeStates}
                     activeChannel={activeChannel}
@@ -446,8 +446,8 @@ export default function App() {
                     onVhfClick={handleVhfClick}
                     onScannerClick={() => setIsScannerOpen(true)}
                     onPulseClick={() => setIsReportOpen(true)}
-                    onTenantSwitch={handleTenantSwitch} // NEW
-                    activeTenantId={activeTenantConfig.id} // NEW
+                    onTenantSwitch={handleTenantSwitch} 
+                    activeTenantId={activeTenantConfig.id} 
                 />
             </div>
 
@@ -456,11 +456,11 @@ export default function App() {
                 className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group"
                 onMouseDown={() => setIsResizingLeft(true)}
             >
-                <div className="h-8 w-0.5 bg-zinc-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
+                <div className="h-8 w-0.5 bg-slate-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
             </div>
 
             {/* 2. CENTER CHAT */}
-            <div className="flex-1 h-full min-w-[350px] border-r border-zinc-200 dark:border-white/5">
+            <div className="flex-1 h-full min-w-[350px] border-r border-slate-200 dark:border-white/5">
                 <ChatInterface 
                     messages={messages}
                     activeChannel={activeChannel}
@@ -468,7 +468,7 @@ export default function App() {
                     selectedModel={selectedModel}
                     userRole={userProfile.role}
                     theme={theme}
-                    activeTenantConfig={activeTenantConfig} // NEW
+                    activeTenantConfig={activeTenantConfig} 
                     onModelChange={setSelectedModel}
                     onSend={handleSendMessage}
                     onQuickAction={(text) => handleSendMessage(text, [])}
@@ -484,11 +484,11 @@ export default function App() {
                 className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group"
                 onMouseDown={() => setIsResizingRight(true)}
             >
-                <div className="h-8 w-0.5 bg-zinc-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
+                <div className="h-8 w-0.5 bg-slate-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
             </div>
 
             {/* 3. RIGHT OPS CANVAS */}
-            <div style={{ width: opsWidth }} className="flex-shrink-0 h-full bg-zinc-100 dark:bg-black">
+            <div style={{ width: opsWidth }} className="flex-shrink-0 h-full bg-slate-100 dark:bg-[#050b14] transition-colors duration-300">
                 <Canvas 
                     vesselsInPort={vesselsInPort}
                     registry={registry}
@@ -499,7 +499,7 @@ export default function App() {
                     onOpenReport={() => setIsReportOpen(true)}
                     onOpenTrace={() => setIsTraceOpen(true)}
                     agentTraces={agentTraces}
-                    activeTenantConfig={activeTenantConfig} // NEW
+                    activeTenantConfig={activeTenantConfig}
                 />
             </div>
         </div>
@@ -530,7 +530,7 @@ export default function App() {
             vesselsInPort={vesselsInPort} 
             userProfile={userProfile} 
             weatherData={[{ day: 'Today', temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }]} 
-            activeTenantConfig={activeTenantConfig} // NEW
+            activeTenantConfig={activeTenantConfig} 
         />
 
     </div>

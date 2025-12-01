@@ -48,7 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const tenantNetworkName = activeTenant ? activeTenant.network : 'Unknown Network';
 
   return (
-    <div className="h-full w-full flex flex-col bg-zinc-50 dark:bg-[#050b14] overflow-y-auto custom-scrollbar">
+    <div className="h-full w-full flex flex-col bg-zinc-50 dark:bg-gunmetal-950 overflow-y-auto custom-scrollbar transition-colors duration-300">
       {/* Header */}
       <div className="p-6 pb-4 flex-shrink-0">
         <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200 mb-1 cursor-pointer" onClick={onPulseClick}>
