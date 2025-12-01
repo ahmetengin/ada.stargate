@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="dark">
   <head>
@@ -23,6 +22,7 @@
                 800: '#1e293b',
               },
               cyan: {
+                300: '#67e8f9',
                 400: '#22d3ee',
                 500: '#06b6d4',
                 900: '#164e63',
@@ -32,6 +32,7 @@
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
               'radar-spin': 'radar-spin 4s linear infinite',
               'grid-drift': 'grid-drift 120s linear infinite',
+              'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
             },
             keyframes: {
               'radar-spin': {
@@ -40,7 +41,11 @@
               },
               'grid-drift': {
                 '0%': { backgroundPosition: '0 0' },
-                '100%': { backgroundPosition: '20px 20px' }
+                '100%': { backgroundPosition: '40px 40px' }
+              },
+              'glow-pulse': {
+                '0%, 100%': { opacity: 0.8, filter: 'brightness(1)' },
+                '50%': { opacity: 1, filter: 'brightness(1.2)' },
               }
             }
           }
@@ -49,19 +54,24 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-primary: #020617; /* Deep Gunmetal */
+        --bg-primary: #020617; 
         --text-primary: #e2e8f0;
-        --neon-accent: #22d3ee;
+        --neon-cyan: #22d3ee;
+        --neon-indigo: #818cf8;
       }
 
       body {
         font-family: 'Inter', sans-serif;
         background-color: var(--bg-primary); 
+        /* Subtle radial gradient for depth */
+        background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #020617 60%);
         color: var(--text-primary);
         overflow: hidden;
+        margin: 0;
+        padding: 0;
       }
       
       h1, h2, h3, h4, h5, h6, .font-display {
@@ -81,34 +91,43 @@
         background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(34, 211, 238, 0.2); 
+        background: rgba(34, 211, 238, 0.3); 
         border-radius: 2px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(34, 211, 238, 0.4); 
+        background: rgba(34, 211, 238, 0.6); 
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
       }
 
-      /* Clean Grid Background - No Vignette */
+      /* Clean Grid Background - Brighter Lines */
       .bg-grid-pattern {
         background-image: 
-          linear-gradient(to right, rgba(34, 211, 238, 0.03) 1px, transparent 1px),
-          linear-gradient(to bottom, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
+          linear-gradient(to right, rgba(34, 211, 238, 0.07) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(34, 211, 238, 0.07) 1px, transparent 1px);
         background-size: 40px 40px;
         animation: grid-drift 120s linear infinite;
-        opacity: 0.5;
+        opacity: 1; 
+        mask-image: linear-gradient(to bottom, black 40%, transparent 100%);
+        pointer-events: none;
       }
       
-      /* Glass Panel Utility */
+      /* Glass Panel Utility - Enhanced Glow */
       .glass-panel {
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        background: rgba(10, 15, 30, 0.65);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(103, 232, 249, 0.15); /* Cyan tint border */
+        box-shadow: 0 0 15px -5px rgba(34, 211, 238, 0.15), inset 0 0 20px rgba(0,0,0,0.5);
       }
       
       .neon-text {
-        text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
+        color: #fff;
+        text-shadow: 0 0 5px rgba(34, 211, 238, 0.6), 0 0 10px rgba(34, 211, 238, 0.3);
+      }
+
+      .neon-border {
+        border-color: rgba(34, 211, 238, 0.4);
+        box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
       }
     </style>
   <script type="importmap">
@@ -129,7 +148,12 @@
 </script>
 </head>
   <body>
-    <div id="root" class="bg-grid-pattern fixed inset-0"></div>
+    <!-- Independent Background Layer (Non-Interactive) -->
+    <div class="bg-grid-pattern fixed inset-0 z-0"></div>
+    
+    <!-- React Application Mount Point (Interactive) -->
+    <div id="root" class="relative z-10 w-full h-full"></div>
+    
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
