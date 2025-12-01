@@ -1,6 +1,4 @@
 
-// services/telemetryStream.ts
-
 export type TelemetryCallback = (data: any) => void;
 
 class TelemetryStreamService {
@@ -18,11 +16,15 @@ class TelemetryStreamService {
 
         // Secure WebSocket Protocol Selection
         // CRITICAL FIX: If on HTTPS, we MUST use WSS. Browser will block WS.
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // We check specific protocol strings to be robust across browsers.
+        const isSecure = window.location.protocol === 'https:' || window.location.protocol.includes('https');
+        const protocol = isSecure ? 'wss:' : 'ws:';
         const host = window.location.host;
+        
+        // Construct URL - Handle potential double slashes if host implies protocol
         const wsUrl = `${protocol}//${host}/ws/telemetry`;
 
-        // Only log connection attempts occasionally to reduce noise
+        // Only log connection attempts occasionally to reduce noise in console
         if (this.retryCount === 0 || this.retryCount % 5 === 0) {
             console.debug(`[Telemetry] Connecting to ${wsUrl} (Attempt ${this.retryCount + 1})...`);
         }
@@ -31,6 +33,7 @@ class TelemetryStreamService {
             this.socket = new WebSocket(wsUrl);
         } catch (error) {
             // If constructor throws (e.g. syntax error), handle gracefully
+            console.warn("[Telemetry] Socket constructor failed:", error);
             this.handleReconnect();
             return;
         }
@@ -52,11 +55,14 @@ class TelemetryStreamService {
 
         this.socket.onclose = (event) => {
             this.socket = null; // Clean up reference
-            this.handleReconnect();
+            // Don't reconnect if it was a clean close (code 1000)
+            if (event.code !== 1000) {
+                this.handleReconnect();
+            }
         };
 
         this.socket.onerror = (err) => {
-            // WebSocket errors are often uninformative in JS. 
+            // WebSocket errors are often uninformative in JS due to security.
             // We just ensure socket is closed to trigger cleanup.
             if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
                 this.socket.close();
@@ -68,7 +74,7 @@ class TelemetryStreamService {
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
 
         // Exponential Backoff: 1s, 2s, 4s, 8s... up to 30s
-        // This prevents "9 errors" appearing instantly.
+        // This prevents "9+ errors" appearing instantly in the logs.
         const delay = Math.min(1000 * Math.pow(2, this.retryCount), this.maxRetryDelay);
         
         this.reconnectTimer = setTimeout(() => {
@@ -81,7 +87,7 @@ class TelemetryStreamService {
         this.listeners.push(callback);
         // Ensure connection is active when someone subscribes
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-            this.connect(); // Reset retry count for manual subscription triggers? No, keep logic simple.
+            this.connect();
         }
         return () => {
             this.listeners = this.listeners.filter(l => l !== callback);

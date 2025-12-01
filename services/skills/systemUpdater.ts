@@ -3,30 +3,33 @@ import { AgentAction } from '../../types';
 import { persistenceService, STORAGE_KEYS } from '../persistence';
 import { TENANT_CONFIG } from '../config';
 
-// Define the interface for a System Update
-interface SystemUpdateParams {
-    target: 'RULES' | 'THEME' | 'ASSETS' | 'MISSION';
-    key: string;
-    value: any;
-}
+/**
+ * ADA SYSTEM UPDATE ADAPTER
+ * This service bridges the React Application with the logical skills defined 
+ * in `.claude/skills/ada-system-ops/`.
+ */
 
 export const systemUpdateExpert = {
     
-    // Skill: Update Operational Rules (e.g., Change Speed Limit)
+    // Skill: Update Operational Rules (Mapping to 'update_operational_rule')
     updateRule: async (key: string, value: any): Promise<AgentAction> => {
-        console.log(`[SYSTEM] Updating Rule: ${key} -> ${value}`);
+        console.log(`[SYSTEM] Skill Triggered: update_operational_rule(${key}, ${value})`);
         
-        // 1. Get Current Config
-        const currentConfig = persistenceService.load(STORAGE_KEYS.ACTIVE_TENANT_ID, TENANT_CONFIG);
+        // Logic mirrors .claude/skills/ada-system-ops/index.js
+        
+        // 1. Get Current Config & Overrides
+        const currentRules = persistenceService.load('dynamic_rules_override', {}) || {};
         
         // 2. Apply Update
-        if (!currentConfig.rules) currentConfig.rules = {};
-        currentConfig.rules[key] = value;
+        currentRules[key] = value;
         
-        // 3. Persist (Save to Browser Memory)
-        // Note: In a real app, this would POST to backend. Here we hack it into local state.
-        // We use a specific key to store "Dynamic Overrides"
-        persistenceService.save('dynamic_rules_override', currentConfig.rules);
+        // 3. Persist
+        persistenceService.save('dynamic_rules_override', currentRules);
+
+        // Also update the in-memory TENANT_CONFIG for immediate React reactivity if needed
+        if (TENANT_CONFIG.rules) {
+            TENANT_CONFIG.rules[key] = value;
+        }
 
         return {
             id: `sys_update_${Date.now()}`,
@@ -36,24 +39,9 @@ export const systemUpdateExpert = {
         };
     },
 
-    // Skill: Emergency Protocol Activation
-    setSecurityLevel: async (level: 'GREEN' | 'AMBER' | 'RED'): Promise<AgentAction> => {
-        console.log(`[SYSTEM] Setting Security DEFCON: ${level}`);
-        
-        // Persist level
-        persistenceService.save('security_defcon_level', level);
-
-        return {
-            id: `sys_sec_${Date.now()}`,
-            kind: 'external',
-            name: 'system.securityLevelChanged',
-            params: { level, timestamp: new Date().toISOString() }
-        };
-    },
-
-    // Skill: Add New Asset (e.g., Register a new Tender Boat)
+    // Skill: Add New Asset (Mapping to 'register_new_asset')
     registerAsset: async (assetType: string, assetName: string): Promise<AgentAction> => {
-        console.log(`[SYSTEM] Registering new asset: ${assetName} (${assetType})`);
+        console.log(`[SYSTEM] Skill Triggered: register_new_asset(${assetType}, ${assetName})`);
         
         const tenders = persistenceService.load(STORAGE_KEYS.TENDERS, []);
         const newTender = {

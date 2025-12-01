@@ -25,6 +25,7 @@ graph LR
     
     B -- SSE / WebSocket --> E[FastAPI Streamer]
     E -- JSON Stream --> F[React Canvas / Feed]
+    B -- Subscribes --> G[Status Line Script]
 ```
 
 ## 3. The Protocol: `HookEvent`
@@ -56,7 +57,7 @@ We define a `@hook` decorator that wraps every FastMCP tool and LangGraph node.
 import redis
 import json
 
-r = redis.Redis(host='localhost', port=6379)
+r = redis.Redis(host='ada-redis', port=6379)
 
 def emit_hook(source: str, event_type: str, payload: dict):
     event = {
@@ -74,7 +75,7 @@ async def calculate_penalty(days: int):
 ```
 
 ### B. Frontend (React Consumer)
-The `App.tsx` or `Canvas.tsx` subscribes to the stream.
+The `App.tsx` or `Canvas.tsx` subscribes to the stream via Server-Sent Events (SSE).
 
 ```typescript
 // Frontend: EventSource
@@ -88,6 +89,13 @@ useEffect(() => {
   };
 }, []);
 ```
+
+### C. Terminal Status Line (DevOps View)
+Inspired by Claude Code, the backend runs a dedicated thread `backend/hooks/status_line.py` that listens to the Redis bus and renders a live, color-coded status line in the server terminal:
+
+`🟢 [ADA.FINANCE] Calculating Invoice | Tool: calculate_vat | Latency: 120ms`
+
+This allows DevOps engineers to monitor the "Heartbeat" of the AI without needing a GUI.
 
 ## 5. Benefits for WIM
 1.  **Debugging:** If a wrong invoice is generated, you can scroll back and see exactly which "Worker" script calculated the wrong VAT.

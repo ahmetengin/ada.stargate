@@ -1,0 +1,44 @@
+{
+  "name": "ada-system-ops",
+  "version": "1.0.0",
+  "description": "Administrative tools for modifying Ada Stargate's operational parameters and asset registry.",
+  "tools": [
+    {
+      "name": "update_operational_rule",
+      "description": "Updates a specific marina rule or limit (e.g. speed limit, debt threshold).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "rule_key": {
+            "type": "string",
+            "description": "The internal key of the rule (e.g. 'speed_limit_knots')"
+          },
+          "value": {
+            "type": ["number", "string", "boolean"],
+            "description": "The new value to enforce."
+          }
+        },
+        "required": ["rule_key", "value"]
+      }
+    },
+    {
+      "name": "register_new_asset",
+      "description": "Adds a new vessel, tender, or vehicle to the active fleet registry.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["Tender", "Patrol", "GolfCart", "Drone"],
+            "description": "The category of the asset."
+          },
+          "name": {
+            "type": "string",
+            "description": "The callsign or name of the asset."
+          }
+        },
+        "required": ["type", "name"]
+      }
+    }
+  ]
+}
