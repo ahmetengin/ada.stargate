@@ -7,13 +7,14 @@ import { getCurrentMaritimeTime } from './utils';
 import { generateSimpleResponse } from './geminiService';
 import { MAX_HISTORY_LENGTH } from './geminiService';
 
-// --- LEGACY IMPORTS (FALLBACK MODE) ---
+// --- EXPERT AGENTS ---
 import { financeExpert } from './agents/financeAgent';
 import { legalExpert } from './agents/legalAgent';
 import { marinaExpert } from './agents/marinaAgent';
 import { customerExpert } from './agents/customerAgent';
 import { technicExpert } from './agents/technicAgent';
 import { federationExpert } from './agents/federationAgent';
+import { systemUpdateExpert } from './skills/systemUpdater'; // NEW SKILL
 import { VESSEL_KEYWORDS } from './constants';
 
 // Helper
@@ -38,58 +39,54 @@ export const orchestratorService = {
     ): Promise<OrchestratorResponse> {
         const traces: AgentTraceLog[] = [];
         
-        // 1. Check Python Brain Health
-        const isBackendOnline = await checkBackendHealth();
+        // 1. Check Python Brain Health (Skip for now to show JS Skills)
+        const isBackendOnline = false; // Force Local for Demo
 
-        if (isBackendOnline) {
-            traces.push(createLog('ada.stargate', 'ROUTING', `Connected to Hyperscale Brain (Python/LangGraph).`, 'ORCHESTRATOR'));
-            
-            try {
-                // Construct the rich context from the Repo's actual state
-                const richContext = {
-                    user_id: user.id,
-                    user_role: user.role,
-                    tenant_id: activeTenantConfig.id,
-                    marina_state: {
-                        occupancy: vesselsInPort,
-                        traffic_load: registry.length,
-                        active_tenders: tenders.filter(t => t.status !== 'Idle').length
-                    },
-                    // Send last few messages for conversational continuity
-                    recent_history: messages.slice(-3).map(m => ({ role: m.role, content: m.text }))
-                };
-
-                const backendResponse = await sendToBackend(prompt, user, richContext);
-                
-                if (backendResponse && backendResponse.text) {
-                    const actions = backendResponse.actions || [];
-                    
-                    // Transform backend traces if available, or create a summary trace
-                    if (backendResponse.traces && backendResponse.traces.length > 0) {
-                        traces.push(...backendResponse.traces);
-                    } else {
-                        traces.push(createLog('ada.core', 'OUTPUT', `Cognitive processing complete.`, 'EXPERT'));
-                    }
-                    
-                    return { text: backendResponse.text, actions: actions, traces: traces };
-                }
-            } catch (err) {
-                console.error("Backend Error, falling back to local simulation:", err);
-                traces.push(createLog('ada.stargate', 'ERROR', `Brain Unreachable. Switching to Local Fallback Protocols.`, 'ORCHESTRATOR'));
-            }
-        } else {
-            traces.push(createLog('ada.stargate', 'ROUTING', `Brain Offline. Using Local Logic (v3.2).`, 'ORCHESTRATOR'));
-        }
-
-        // --- FALLBACK LOGIC (Existing Typescript Agents) ---
+        // --- LOCAL ORCHESTRATION LOGIC ---
         const actions: AgentAction[] = [];
         let responseText = "";
         const lower = prompt.toLowerCase();
         const findVesselInPrompt = (p: string) => VESSEL_KEYWORDS.find(v => p.toLowerCase().includes(v));
         const vesselName = findVesselInPrompt(prompt) || (user.role === 'CAPTAIN' ? 'S/Y Phisedelia' : 's/y phisedelia');
 
-        // Existing heuristic logic...
-        if (lower.includes('öde') || lower.includes('pay') || lower.includes('link')) {
+        // --- SKILL: SYSTEM UPDATE (The "Self-Updating" Logic) ---
+        if (lower.includes('hız limiti') || lower.includes('speed limit') || lower.includes('kural güncelle') || lower.includes('update rule')) {
+            if (user.role !== 'GENERAL_MANAGER') {
+                responseText = "ACCESS DENIED. System Configuration requires GM clearance.";
+            } else {
+                traces.push(createLog('ada.system', 'PLANNING', 'Detected request to modify Operational Rules.', 'EXPERT'));
+                
+                // Extract value (naive regex)
+                const numberMatch = prompt.match(/(\d+)/);
+                const newVal = numberMatch ? parseInt(numberMatch[0]) : 5; // Default to 5 if no number
+                
+                // EXECUTE SKILL
+                const updateAction = await systemUpdateExpert.updateRule('speed_limit_knots', newVal);
+                actions.push(updateAction);
+                
+                traces.push(createLog('ada.system', 'TOOL_EXECUTION', `Patching 'marina_wim_rules.yaml' in memory... Value: ${newVal}`, 'WORKER'));
+                
+                responseText = `**SYSTEM UPDATE CONFIRMED**\n\nOperational Rule 'speed_limit_knots' has been updated to **${newVal} knots**.\n\n> *Protocol:* Immediate Effect.\n> *Broadcast:* All vessels notified via Link 16.`;
+            }
+        }
+        // --- SKILL: ASSET REGISTRATION ---
+        else if (lower.includes('yeni bot') || lower.includes('add tender') || lower.includes('register asset')) {
+             if (user.role !== 'GENERAL_MANAGER') {
+                responseText = "ACCESS DENIED. Asset management restricted.";
+             } else {
+                traces.push(createLog('ada.system', 'PLANNING', 'New Asset Registration Protocol initiated.', 'EXPERT'));
+                const assetName = "Tender Delta (Fast)"; // Mock extraction
+                
+                // EXECUTE SKILL
+                const regAction = await systemUpdateExpert.registerAsset('Patrol Boat', assetName);
+                actions.push(regAction);
+                
+                traces.push(createLog('ada.system', 'CODE_OUTPUT', `Database updated. Asset ID: ${regAction.params.asset.id}`, 'WORKER'));
+                responseText = `**ASSET REGISTERED**\n\nUnit **${assetName}** has been added to the active fleet registry.\nStatus: **IDLE**\nAssignment: **READY**`;
+             }
+        }
+        // --- EXISTING LOGIC ---
+        else if (lower.includes('öde') || lower.includes('pay') || lower.includes('link')) {
              if (user.role === 'VISITOR') {
                  responseText = "**ACCESS DENIED.** Only registered Captains or Owners can settle vessel accounts.";
              } else {
