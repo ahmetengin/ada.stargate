@@ -8,7 +8,7 @@ import { commercialExpert } from '../../services/agents/commercialAgent';
 import { analyticsExpert } from '../../services/agents/analyticsAgent';
 import { berthExpert } from '../../services/agents/berthAgent';
 import { reservationsExpert } from '../../services/agents/reservationsAgent';
-import { FileText, Activity, Bell } from 'lucide-react';
+import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Layers, Zap, Users, BarChart3 } from 'lucide-react';
 
 import { OpsTab } from './gm/OpsTab';
 import { FleetTab } from './gm/FleetTab';
@@ -30,8 +30,73 @@ interface GMDashboardProps {
   aisTargets?: AisTarget[];
   onOpenReport: () => void;
   onOpenTrace: () => void;
-  activeTenantConfig: TenantConfig; // NEW: Pass activeTenantConfig
+  activeTenantConfig: TenantConfig;
 }
+
+// --- DEPARTMENT STRUCTURE DEFINITION ---
+const DEPARTMENTS = [
+    {
+        id: 'OPS',
+        label: 'OPERATIONS',
+        icon: Navigation,
+        color: 'text-indigo-500',
+        borderColor: 'border-indigo-500',
+        bgHover: 'hover:bg-indigo-500/10',
+        modules: [
+            { id: 'ops', label: 'LIVE MAP' },
+            { id: 'fleet', label: 'FLEET CMD' },
+            { id: 'berths', label: 'HARBOR' }
+        ]
+    },
+    {
+        id: 'ENG',
+        label: 'TECHNICAL',
+        icon: Zap,
+        color: 'text-amber-500',
+        borderColor: 'border-amber-500',
+        bgHover: 'hover:bg-amber-500/10',
+        modules: [
+            { id: 'facility', label: 'INFRA & ECO' }
+        ]
+    },
+    {
+        id: 'COM',
+        label: 'COMMERCIAL',
+        icon: DollarSign,
+        color: 'text-emerald-500',
+        borderColor: 'border-emerald-500',
+        bgHover: 'hover:bg-emerald-500/10',
+        modules: [
+            { id: 'bookings', label: 'BOOKINGS' },
+            { id: 'commercial', label: 'RETAIL' },
+            { id: 'congress', label: 'EVENTS' }
+        ]
+    },
+    {
+        id: 'ADM',
+        label: 'ADMIN',
+        icon: Users,
+        color: 'text-blue-500',
+        borderColor: 'border-blue-500',
+        bgHover: 'hover:bg-blue-500/10',
+        modules: [
+            { id: 'hr', label: 'HR / STAFF' },
+            { id: 'guest_entry', label: 'SECURITY' }
+        ]
+    },
+    {
+        id: 'INT',
+        label: 'INTEL',
+        icon: BarChart3,
+        color: 'text-purple-500',
+        borderColor: 'border-purple-500',
+        bgHover: 'hover:bg-purple-500/10',
+        modules: [
+            { id: 'analytics', label: 'PREDICTIVE' },
+            { id: 'observer', label: 'SYSTEM' }
+        ]
+    }
+];
 
 export const GMDashboard: React.FC<GMDashboardProps> = ({
   userProfile,
@@ -44,11 +109,14 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   aisTargets = [],
   onOpenReport,
   onOpenTrace,
-  activeTenantConfig // NEW
+  activeTenantConfig
 }) => {
   const criticalLogs = logs.filter(log => log.type === 'critical' || log.type === 'alert');
-  const [activeGmTab, setActiveGmTab] = useState<'ops' | 'fleet' | 'facility' | 'congress' | 'hr' | 'commercial' | 'analytics' | 'berths' | 'bookings' | 'observer' | 'guest_entry'>('ops');
   
+  // State for Active Module
+  const [activeModuleId, setActiveModuleId] = useState<string>('ops');
+  
+  // Data States
   const [zeroWasteStats, setZeroWasteStats] = useState<any>(null);
   const [blueFlagStatus, setBlueFlagStatus] = useState<any>(null);
   const [eventDetails, setEventDetails] = useState<CongressEvent | null>(null);
@@ -59,126 +127,137 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   const [berthAllocation, setBerthAllocation] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
 
+  // Effect to load data based on active module
   useEffect(() => {
-    if (activeGmTab === 'facility') {
+    if (activeModuleId === 'facility') {
       facilityExpert.generateZeroWasteReport(() => { }).then(res => setZeroWasteStats(res));
       facilityExpert.checkSeaWaterQuality(() => { }).then(res => setBlueFlagStatus(res));
     }
-    if (activeGmTab === 'congress') {
+    if (activeModuleId === 'congress') {
       congressExpert.getEventDetails().then(setEventDetails);
       congressExpert.getDelegates().then(setDelegates);
     }
-    if (activeGmTab === 'hr') {
+    if (activeModuleId === 'hr') {
       hrExpert.getShiftSchedule('Security', () => { }).then(setHrData);
     }
-    if (activeGmTab === 'commercial') {
+    if (activeModuleId === 'commercial') {
       commercialExpert.getTenantLeases(() => { }).then(setCommercialData);
     }
-    if (activeGmTab === 'analytics') {
+    if (activeModuleId === 'analytics') {
       analyticsExpert.predictOccupancy('3M', () => { }).then(setAnalyticsData);
     }
-    if (activeGmTab === 'berths') {
+    if (activeModuleId === 'berths') {
       berthExpert.findOptimalBerth({ loa: 20.4, beam: 5.6, draft: 4.7, type: 'VO65 Racing Yacht' }, () => { }).then(setBerthAllocation);
     }
-    if (activeGmTab === 'bookings') {
+    if (activeModuleId === 'bookings') {
       reservationsExpert.processBooking({ name: "S/Y Wind Chaser", type: "Sailing Yacht", loa: 16, beam: 4.5 }, { start: "2025-06-10", end: "2025-06-15" }, () => { }).then(res => setBookings([res.proposal]));
     }
-  }, [activeGmTab]);
-
-  const tabs = [
-      { id: 'ops', label: 'Ops' },
-      { id: 'fleet', label: 'Fleet' },
-      { id: 'facility', label: 'Facility' },
-      { id: 'guest_entry', label: 'Check-In' }, // Moved up for priority
-      { id: 'berths', label: 'Berths' },
-      { id: 'observer', label: 'Neural' },
-      { id: 'congress', label: 'Event' },
-      { id: 'hr', label: 'HR' },
-      { id: 'commercial', label: 'Retail' },
-      { id: 'analytics', label: 'Data' },
-      { id: 'bookings', label: 'Book' },
-  ];
+  }, [activeModuleId]);
 
   return (
-    <div className="text-zinc-800 dark:text-zinc-200 font-sans h-full flex flex-col bg-zinc-50 dark:bg-gunmetal-950 transition-colors duration-300">
+    <div className="text-zinc-800 dark:text-zinc-300 font-mono h-full flex flex-col bg-transparent relative overflow-hidden">
       
-      {/* COMMAND DECK HEADER */}
-      <div className="bg-white dark:bg-gunmetal-900 border-b border-zinc-200 dark:border-zinc-800 flex-shrink-0 shadow-sm relative z-10 transition-colors duration-300">
-        <div className="flex items-center justify-between p-4 pb-2">
-            
-            {/* Left: Title & Status (CLEAN - NO ICON) */}
-            <div>
-                <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-wider leading-none">
-                    {activeTenantConfig.name} Command Deck
-                </h2>
-                <div className="flex items-center gap-2 mt-1.5">
-                    <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded text-[9px] font-bold text-emerald-600 dark:text-emerald-400">
-                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                        ONLINE
-                    </div>
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest hidden sm:inline-block">
-                        Clearance Level 5 • {userProfile.name}
-                    </span>
+      {/* HEADER: Strategic Command HUD */}
+      <div className="flex-shrink-0 pt-4 pb-2 px-6 flex items-end justify-between border-b border-zinc-200 dark:border-white/5 relative z-20 bg-slate-50/90 dark:bg-gunmetal-900/90 backdrop-blur-md">
+        
+        {/* Left: Identity */}
+        <div>
+            <div className="flex items-center gap-3">
+                <div className="p-2 bg-zinc-900 dark:bg-white rounded-lg">
+                    <Hexagon size={20} className="text-white dark:text-black fill-current" />
                 </div>
-            </div>
-            
-            {/* Right: Utility Cluster */}
-            <div className="flex items-center gap-2">
-                <div className="flex items-center bg-zinc-100 dark:bg-zinc-900 rounded-lg p-1 border border-zinc-200 dark:border-zinc-800">
-                    <button 
-                        onClick={onOpenReport}
-                        className="p-2 text-zinc-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-zinc-800 rounded-md transition-all group"
-                        title="Daily Operations Report"
-                    >
-                        <FileText size={18} className="group-hover:scale-110 transition-transform" />
-                    </button>
-                    <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-800 mx-1"></div>
-                    <button 
-                        onClick={onOpenTrace}
-                        className="p-2 text-zinc-500 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-zinc-800 rounded-md transition-all group"
-                        title="System Intelligence (Neural Trace)"
-                    >
-                        <Activity size={18} className="group-hover:scale-110 transition-transform" />
-                    </button>
-                    <div className="w-px h-5 bg-zinc-300 dark:bg-zinc-800 mx-1"></div>
-                    <button 
-                        className="p-2 text-zinc-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-white dark:hover:bg-zinc-800 rounded-md transition-all relative group"
-                        title="Notifications"
-                    >
-                        <Bell size={18} className="group-hover:scale-110 transition-transform" />
-                        {criticalLogs.length > 0 && (
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse ring-2 ring-white dark:ring-zinc-900"></span>
-                        )}
-                    </button>
+                <div>
+                    <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                        {activeTenantConfig.name.toUpperCase()}
+                    </h2>
+                    <div className="text-[9px] font-bold text-zinc-400 mt-1 uppercase tracking-[0.3em] flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Strategic Command
+                    </div>
                 </div>
             </div>
         </div>
+        
+        {/* Right: Global Metrics & Tools */}
+        <div className="flex items-center gap-6">
+            
+            {/* Quick Metrics */}
+            <div className="hidden lg:flex items-center gap-6 mr-6 border-r border-zinc-200 dark:border-white/10 pr-6">
+                <div className="text-right">
+                    <div className="text-[9px] text-zinc-500 uppercase font-bold">Occupancy</div>
+                    <div className="text-lg font-black text-slate-800 dark:text-white leading-none">{vesselsInPort}/600</div>
+                </div>
+                <div className="text-right">
+                    <div className="text-[9px] text-zinc-500 uppercase font-bold">Radar</div>
+                    <div className="text-lg font-black text-indigo-500 leading-none">{aisTargets.length} <span className="text-[9px] text-zinc-400">TGT</span></div>
+                </div>
+                <div className="text-right">
+                    <div className="text-[9px] text-zinc-500 uppercase font-bold">Yield</div>
+                    <div className="text-lg font-black text-emerald-500 leading-none">€{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k</div>
+                </div>
+            </div>
 
-        {/* MOBILE-FRIENDLY TABS (Horizontal Scroll + Capsules) */}
-        <div className="px-4 pb-3 pt-1 overflow-x-auto custom-scrollbar no-scrollbar w-full">
-            <div className="flex gap-2">
-                {tabs.map(tab => (
-                <button
-                    key={tab.id}
-                    onClick={() => setActiveGmTab(tab.id as any)}
-                    className={`
-                        px-4 py-2 text-[10px] font-bold uppercase tracking-wider rounded-full transition-all whitespace-nowrap flex-shrink-0 border
-                        ${activeGmTab === tab.id 
-                            ? 'bg-zinc-900 dark:bg-white text-white dark:text-black border-zinc-900 dark:border-white shadow-md transform scale-105' 
-                            : 'bg-zinc-100 dark:bg-zinc-900 text-zinc-500 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800'
-                        }
-                    `}
-                >
-                    {tab.label}
+            {/* Utility Icons */}
+            <div className="flex items-center gap-3">
+                <button onClick={onOpenReport} className="p-2 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-indigo-500/10 hover:text-indigo-500 transition-colors" title="Generate Report">
+                    <FileText size={18} />
                 </button>
-                ))}
+                <button onClick={onOpenTrace} className="p-2 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" title="Neural Trace">
+                    <Activity size={18} />
+                </button>
+                <button className="p-2 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-red-500/10 hover:text-red-500 transition-colors relative" title="Alerts">
+                    <Bell size={18} />
+                    {criticalLogs.length > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse border border-zinc-900"></span>
+                    )}
+                </button>
             </div>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-zinc-100 dark:bg-[#050b14] relative">
-        {activeGmTab === 'ops' && (
+      {/* DEPARTMENTAL NAVIGATION BAR */}
+      <div className="flex-shrink-0 px-6 py-2 bg-white dark:bg-black/20 border-b border-zinc-200 dark:border-white/5 overflow-x-auto custom-scrollbar">
+          <div className="flex items-center gap-8 min-w-max">
+              {DEPARTMENTS.map((dept) => (
+                  <div key={dept.id} className="flex flex-col gap-2 group">
+                      {/* Dept Header */}
+                      <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${dept.color} opacity-70 group-hover:opacity-100 transition-opacity`}>
+                          <dept.icon size={10} />
+                          {dept.label}
+                      </div>
+                      
+                      {/* Dept Modules */}
+                      <div className="flex items-center gap-1">
+                          {dept.modules.map(mod => {
+                              const isActive = activeModuleId === mod.id;
+                              return (
+                                  <button
+                                      key={mod.id}
+                                      onClick={() => setActiveModuleId(mod.id)}
+                                      className={`
+                                          px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all relative overflow-hidden
+                                          ${isActive 
+                                              ? `text-white bg-zinc-900 dark:bg-white dark:text-black shadow-lg` 
+                                              : `text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10`
+                                          }
+                                      `}
+                                  >
+                                      {mod.label}
+                                      {isActive && (
+                                          <div className={`absolute bottom-0 left-0 w-full h-[2px] ${dept.color.replace('text-', 'bg-')}`}></div>
+                                      )}
+                                  </button>
+                              )
+                          })}
+                      </div>
+                  </div>
+              ))}
+          </div>
+      </div>
+
+      {/* CONTENT AREA */}
+      <div className="flex-1 overflow-y-auto p-0 relative custom-scrollbar bg-slate-100/50 dark:bg-[#050b14]">
+        {activeModuleId === 'ops' && (
             <OpsTab 
                 vesselsInPort={vesselsInPort} 
                 registry={registry} 
@@ -188,16 +267,16 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                 aisTargets={aisTargets}
             />
         )}
-        {activeGmTab === 'fleet' && <FleetTab tenders={tenders} />}
-        {activeGmTab === 'facility' && <FacilityTab blueFlagStatus={blueFlagStatus} zeroWasteStats={zeroWasteStats} />}
-        {activeGmTab === 'congress' && <CongressTab eventDetails={eventDetails} delegates={delegates} />}
-        {activeGmTab === 'hr' && <HRTab hrData={hrData} />}
-        {activeGmTab === 'commercial' && <CommercialTab commercialData={commercialData} />}
-        {activeGmTab === 'analytics' && <AnalyticsTab analyticsData={analyticsData} />}
-        {activeGmTab === 'berths' && <BerthsTab berthAllocation={berthAllocation} />}
-        {activeGmTab === 'bookings' && <BookingsTab bookings={bookings} />}
-        {activeGmTab === 'guest_entry' && <GuestCheckInTab />}
-        {activeGmTab === 'observer' && <ObserverTab traces={agentTraces} />}
+        {activeModuleId === 'fleet' && <FleetTab tenders={tenders} />}
+        {activeModuleId === 'facility' && <FacilityTab blueFlagStatus={blueFlagStatus} zeroWasteStats={zeroWasteStats} />}
+        {activeModuleId === 'congress' && <CongressTab eventDetails={eventDetails} delegates={delegates} />}
+        {activeModuleId === 'hr' && <HRTab hrData={hrData} />}
+        {activeModuleId === 'commercial' && <CommercialTab commercialData={commercialData} />}
+        {activeModuleId === 'analytics' && <AnalyticsTab analyticsData={analyticsData} />}
+        {activeModuleId === 'berths' && <BerthsTab berthAllocation={berthAllocation} />}
+        {activeModuleId === 'bookings' && <BookingsTab bookings={bookings} />}
+        {activeModuleId === 'guest_entry' && <GuestCheckInTab />}
+        {activeModuleId === 'observer' && <ObserverTab traces={agentTraces} />}
       </div>
     </div>
   );

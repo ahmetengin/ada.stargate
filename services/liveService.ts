@@ -1,5 +1,6 @@
 
 
+
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { UserProfile, TenantConfig } from "../types";
 import { TENANT_CONFIG } from "./config"; // Import TENANT_CONFIG for generating base instruction
@@ -251,7 +252,16 @@ export class LiveSession {
     }
     this.inputSource?.disconnect();
     this.processor?.disconnect();
-    this.audioContext?.close();
+    
+    // Check if context is valid and running before closing
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+        try {
+            await this.audioContext.close();
+        } catch (e) {
+            console.warn("AudioContext close warning", e);
+        }
+    }
+    
     this.onStatusChange?.('disconnected');
     this.session = null;
     this.isConnected = false;

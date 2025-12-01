@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Wifi, Thermometer, Zap, ShieldCheck, Droplets, Recycle, Clock, Wind } from 'lucide-react';
+import { Wifi, Thermometer, Zap, ShieldCheck, Droplets, Recycle, Clock, Wind, Activity } from 'lucide-react';
 import { marinaExpert } from '../../services/agents/marinaAgent';
 import { getCurrentMaritimeTime } from '../../services/utils';
 import { VesselSystemsStatus, TenantConfig } from '../../types';
@@ -12,6 +12,7 @@ export const CaptainDashboard: React.FC = () => {
   const [zuluTime, setZuluTime] = useState(getCurrentMaritimeTime());
   const [telemetry, setTelemetry] = useState<VesselSystemsStatus | null>(null);
   const [liveWind, setLiveWind] = useState({ speed: 0, dir: 'N' });
+  const [isLive, setIsLive] = useState(false);
 
   const activeTenantConfig: TenantConfig = TENANT_CONFIG;
 
@@ -29,6 +30,7 @@ export const CaptainDashboard: React.FC = () => {
       // 2. Subscribe to WebSocket (Live Updates)
       const unsubscribe = telemetryStream.subscribe((data) => {
           if (data.type === 'VESSEL_TELEMETRY' && data.payload) {
+              setIsLive(true);
               setTelemetry(prev => ({
                   ...prev,
                   ...data.payload // Merge updates
@@ -58,6 +60,11 @@ export const CaptainDashboard: React.FC = () => {
                 <Clock size={12} /> MARITIME TIME
             </div>
             <div className="flex items-center gap-4">
+                {isLive && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20 text-[9px] font-bold text-emerald-500">
+                        <Activity size={10} className="animate-pulse" /> LIVE STREAM
+                    </div>
+                )}
                 <div className="flex items-center gap-2 text-xs text-zinc-400">
                     <Wind size={12} />
                     <span>{liveWind.dir} {liveWind.speed}kn</span>

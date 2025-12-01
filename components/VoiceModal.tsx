@@ -15,7 +15,6 @@ interface VoiceModalProps {
 }
 
 export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userProfile, onTranscriptReceived, channel }) => {
-  const [mode, setMode] = useState<'CLOUD' | 'LOCAL'>('CLOUD'); // Toggle between Gemini Live (Cloud) and FastRTC (Local)
   const [status, setStatus] = useState<LiveConnectionState>(LiveConnectionState.Disconnected);
   const [audioLevel, setAudioLevel] = useState(0);
   const [session, setSession] = useState<LiveSession | null>(null);
@@ -25,15 +24,15 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
   const { lat, lng } = wimMasterData.identity.location.coordinates;
   const displayCoordinates = `${formatCoordinate(lat, 'lat')} / ${formatCoordinate(lng, 'lng')}`;
 
-  // --- CLOUD MODE LOGIC ---
+  // --- AUTO CONNECT (CLOUD ONLY) ---
   useEffect(() => {
-    if (isOpen && mode === 'CLOUD' && status === LiveConnectionState.Disconnected) {
+    if (isOpen && status === LiveConnectionState.Disconnected) {
       connectCloud();
     }
     return () => {
-       // Cleanup handled on close
+       // Cleanup handled on close logic or component unmount if needed
     };
-  }, [isOpen, mode]);
+  }, [isOpen]);
 
   const connectCloud = async () => {
       const newSession = new LiveSession();
@@ -77,80 +76,52 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
             </div>
           </div>
           
-          {/* Mode Switcher */}
-          <div className="flex bg-black/40 rounded-lg p-1 border border-white/10">
-              <button 
-                onClick={() => { if(session) session.disconnect(); setMode('CLOUD'); }}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${mode === 'CLOUD' ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-              >
-                  <Cloud size={10} /> Cloud
-              </button>
-              <button 
-                onClick={() => { if(session) session.disconnect(); setMode('LOCAL'); }}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${mode === 'LOCAL' ? 'bg-emerald-600 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
-              >
-                  <Server size={10} /> Local Node
+          <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-indigo-900/30 border border-indigo-500/30">
+                  <Cloud size={10} className="text-indigo-400" />
+                  <span className="text-[9px] font-bold text-indigo-300 uppercase">Cloud Link</span>
+              </div>
+              <button onClick={handleDisconnect} className="text-zinc-500 hover:text-red-500 transition-colors ml-2">
+                  <X size={20} />
               </button>
           </div>
-
-          <button onClick={handleDisconnect} className="text-zinc-500 hover:text-red-500 transition-colors ml-2">
-              <X size={20} />
-          </button>
         </div>
 
-        {/* CONTENT AREA */}
+        {/* CONTENT AREA (VISUALIZER) */}
         <div className="flex-1 relative z-10 bg-black/20 flex flex-col">
-            
-            {/* LOCAL MODE: FASTRTC IFRAME */}
-            {mode === 'LOCAL' ? (
-                <div className="flex-1 w-full h-full flex flex-col">
-                    <div className="bg-emerald-900/20 border-b border-emerald-500/20 p-2 text-center text-[10px] text-emerald-400 font-mono">
-                        Connected to Local Python Node (FastRTC/WebRTC)
+            <div className="p-8 flex flex-col items-center justify-center h-full">
+                {/* Channel Info */}
+                <div className="mb-8 text-center">
+                    <div className="text-6xl font-mono font-bold text-indigo-500 tracking-tighter flex items-center justify-center gap-2 text-shadow-glow">
+                    {channel === 'SCAN' ? 'SCAN' : channel} 
+                    <span className="text-xl text-zinc-600">{getChannelLabel(channel)}</span>
                     </div>
-                    {/* The /radio path is proxied by Nginx to the Python Backend */}
-                    <iframe 
-                        src="/radio" 
-                        className="w-full h-full border-none" 
-                        title="VHF Radio Node"
-                        allow="microphone"
-                    />
+                    <div className="text-xs font-mono text-zinc-500 mt-2">{displayCoordinates}</div>
                 </div>
-            ) : (
-                /* CLOUD MODE: VISUALIZER */
-                <div className="p-8 flex flex-col items-center justify-center h-full">
-                    {/* Channel Info */}
-                    <div className="mb-8 text-center">
-                        <div className="text-6xl font-mono font-bold text-indigo-500 tracking-tighter flex items-center justify-center gap-2 text-shadow-glow">
-                        {channel === 'SCAN' ? 'SCAN' : channel} 
-                        <span className="text-xl text-zinc-600">{getChannelLabel(channel)}</span>
+
+                {/* Visualizer */}
+                <div className="relative w-32 h-32 flex items-center justify-center">
+                    {status === LiveConnectionState.Error ? (
+                        <div className="text-red-500 animate-pulse flex flex-col items-center">
+                            <AlertTriangle size={48} />
+                            <span className="text-[10px] font-bold mt-2">NO SIGNAL</span>
                         </div>
-                        <div className="text-xs font-mono text-zinc-500 mt-2">{displayCoordinates}</div>
-                    </div>
-
-                    {/* Visualizer */}
-                    <div className="relative w-32 h-32 flex items-center justify-center">
-                        {status === LiveConnectionState.Error ? (
-                            <div className="text-red-500 animate-pulse flex flex-col items-center">
-                                <AlertTriangle size={48} />
-                                <span className="text-[10px] font-bold mt-2">NO SIGNAL</span>
+                    ) : (
+                        <>
+                            <div className={`absolute inset-0 rounded-full border-2 border-indigo-900 transition-all duration-100`} 
+                                style={{ transform: `scale(${1 + audioLevel * 2})`, opacity: 0.5 - audioLevel }}></div>
+                            <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-900 flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.4)] ${status === LiveConnectionState.Connected ? 'animate-pulse' : 'grayscale opacity-50'}`}>
+                                <Mic className="text-white w-8 h-8" />
                             </div>
-                        ) : (
-                            <>
-                                <div className={`absolute inset-0 rounded-full border-2 border-indigo-900 transition-all duration-100`} 
-                                    style={{ transform: `scale(${1 + audioLevel * 2})`, opacity: 0.5 - audioLevel }}></div>
-                                <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-900 flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.4)] ${status === LiveConnectionState.Connected ? 'animate-pulse' : 'grayscale opacity-50'}`}>
-                                    <Mic className="text-white w-8 h-8" />
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    <div className="mt-8 font-mono text-sm text-zinc-400">
-                        {status === LiveConnectionState.Connecting ? "TUNING FREQUENCY..." : 
-                         status === LiveConnectionState.Connected ? "CHANNEL OPEN - TRANSMITTING" : "OFFLINE"}
-                    </div>
+                        </>
+                    )}
                 </div>
-            )}
+
+                <div className="mt-8 font-mono text-sm text-zinc-400">
+                    {status === LiveConnectionState.Connecting ? "TUNING FREQUENCY..." : 
+                        status === LiveConnectionState.Connected ? "CHANNEL OPEN - TRANSMITTING" : "OFFLINE"}
+                </div>
+            </div>
         </div>
 
         {/* Footer Controls */}
@@ -162,14 +133,12 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                 {showProtocol ? 'Hide Protocol' : 'Show Protocol'}
             </button>
             
-            {mode === 'CLOUD' && (
-                <button 
-                    onClick={handleDisconnect}
-                    className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-500 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all"
-                >
-                    <Power size={14} /> End Transmission
-                </button>
-            )}
+            <button 
+                onClick={handleDisconnect}
+                className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-500 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all"
+            >
+                <Power size={14} /> End Transmission
+            </button>
         </div>
 
         {/* Protocol Overlay */}
