@@ -31,7 +31,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
   
   // Speech Recognition Refs
   const recognitionRef = useRef<any>(null);
-  const finalTranscriptRef = useRef(''); // Stores the stable, committed text
+  // Stores the text that was already in the input BEFORE the current dictation session started
+  const textBeforeDictationRef = useRef(''); 
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -39,29 +40,21 @@ export const InputArea: React.FC<InputAreaProps> = ({
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true; // Keep listening
-      recognitionRef.current.interimResults = true; // IMPORTANT: Show results while speaking
+      recognitionRef.current.interimResults = true; // Show results while speaking
       recognitionRef.current.lang = 'tr-TR'; 
 
       recognitionRef.current.onresult = (event: any) => {
-        let interimTranscript = '';
-        let newFinalPart = '';
+        let currentSessionTranscript = '';
 
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            newFinalPart += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
+        // Instead of appending new parts to a ref, we iterate over the entire result list provided by the browser.
+        // This prevents the "Ben Ben" duplication bug because the browser manages the 'results' array integrity.
+        for (let i = 0; i < event.results.length; i++) {
+            currentSessionTranscript += event.results[i][0].transcript;
         }
 
-        if (newFinalPart) {
-            // Append new final part to our stable ref
-            finalTranscriptRef.current += (finalTranscriptRef.current ? ' ' : '') + newFinalPart;
-        }
-
-        // Update UI: Stable Text + Gray Interim Text
-        // Note: We combine them into the single textarea for simplicity
-        setText((finalTranscriptRef.current + ' ' + interimTranscript).trim());
+        // Combine what was there before dictation + what is being spoken now
+        const combinedText = (textBeforeDictationRef.current + ' ' + currentSessionTranscript).trim();
+        setText(combinedText);
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -73,17 +66,14 @@ export const InputArea: React.FC<InputAreaProps> = ({
       };
 
       recognitionRef.current.onend = () => {
-        // Automatically ensure state sync when it stops (e.g. by silence)
         setIsDictating(false);
       };
     }
   }, []);
 
-  // Sync ref with manual text edits
-  // If user types manually, we must update the finalTranscriptRef so dictation continues from there
+  // Handle manual text changes
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setText(e.target.value);
-      finalTranscriptRef.current = e.target.value; 
   };
 
   // Handle Dictation Toggle
@@ -98,8 +88,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
         setIsDictating(false);
     } else {
         try {
-            // Sync ref with current text before starting (in case user typed something)
-            finalTranscriptRef.current = text;
+            // Snapshot the current text so we append to it, rather than overwriting or duplicating
+            textBeforeDictationRef.current = text;
             recognitionRef.current.start();
             setIsDictating(true);
         } catch (e) {
@@ -121,7 +111,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if ((!text.trim()) || isLoading) return;
     onSend(text, []);
     setText('');
-    finalTranscriptRef.current = ''; // Reset dictation buffer
+    textBeforeDictationRef.current = ''; 
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     
     // Stop dictation if sending

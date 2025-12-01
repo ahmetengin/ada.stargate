@@ -1,18 +1,19 @@
 
-
 import React, { useState, useEffect } from 'react';
-import { Wifi, Thermometer, Zap, ShieldCheck, Droplets, Recycle, Clock } from 'lucide-react';
+import { Wifi, Thermometer, Zap, ShieldCheck, Droplets, Recycle, Clock, Wind } from 'lucide-react';
 import { marinaExpert } from '../../services/agents/marinaAgent';
 import { getCurrentMaritimeTime } from '../../services/utils';
 import { VesselSystemsStatus, TenantConfig } from '../../types';
 import { TENANT_CONFIG } from '../../services/config';
+import { telemetryStream } from '../../services/telemetryStream';
 
 export const CaptainDashboard: React.FC = () => {
   const [activeCaptainTab, setActiveCaptainTab] = useState<'overview' | 'engineering' | 'finance' | 'bluecard'>('overview');
   const [zuluTime, setZuluTime] = useState(getCurrentMaritimeTime());
   const [telemetry, setTelemetry] = useState<VesselSystemsStatus | null>(null);
+  const [liveWind, setLiveWind] = useState({ speed: 0, dir: 'N' });
 
-  const activeTenantConfig: TenantConfig = TENANT_CONFIG; // Assuming TENANT_CONFIG is the active one
+  const activeTenantConfig: TenantConfig = TENANT_CONFIG;
 
   useEffect(() => {
       // Live Clock Ticker
@@ -20,25 +21,50 @@ export const CaptainDashboard: React.FC = () => {
           setZuluTime(getCurrentMaritimeTime());
       }, 1000);
 
-      // Simulated telemetry fetch using the active tenant's name
-      // This part would ideally be dynamically linked to the user's vessel
+      // 1. Initial Static Fetch (Fast Load)
       marinaExpert.getVesselTelemetry(activeTenantConfig.name).then((data) => {
-          setTelemetry(data);
+          if (data) setTelemetry(data);
       });
 
-      return () => clearInterval(timer);
+      // 2. Subscribe to WebSocket (Live Updates)
+      const unsubscribe = telemetryStream.subscribe((data) => {
+          if (data.type === 'VESSEL_TELEMETRY' && data.payload) {
+              setTelemetry(prev => ({
+                  ...prev,
+                  ...data.payload // Merge updates
+              } as VesselSystemsStatus));
+              
+              if (data.payload.environment) {
+                  setLiveWind({
+                      speed: data.payload.environment.windSpeed,
+                      dir: data.payload.environment.windDir
+                  });
+              }
+          }
+      });
+
+      return () => {
+          clearInterval(timer);
+          unsubscribe();
+      };
   }, []);
 
   return (
     <div className="space-y-4 font-mono text-zinc-800 dark:text-zinc-300 p-4 animate-in fade-in slide-in-from-right-4 duration-500">
         
-        {/* Live Clock Header */}
+        {/* Live Clock & Env Header */}
         <div className="flex justify-between items-center bg-zinc-900/50 p-2 rounded-lg border border-zinc-800 mb-2">
             <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
                 <Clock size={12} /> MARITIME TIME
             </div>
-            <div className="font-mono text-sm font-bold text-indigo-400 tracking-wider">
-                {zuluTime}
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <Wind size={12} />
+                    <span>{liveWind.dir} {liveWind.speed}kn</span>
+                </div>
+                <div className="font-mono text-sm font-bold text-indigo-400 tracking-wider">
+                    {zuluTime}
+                </div>
             </div>
         </div>
 
@@ -88,7 +114,7 @@ export const CaptainDashboard: React.FC = () => {
                                 <Wifi size={12} /> ADA SEA ONE
                             </div>
                             <div className="text-[9px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded border border-indigo-500/30">
-                                CONNECTED
+                                LIVE
                             </div>
                         </div>
                         

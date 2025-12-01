@@ -56,7 +56,7 @@ Bu liste, Ada'yı "Canlı Bir Varlığa" dönüştürmek için uygulanacak adım
 *   **Dosya:** `backend/vhf_radio.py` & `backend/nano.py`
 *   **Görev:** Sesli konuşmayı dinleyip, mili-saniyeler içinde cevap vermek.
 *   **Gemini API Kullanımı:**
-    *   **Model:** `gemini-2.5-flash` (veya `gemini-2.0-flash-exp` eğer latency kritikse).
+    *   **Model:** `gemini-2.5-flash` (veya `gemini-2.0-flash-lite-preview` eğer latency kritikse).
     *   **Ayarlar:** `response_mime_type="text/plain"` (JSON parse süresinden tasarruf etmek için).
     *   **Amaç:** Telsiz operatörü gibi anlık, kısa ve net cevaplar üretmek.
 
