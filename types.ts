@@ -1,3 +1,4 @@
+
 // types.ts
 
 export enum MessageRole {
@@ -103,7 +104,8 @@ export interface TrafficEntry {
   status: 'INBOUND' | 'OUTBOUND' | 'HOLDING' | 'TAXIING' | 'DOCKED' | 'AT_ANCHOR';
 }
 
-export type UserRole = 'GUEST' | 'CAPTAIN' | 'GENERAL_MANAGER';
+// UPDATED ROLES: VISITOR (Public), MEMBER (PassKit), CAPTAIN (Ops), MANAGER (Admin)
+export type UserRole = 'VISITOR' | 'MEMBER' | 'CAPTAIN' | 'GENERAL_MANAGER';
 
 export interface UserProfile {
   id: string;

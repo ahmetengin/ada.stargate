@@ -289,7 +289,7 @@ export const financeExpert = {
     const actions: AgentAction[] = [];
     
     // RBAC Check: Finance data is sensitive
-    if (user.role === 'GUEST') {
+    if (user.role === 'VISITOR') {
         addTrace(createLog('ada.finance', 'ERROR', `Access Denied: User role '${user.role}' lacks clearance for Financial Operations.`, 'EXPERT'));
         return [{
             id: `fin_deny_${Date.now()}`,

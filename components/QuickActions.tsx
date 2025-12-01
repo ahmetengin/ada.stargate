@@ -12,10 +12,11 @@ import {
     Recycle, 
     FileText 
 } from 'lucide-react';
+import { UserRole } from '../types';
 
 interface QuickActionsProps {
   onAction: (text: string) => void;
-  userRole: 'GUEST' | 'CAPTAIN' | 'GENERAL_MANAGER';
+  userRole: UserRole;
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, userRole }) => {
@@ -23,9 +24,9 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, userRole }
   // Define Role-Specific Action Sets
   const actions = [
     // --- GUEST ACTIONS ---
-    { label: 'Wi-Fi Access', icon: Wifi, text: 'What is the guest wifi password?', roles: ['GUEST'] },
-    { label: 'Book Table', icon: Utensils, text: 'Reserve a table at Poem Restaurant for tonight', roles: ['GUEST'] },
-    { label: 'Call Taxi', icon: Car, text: 'I need a taxi at the main gate', roles: ['GUEST'] },
+    { label: 'Wi-Fi Access', icon: Wifi, text: 'What is the guest wifi password?', roles: ['VISITOR', 'MEMBER'] },
+    { label: 'Book Table', icon: Utensils, text: 'Reserve a table at Poem Restaurant for tonight', roles: ['VISITOR', 'MEMBER'] },
+    { label: 'Call Taxi', icon: Car, text: 'I need a taxi at the main gate', roles: ['VISITOR', 'MEMBER'] },
     
     // --- CAPTAIN ACTIONS ---
     { label: 'Departure', icon: ArrowUp, text: 'Request departure clearance for S/Y Phisedelia', roles: ['CAPTAIN', 'GENERAL_MANAGER'] },
@@ -39,7 +40,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, userRole }
     { label: 'Staff Status', icon: LifeBuoy, text: 'Show security patrol status', roles: ['GENERAL_MANAGER'] },
   ];
 
-  const visibleActions = actions.filter(action => action.roles.includes(userRole));
+  const visibleActions = actions.filter(action => action.roles.includes(userRole as string));
 
   return (
     <div className="flex items-center sm:justify-center gap-2 mt-2 px-0 sm:px-6 overflow-x-auto custom-scrollbar no-scrollbar pb-1 w-full">

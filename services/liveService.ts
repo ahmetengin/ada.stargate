@@ -42,7 +42,7 @@ export class LiveSession {
       let VOICE_SYSTEM_INSTRUCTION = generateBaseSystemInstruction(tenantConfig);
       
       // Customize based on role, appending to the base instruction
-      if (userProfile.role === 'GUEST') {
+      if (userProfile.role === 'VISITOR') {
           VOICE_SYSTEM_INSTRUCTION += `
           ROLE: Receptionist & Sales Agent (West Istanbul Marina).
           TARGET: Potential Customer (Guest).
@@ -130,7 +130,7 @@ export class LiveSession {
       try {
           if (this.session && typeof this.session.send === 'function') {
               let welcomePrompt = "Connection Open. ";
-              if (userProfile.role === 'GUEST') welcomePrompt += "Greeting: 'West İstanbul Marina, hoş geldiniz.' (Wait for user request).";
+              if (userProfile.role === 'VISITOR') welcomePrompt += "Greeting: 'West İstanbul Marina, hoş geldiniz.' (Wait for user request).";
               else if (userProfile.role === 'CAPTAIN') welcomePrompt += "Greeting: 'West İstanbul Marina, dinlemede. Kanal 72.'";
               else welcomePrompt += `Greeting: 'Sistemler aktif ${userProfile.name.split(' ')[0]} Bey.'`;
 

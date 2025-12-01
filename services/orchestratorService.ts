@@ -1,3 +1,4 @@
+
 // services/orchestratorService.ts
 
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
@@ -89,7 +90,7 @@ export const orchestratorService = {
 
         // Existing heuristic logic...
         if (lower.includes('öde') || lower.includes('pay') || lower.includes('link')) {
-             if (user.role === 'GUEST') {
+             if (user.role === 'VISITOR') {
                  responseText = "**ACCESS DENIED.** Only registered Captains or Owners can settle vessel accounts.";
              } else {
                  traces.push(createLog('ada.finance', 'PLANNING', `User requested payment link. Initiating transaction protocol...`, 'EXPERT'));

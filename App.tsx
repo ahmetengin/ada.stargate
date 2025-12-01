@@ -10,6 +10,7 @@ import { VoiceModal } from './components/VoiceModal';
 import { PassportScanner } from './components/PassportScanner';
 import { AgentTraceModal } from './components/AgentTraceModal';
 import { DailyReportModal } from './components/DailyReportModal';
+import { AuthOverlay } from './components/AuthOverlay'; // IMPORTED
 import { streamChatResponse } from './services/geminiService';
 import { orchestratorService } from './services/orchestratorService';
 import { marinaExpert } from './services/agents/marinaAgent';
@@ -21,7 +22,8 @@ import { FEDERATION_REGISTRY } from './services/config';
 
 // --- SIMULATED USER DATABASE ---
 const MOCK_USER_DATABASE: Record<string, UserProfile> = {
-  'GUEST': { id: 'usr_anonymous', name: 'Misafir', role: 'GUEST', clearanceLevel: 0, legalStatus: 'GREEN' },
+  'VISITOR': { id: 'usr_visitor', name: 'Anonymous Visitor', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
+  'MEMBER': { id: 'usr_member_01', name: 'Caner Erkin', role: 'MEMBER', clearanceLevel: 1, legalStatus: 'GREEN' },
   'CAPTAIN': { id: 'usr_cpt_99', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN', contractId: 'CNT-2025-PHISEDELIA' },
   'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Levent Baktır', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
 };
@@ -146,6 +148,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 export default function App() {
   // --- STATE ---
   const [isBooting, setIsBooting] = useState(true);
+  const [isSwitchingAuth, setIsSwitchingAuth] = useState(false); // NEW: Auth State
+  const [targetRole, setTargetRole] = useState<string>(''); // NEW: Target Role State
+
   const [messages, setMessages] = useState<Message[]>(() => persistenceService.load(STORAGE_KEYS.MESSAGES, [INITIAL_MESSAGE]));
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
@@ -285,12 +290,25 @@ export default function App() {
   };
 
   const handleRoleChange = (newRole: string) => {
-      const profile = MOCK_USER_DATABASE[newRole];
+      if (newRole === userProfile.role) return;
+      
+      // 1. Trigger Animation
+      setTargetRole(newRole);
+      setIsSwitchingAuth(true);
+      
+      // 2. Data switch happens after animation (handled by onComplete)
+  };
+
+  const completeRoleSwitch = () => {
+      const profile = MOCK_USER_DATABASE[targetRole];
       if (profile) {
           setUserProfile(profile);
           persistenceService.save(STORAGE_KEYS.USER_PROFILE, profile);
-          if (newRole === 'GUEST' && activeMobileTab === 'nav') setActiveMobileTab('ops');
+          
+          // CRITICAL FIX: Removed forced tab switching logic.
+          // The user stays on the current tab (Nav/Chat/Ops) regardless of role switch.
       }
+      setIsSwitchingAuth(false);
   };
 
   // NEW: Handle Tenant Switch
@@ -352,6 +370,9 @@ export default function App() {
   return (
     <div className="h-[100dvh] w-full bg-slate-50 dark:bg-gunmetal-950 text-slate-900 dark:text-zinc-300 font-sans overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
         
+        {/* THE MAGIC OVERLAY */}
+        {isSwitchingAuth && <AuthOverlay targetRole={targetRole} onComplete={completeRoleSwitch} />}
+
         {/* --- MOBILE VIEW --- */}
         <div className="lg:hidden flex flex-col h-full w-full relative overflow-hidden">
             

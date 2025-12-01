@@ -21,9 +21,9 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
     { 
         name: 'S/Y Phisedelia', imo: '987654321', type: 'VO65 Racing Yacht (ex-Mapfre)', flag: 'MT', 
         ownerName: 'Ahmet Engin', ownerId: '12345678901', ownerEmail: 'ahmet.engin@example.com', ownerPhone: '+905321234567',
-        dwt: 150, loa: 20.4, beam: 5.6, status: 'INBOUND', location: 'Marmara Approach', 
-        coordinates: { lat: 40.8500, lng: 28.6200 }, // 10nm out
-        voyage: { lastPort: 'Alicante', nextPort: 'WIM', eta: 'Today 14:00' },
+        dwt: 150, loa: 20.4, beam: 5.6, status: 'DOCKED', location: 'Pontoon C-12', 
+        coordinates: { lat: 40.9634, lng: 28.6289 }, // Inside Marina
+        voyage: { lastPort: 'Alicante', nextPort: 'WIM', eta: 'Arrived' },
         paymentHistoryStatus: 'REGULAR',
         adaSeaOneStatus: 'INACTIVE', 
         utilities: { electricityKwh: 450.2, waterM3: 12.5, lastReading: 'Today 08:00', status: 'ACTIVE' }
@@ -57,6 +57,15 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
 
 // --- LOAD FROM PERSISTENCE ---
 let FLEET_DB: VesselIntelligenceProfile[] = persistenceService.load(STORAGE_KEYS.FLEET, DEFAULT_FLEET);
+
+// FIX: Force S/Y Phisedelia to DOCKED if it was stuck in INBOUND from previous state
+// This prevents the "Welcome Home" message from triggering on every reload.
+const phisedelia = FLEET_DB.find(v => v.name.includes('Phisedelia'));
+if (phisedelia && phisedelia.status === 'INBOUND') {
+    phisedelia.status = 'DOCKED';
+    phisedelia.location = 'Pontoon C-12';
+}
+
 persistenceService.save(STORAGE_KEYS.FLEET, FLEET_DB);
 
 const identifyVessel: TaskHandlerFn = async (ctx, obs) => {

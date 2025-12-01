@@ -305,7 +305,8 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
 
   const renderContent = () => {
     switch(userProfile.role) {
-      case 'GUEST': return <GuestDashboard />;
+      case 'VISITOR': 
+      case 'MEMBER': return <GuestDashboard />;
       case 'CAPTAIN': return <CaptainDashboard />;
       case 'GENERAL_MANAGER': return <GMDashboard />;
       default: return null;

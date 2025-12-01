@@ -60,21 +60,21 @@ export const Canvas: React.FC<CanvasProps> = ({
   // If a CODE RED is active, override the dashboard for non-guests to focus purely on the emergency
   const isEmergency = dashboardLogs.some(l => l.type === 'CRITICAL_EMERGENCY');
 
-  if (isEmergency && userProfile.role !== 'GUEST') {
+  if (isEmergency && userProfile.role !== 'VISITOR' && userProfile.role !== 'MEMBER') {
       return <EmergencyDashboard />;
   }
 
-  // --- VIEW 1: GUEST (LIFESTYLE DECK) ---
-  if (userProfile.role === 'GUEST') {
+  // --- VIEW 1 & 2: VISITOR / MEMBER (LIFESTYLE DECK) ---
+  if (userProfile.role === 'VISITOR' || userProfile.role === 'MEMBER') {
       return <GuestDashboard userProfile={userProfile} />;
   }
 
-  // --- VIEW 2: CAPTAIN (VESSEL DECK) ---
+  // --- VIEW 3: CAPTAIN (VESSEL DECK) ---
   if (userProfile.role === 'CAPTAIN') {
       return <CaptainDashboard />;
   }
 
-  // --- VIEW 3: GM / OPERATOR (MASTER OPS) ---
+  // --- VIEW 4: GM / OPERATOR (MASTER OPS) ---
   return (
       <div className="h-full w-full pb-20 lg:pb-0">
         <GMDashboard 
