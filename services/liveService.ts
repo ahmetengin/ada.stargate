@@ -1,6 +1,4 @@
 
-
-
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { UserProfile, TenantConfig } from "../types";
 import { TENANT_CONFIG } from "./config"; // Import TENANT_CONFIG for generating base instruction
@@ -156,13 +154,15 @@ export class LiveSession {
       if (audioData) {
         this.onAudioLevel?.(Math.random() * 0.5 + 0.3); 
         const buffer = await this.decodeAudioData(audioData);
-        const source = this.audioContext!.createBufferSource();
-        source.buffer = buffer;
-        source.connect(this.audioContext!.destination);
-        const now = this.audioContext!.currentTime;
-        const start = Math.max(now, this.nextStartTime);
-        source.start(start);
-        this.nextStartTime = start + buffer.duration;
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            const source = this.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(this.audioContext.destination);
+            const now = this.audioContext.currentTime;
+            const start = Math.max(now, this.nextStartTime);
+            source.start(start);
+            this.nextStartTime = start + buffer.duration;
+        }
       }
       
       if (msg.serverContent?.inputTranscription) {
@@ -193,7 +193,11 @@ export class LiveSession {
      for(let i=0; i<dataInt16.length; i++) {
         float32[i] = dataInt16[i] / 32768.0;
      }
-     const buffer = this.audioContext!.createBuffer(1, float32.length, 24000);
+     // Safe creation
+     if (!this.audioContext || this.audioContext.state === 'closed') {
+         throw new Error("AudioContext is closed");
+     }
+     const buffer = this.audioContext.createBuffer(1, float32.length, 24000);
      buffer.getChannelData(0).set(float32);
      return buffer;
   }
@@ -250,10 +254,12 @@ export class LiveSession {
             if (typeof this.session.close === 'function') this.session.close(); 
         } catch(e) { console.warn("Session close error", e); }
     }
-    this.inputSource?.disconnect();
-    this.processor?.disconnect();
+    try {
+        this.inputSource?.disconnect();
+        this.processor?.disconnect();
+    } catch (e) {}
     
-    // Check if context is valid and running before closing
+    // SAFE CLOSE: Check state before closing
     if (this.audioContext && this.audioContext.state !== 'closed') {
         try {
             await this.audioContext.close();

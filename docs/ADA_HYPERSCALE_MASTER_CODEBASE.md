@@ -104,7 +104,7 @@ volumes:
 ```
 
 ### `nginx/nginx.conf`
-Updated to support FastRTC (`/radio`) and WebSocket (`/ws`) proxying.
+Updated to support FastRTC (`/radio`) and WebSocket (`/ws`) proxying with secure upgrades.
 
 ```nginx
 events {
@@ -132,7 +132,7 @@ http {
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        # Proxy WebSocket Telemetry
+        # Proxy WebSocket Telemetry (Supports WSS via Upgrade)
         location /ws/ {
             proxy_pass http://ada-core:8000/ws/;
             proxy_http_version 1.1;
@@ -153,71 +153,9 @@ http {
 }
 ```
 
-### `vite.config.ts`
-For local development proxying.
-
-```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  define: {
-    'process.env': process.env
-  },
-  server: {
-    host: true,
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://127.0.0.1:8000',
-        changeOrigin: true,
-        ws: true
-      },
-      '/radio': {
-        target: 'http://127.0.0.1:8000',
-        changeOrigin: true,
-        ws: true
-      }
-    }
-  }
-});
-```
-
 ---
 
 ## 🐍 2. THE BRAIN (PYTHON BACKEND)
-
-### `backend/requirements.txt`
-```text
-fastapi>=0.109.0
-uvicorn>=0.27.0
-pydantic>=2.6.0
-python-dotenv>=1.0.1
-google-genai>=0.3.0
-httpx>=0.26.0
-redis>=5.0.0
-langgraph>=0.0.10
-langchain-core
-langchain-community
-langchain-google-genai
-qdrant-client
-asyncpg
-markdown
-beautifulsoup4
-fastrtc>=0.1.0
-gradio>=5.0.0
-numpy
-scipy
-loguru
-paho-mqtt>=1.6.1
-schedule>=1.2.0
-websockets>=12.0
-```
 
 ### `backend/main.py`
 WebSocket & FastRTC Enabled API.
@@ -281,7 +219,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# --- TELEMETRY SIMULATOR ---
+# --- TELEMETRY SIMULATOR (Until MQTT is live) ---
 async def simulate_telemetry_stream():
     """Simulates live NMEA2000/SignalK data stream."""
     while True:
@@ -311,7 +249,7 @@ async def startup_event():
     # 1. Daemon
     daemon_thread = threading.Thread(target=start_daemon, daemon=True)
     daemon_thread.start()
-    # 2. Telemetry
+    # 2. Telemetry Simulation
     asyncio.create_task(simulate_telemetry_stream())
 
 @app.websocket("/ws/telemetry")
@@ -357,37 +295,63 @@ if __name__ == "__main__":
 ## 3. FRONTEND INTEGRATION
 
 ### `services/telemetryStream.ts`
-Manage WebSocket connection.
+Manages Secure WebSocket connection to Backend.
 
 ```typescript
+// services/telemetryStream.ts
+
 export type TelemetryCallback = (data: any) => void;
 
 class TelemetryStreamService {
     private socket: WebSocket | null = null;
     private listeners: TelemetryCallback[] = [];
-    private reconnectInterval = 5000;
+    private retryCount = 0;
+    private maxRetryDelay = 30000;
 
     connect() {
-        if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) return;
+        if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+            return;
+        }
 
-        const protocol = window.location.protocol.includes('https') ? 'wss:' : 'ws:';
+        // SECURE PROTOCOL SELECTION
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
         const wsUrl = `${protocol}//${host}/ws/telemetry`;
 
         try {
             this.socket = new WebSocket(wsUrl);
-            this.socket.onmessage = (event) => {
-                try { this.notifyListeners(JSON.parse(event.data)); } catch (e) {}
+            
+            this.socket.onopen = () => {
+                console.log("📡 Telemetry Stream Connected");
+                this.retryCount = 0; 
             };
-            this.socket.onclose = () => setTimeout(() => this.connect(), this.reconnectInterval);
+
+            this.socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.notifyListeners(data);
+                } catch (e) {}
+            };
+
+            this.socket.onclose = () => this.handleReconnect();
+            
         } catch (error) {
             console.error("[Telemetry] Connection failed:", error);
+            this.handleReconnect();
         }
+    }
+
+    private handleReconnect() {
+        const delay = Math.min(1000 * Math.pow(1.5, this.retryCount), this.maxRetryDelay);
+        setTimeout(() => {
+            this.retryCount++;
+            this.connect();
+        }, delay);
     }
 
     subscribe(callback: TelemetryCallback) {
         this.listeners.push(callback);
-        this.connect();
+        if (!this.socket || this.socket.readyState !== WebSocket.OPEN) this.connect();
         return () => { this.listeners = this.listeners.filter(l => l !== callback); };
     }
 

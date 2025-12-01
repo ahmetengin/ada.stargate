@@ -30,7 +30,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
       connectCloud();
     }
     return () => {
-       // Cleanup handled on close logic or component unmount if needed
+       // Cleanup handled on disconnect button or modal unmount if managed externally
     };
   }, [isOpen]);
 
