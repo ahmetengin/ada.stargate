@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark">
   <head>
@@ -10,44 +11,36 @@
         darkMode: 'class',
         theme: {
           extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['JetBrains Mono', 'monospace'],
+              display: ['Rajdhani', 'sans-serif'],
+            },
             colors: {
               gunmetal: {
                 950: '#020617',
                 900: '#0f172a',
                 800: '#1e293b',
               },
-              slate: {
-                50: '#f8fafc',
-                100: '#f1f5f9',
-                200: '#e2e8f0',
-                800: '#1e293b',
-                900: '#0f172a',
-              },
-              teal: {
-                400: '#2dd4bf',
-                500: '#14b8a6',
-                600: '#0d9488',
-                900: '#134e4a',
+              cyan: {
+                400: '#22d3ee',
+                500: '#06b6d4',
+                900: '#164e63',
               },
             },
             animation: {
               'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-              'scan': 'scan 3s linear infinite',
               'radar-spin': 'radar-spin 4s linear infinite',
-              'grid-drift': 'grid-drift 60s linear infinite',
+              'grid-drift': 'grid-drift 120s linear infinite',
             },
             keyframes: {
-              scan: {
-                '0%': { transform: 'translateY(-100%)' },
-                '100%': { transform: 'translateY(100%)' }
-              },
               'radar-spin': {
                 '0%': { transform: 'rotate(0deg)' },
                 '100%': { transform: 'rotate(360deg)' }
               },
               'grid-drift': {
                 '0%': { backgroundPosition: '0 0' },
-                '100%': { backgroundPosition: '50px 50px' }
+                '100%': { backgroundPosition: '20px 20px' }
               }
             }
           }
@@ -56,19 +49,12 @@
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-primary: #f8fafc;
-        --text-primary: #1e293b;
-        --panel-bg: #ffffff;
-        --border-color: #e2e8f0;
-      }
-      :root.dark {
-        --bg-primary: #020617;
+        --bg-primary: #020617; /* Deep Gunmetal */
         --text-primary: #e2e8f0;
-        --panel-bg: #0f172a;
-        --border-color: #1e293b;
+        --neon-accent: #22d3ee;
       }
 
       body {
@@ -76,7 +62,10 @@
         background-color: var(--bg-primary); 
         color: var(--text-primary);
         overflow: hidden;
-        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      
+      h1, h2, h3, h4, h5, h6, .font-display {
+        font-family: 'Rajdhani', sans-serif;
       }
       
       code, .font-mono {
@@ -85,42 +74,41 @@
       
       /* Clean Scrollbar */
       ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 4px;
+        height: 4px;
       }
       ::-webkit-scrollbar-track {
         background: transparent; 
       }
       ::-webkit-scrollbar-thumb {
-        background: rgba(148, 163, 184, 0.5); 
-        border-radius: 3px;
+        background: rgba(34, 211, 238, 0.2); 
+        border-radius: 2px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(100, 116, 139, 0.8); 
+        background: rgba(34, 211, 238, 0.4); 
       }
 
-      /* CRT Scanline Effect */
-      .scanlines::before {
-        content: " ";
-        display: block;
-        position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        right: 0;
-        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
-        z-index: 2;
-        background-size: 100% 2px, 3px 100%;
-        pointer-events: none;
-        opacity: 0.4;
-      }
-
-      /* Animated Grid Background */
+      /* Clean Grid Background - No Vignette */
       .bg-grid-pattern {
-        background-image: linear-gradient(to right, rgba(128, 128, 128, 0.05) 1px, transparent 1px),
-                          linear-gradient(to bottom, rgba(128, 128, 128, 0.05) 1px, transparent 1px);
+        background-image: 
+          linear-gradient(to right, rgba(34, 211, 238, 0.03) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(34, 211, 238, 0.03) 1px, transparent 1px);
         background-size: 40px 40px;
-        animation: grid-drift 60s linear infinite;
+        animation: grid-drift 120s linear infinite;
+        opacity: 0.5;
+      }
+      
+      /* Glass Panel Utility */
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      
+      .neon-text {
+        text-shadow: 0 0 10px rgba(34, 211, 238, 0.3);
       }
     </style>
   <script type="importmap">
@@ -141,7 +129,7 @@
 </script>
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root" class="bg-grid-pattern fixed inset-0"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

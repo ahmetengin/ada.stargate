@@ -6,7 +6,7 @@ import {
     Radio, Shield, Anchor, Wifi, Zap, Battery, Signal, UserCheck, 
     CreditCard, ScanLine, Activity, CheckCircle2, 
     LifeBuoy, Droplets, Wrench, Navigation, 
-    Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn
+    Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn, ChevronRight
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -54,17 +54,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const tenantNetworkName = activeTenant ? activeTenant.network : 'Unknown Network';
 
   return (
-    <div className="h-full w-full flex flex-col bg-zinc-50 dark:bg-gunmetal-950 overflow-y-auto custom-scrollbar transition-colors duration-300 border-r border-zinc-200 dark:border-white/5">
+    <div className="h-full w-full flex flex-col bg-[#020617]/80 backdrop-blur-xl border-r border-white/5 text-slate-300 relative overflow-hidden">
+      
+      {/* Glow Effect */}
+      <div className="absolute top-0 left-0 w-full h-32 bg-cyan-500/5 blur-[100px] pointer-events-none"></div>
+
       {/* Header */}
-      <div className="p-6 pb-4 flex-shrink-0">
-        <div className="flex items-center gap-3 text-zinc-800 dark:text-zinc-200 mb-1 cursor-pointer group" onClick={onPulseClick}>
-            <div className="w-10 h-10 bg-gradient-to-br from-zinc-800 to-black dark:from-white/10 dark:to-white/5 rounded-xl flex items-center justify-center border border-zinc-200 dark:border-white/10 shadow-lg group-hover:scale-105 transition-transform">
-                <Anchor size={20} className="text-teal-500" />
+      <div className="p-6 flex-shrink-0 border-b border-white/5 relative z-10">
+        <div className="flex items-center gap-4 cursor-pointer group" onClick={onPulseClick}>
+            <div className="relative">
+                <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center border border-white/10 group-hover:border-cyan-500/50 transition-all duration-500">
+                    <Anchor size={20} className="text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[#020617] rounded-full flex items-center justify-center">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                </div>
             </div>
             <div>
-                <h2 className="text-sm font-black tracking-widest uppercase">ADA STARGATE</h2>
-                <div className="text-[9px] text-zinc-500 dark:text-zinc-400 font-mono tracking-wider flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <h2 className="text-lg font-display font-bold tracking-widest text-white leading-none">ADA<span className="text-cyan-400">STARGATE</span></h2>
+                <div className="text-[10px] text-slate-500 font-mono tracking-wider mt-1">
                     {tenantNetworkName}
                 </div>
             </div>
@@ -72,58 +80,56 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* DYNAMIC CONTENT AREA BASED ON ROLE */}
-      <div className="px-4 py-2 flex-1 space-y-6">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-8 relative z-10">
           
           {/* 1. GENERAL MANAGER VIEW: The "Matrix" (System Nodes) */}
           {isGM && (
-              <>
-                <div className="bg-zinc-100/50 dark:bg-white/5 rounded-xl p-4 border border-zinc-200 dark:border-white/5">
-                    <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Activity size={12} /> Neural Network Status
-                    </div>
-                    <div className="space-y-3">
-                        {nodes.map((node) => {
-                        const isWorking = nodeStates[node.id] === 'working';
-                        return (
-                            <div key={node.id} className="flex items-center justify-between group">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isWorking ? 'bg-amber-500 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'bg-emerald-500'}`} />
-                                    <span className={`text-[10px] font-mono font-bold uppercase transition-colors ${isWorking ? 'text-zinc-900 dark:text-white' : 'text-zinc-500 dark:text-zinc-500'}`}>
-                                        {node.label}
-                                    </span>
-                                </div>
-                                {isWorking && <ActivityIcon />}
+              <div className="space-y-4">
+                <SectionHeader title="System Status" />
+                <div className="grid grid-cols-1 gap-1">
+                    {nodes.map((node) => {
+                    const isWorking = nodeStates[node.id] === 'working';
+                    return (
+                        <div key={node.id} className="flex items-center justify-between group py-2 px-3 hover:bg-white/5 rounded-lg transition-all border border-transparent hover:border-white/5">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-1 h-1 rounded-full ${isWorking ? 'bg-amber-400 box-shadow-glow' : 'bg-cyan-500'}`} />
+                                <span className={`text-[10px] font-mono font-bold uppercase transition-colors ${isWorking ? 'text-amber-400' : 'text-slate-400 group-hover:text-cyan-200'}`}>
+                                    {node.label}
+                                </span>
                             </div>
-                        );
-                        })}
-                    </div>
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                {isWorking ? <ActivityIcon color="text-amber-400" /> : <div className="text-[9px] text-slate-600 font-mono">OK</div>}
+                            </div>
+                        </div>
+                    );
+                    })}
                 </div>
-              </>
+              </div>
           )}
 
           {/* 2. CAPTAIN VIEW: "My Ship" & Port Services */}
           {isCaptain && (
-              <>
-                {/* Vessel Status Card */}
-                <div className="bg-zinc-900 text-white rounded-xl p-4 shadow-lg relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-3 opacity-10"><Anchor size={48} /></div>
+              <div className="space-y-6">
+                {/* Vessel Status HUD */}
+                <div className="relative overflow-hidden rounded-xl border border-cyan-500/20 bg-cyan-950/10 p-4">
+                    <div className="absolute top-0 right-0 p-2 opacity-10 text-cyan-500"><Anchor size={64} /></div>
                     <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-4 border-b border-white/10 pb-2">
-                            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">COMMAND</span>
-                            <span className="text-[9px] font-bold bg-indigo-500 px-2 py-0.5 rounded">S/Y Phisedelia</span>
+                        <div className="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+                            <span className="text-[10px] font-display font-bold text-cyan-400 uppercase tracking-widest">COMMAND</span>
+                            <span className="text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-300 px-2 py-0.5 rounded border border-cyan-500/20">S/Y Phisedelia</span>
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-2 font-mono text-[10px]">
                             <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-zinc-400 text-[10px]"><Zap size={10}/> Shore Power</div>
-                                <span className="text-[10px] font-bold text-emerald-400">CONNECTED</span>
+                                <span className="text-slate-400">Power</span>
+                                <span className="text-emerald-400">CONNECTED</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-zinc-400 text-[10px]"><Battery size={10}/> Service Bank</div>
-                                <span className="text-[10px] font-bold text-yellow-400">24.4V</span>
+                                <span className="text-slate-400">Battery</span>
+                                <span className="text-amber-400">24.4V</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-2 text-zinc-400 text-[10px]"><CreditCard size={10}/> Account</div>
-                                <span className="text-[10px] font-bold text-zinc-200">CLEAR</span>
+                                <span className="text-slate-400">Account</span>
+                                <span className="text-white">CLEAR</span>
                             </div>
                         </div>
                     </div>
@@ -131,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Port Services Menu */}
                 <div>
-                    <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2 pl-2">Port Services</div>
+                    <SectionHeader title="Services" />
                     <div className="space-y-1">
                         <MenuButton icon={LifeBuoy} label="Request Tender" />
                         <MenuButton icon={Droplets} label="Fuel & Water" />
@@ -139,24 +145,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <MenuButton icon={Navigation} label="Flight Plan" />
                     </div>
                 </div>
-              </>
+              </div>
           )}
 
           {/* 3. MEMBER VIEW: "Digital Pass" & Concierge */}
           {isMember && (
-              <>
+              <div className="space-y-6">
                 {/* Guest Pass Card */}
-                <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-xl p-4 text-white shadow-xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-2 opacity-20"><ScanLine size={48}/></div>
-                    <div className="relative z-10">
-                        <div className="text-[10px] font-bold opacity-70 uppercase tracking-widest mb-1">ADA PASS</div>
-                        <div className="text-lg font-bold mb-4">{userProfile.name}</div>
+                <div className="rounded-xl p-1 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30">
+                    <div className="bg-[#020617]/80 rounded-lg p-4 relative overflow-hidden backdrop-blur-sm">
+                        <div className="absolute top-0 right-0 p-2 opacity-20 text-indigo-400"><ScanLine size={48}/></div>
+                        <div className="text-[9px] font-display font-bold text-indigo-400 uppercase tracking-widest mb-1">ADA PASS</div>
+                        <div className="text-lg font-bold text-white mb-4">{userProfile.name}</div>
                         
-                        <div className="flex items-center gap-2 bg-white/10 p-2 rounded backdrop-blur-sm">
-                            <Wifi size={14} className="text-emerald-300"/>
+                        <div className="flex items-center gap-2 bg-white/5 p-2 rounded border border-white/5">
+                            <Wifi size={14} className="text-emerald-400"/>
                             <div>
-                                <div className="text-[9px] opacity-60 uppercase">Wi-Fi Access</div>
-                                <div className="text-[10px] font-mono font-bold">WIM_GUEST / Sailor25</div>
+                                <div className="text-[8px] text-slate-500 uppercase">Wi-Fi Access</div>
+                                <div className="text-[10px] font-mono font-bold text-emerald-300">WIM_GUEST / Sailor25</div>
                             </div>
                         </div>
                     </div>
@@ -164,31 +170,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Concierge Menu */}
                 <div>
-                    <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2 pl-2">Member Concierge</div>
+                    <SectionHeader title="Concierge" />
                     <div className="space-y-1">
                         <MenuButton icon={Car} label="Valet / Taxi" />
                         <MenuButton icon={Utensils} label="Dining Reservations" />
                         <MenuButton icon={Info} label="Concierge Desk" />
                     </div>
                 </div>
-              </>
+              </div>
           )}
 
           {/* 4. VISITOR VIEW: "Public Info" */}
           {isVisitor && (
-              <>
+              <div className="space-y-6">
                 {/* Welcome Card */}
-                <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4 shadow-sm text-center">
-                    <div className="text-lg font-bold text-slate-800 dark:text-white mb-2">Welcome to WIM</div>
-                    <p className="text-xs text-zinc-500 mb-4">Discover the marina lifestyle. Login to access exclusive services.</p>
-                    <button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">
+                <div className="bg-white/5 border border-white/10 rounded-xl p-4 text-center backdrop-blur-sm">
+                    <div className="text-lg font-display font-bold text-white mb-2">Welcome to WIM</div>
+                    <p className="text-xs text-slate-400 mb-4 leading-relaxed">Discover the marina lifestyle. Login to access exclusive services.</p>
+                    <button className="w-full bg-cyan-600 hover:bg-cyan-500 text-white py-2 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                         <LogIn size={12} /> Member Login
                     </button>
                 </div>
 
                 {/* Public Menu */}
                 <div>
-                    <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2 pl-2">Explore Marina</div>
+                    <SectionHeader title="Explore" />
                     <div className="space-y-1">
                         <MenuButton icon={MapPin} label="Marina Map" />
                         <MenuButton icon={ShoppingBag} label="Shops & Brands" />
@@ -196,40 +202,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <MenuButton icon={Calendar} label="Events" />
                     </div>
                 </div>
-              </>
+              </div>
           )}
 
       </div>
 
       {/* VHF MONITOR (GM ONLY) */}
       {isGM && (
-        <div className="px-6 py-4 border-t border-zinc-200 dark:border-white/5">
+        <div className="px-6 py-4 border-t border-white/5 relative z-10 bg-black/20">
             <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-zinc-500 font-bold text-[10px] uppercase tracking-wider">
-                    <Radio size={12} /> Radio Monitor
+                <div className="flex items-center gap-2 text-cyan-500 font-bold text-[10px] uppercase tracking-wider font-mono">
+                    <Radio size={12} /> Live Spectrum
                 </div>
-                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse shadow-[0_0_8px_cyan]"></div>
             </div>
-            <div className="bg-zinc-900 rounded p-2 border border-zinc-800 relative overflow-hidden">
-                <div className="flex justify-between items-end relative z-10">
-                    <div className="text-emerald-500 font-mono text-lg leading-none font-bold">SCANNING</div>
-                    <div className="flex gap-0.5 items-end h-3">
-                        {[...Array(5)].map((_, i) => (
-                            <div key={i} className="w-1 bg-emerald-500/50 animate-pulse" style={{ height: `${Math.random() * 80 + 20}%`, animationDelay: `${i * 0.1}s` }}></div>
-                        ))}
-                    </div>
-                </div>
+            <div className="h-8 flex items-end gap-0.5 opacity-50">
+                {[...Array(20)].map((_, i) => (
+                    <div key={i} className="flex-1 bg-cyan-500/50 animate-pulse" style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.05}s` }}></div>
+                ))}
             </div>
         </div>
       )}
 
       {/* FOOTER: SYSTEM CONTROLS */}
-      <div className="px-4 py-4 border-t border-zinc-200 dark:border-white/5 bg-zinc-100/50 dark:bg-black/20">
+      <div className="p-4 border-t border-white/5 bg-[#020617] relative z-10">
           
           {/* Identity Switcher */}
           <div className="mb-4">
-            <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                <Shield size={10} /> Active Identity
+            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Shield size={10} /> Identity Profile
             </div>
             <div className="grid grid-cols-4 gap-1">
                 <RoleMiniButton role="VISITOR" current={userProfile.role} onClick={() => onRoleChange('VISITOR')} label="VIS" />
@@ -241,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Node Switcher */}
           <div>
-            <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+            <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
                 <Anchor size={10} /> Active Node
             </div>
             <div className="space-y-1">
@@ -263,20 +264,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 // --- SUB-COMPONENTS ---
 
+const SectionHeader = ({ title }: { title: string }) => (
+    <h3 className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 pl-1 border-l-2 border-slate-700">
+        {title}
+    </h3>
+);
+
 const MenuButton = ({ icon: Icon, label }: { icon: any, label: string }) => (
-    <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left group">
-        <Icon size={14} className="text-zinc-400 group-hover:text-current transition-colors" />
-        {label}
+    <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:bg-white/5 hover:text-cyan-300 transition-all group">
+        <div className="flex items-center gap-3">
+            <Icon size={14} className="text-slate-600 group-hover:text-cyan-400 transition-colors" />
+            {label}
+        </div>
+        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-cyan-500" />
     </button>
 );
 
 const RoleMiniButton = ({ role, current, onClick, label }: any) => (
     <button
         onClick={onClick}
-        className={`px-1 py-1.5 rounded text-[8px] font-bold uppercase tracking-wider text-center transition-all ${
+        className={`px-1 py-1.5 rounded text-[8px] font-bold uppercase tracking-wider text-center transition-all border ${
             current === role 
-            ? 'bg-zinc-800 dark:bg-white text-white dark:text-black shadow-md' 
-            : 'text-zinc-500 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/10'
+            ? 'bg-cyan-950 text-cyan-400 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]' 
+            : 'text-slate-600 border-white/5 hover:bg-white/5 hover:text-slate-300'
         }`}
     >
         {label}
@@ -286,21 +296,21 @@ const RoleMiniButton = ({ role, current, onClick, label }: any) => (
 const TenantButton = ({ tenantId, currentTenantId, onClick, label }: any) => (
     <button
         onClick={onClick}
-        className={`w-full text-left px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider flex justify-between items-center transition-all ${
+        className={`w-full text-left px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider flex justify-between items-center transition-all border ${
             currentTenantId === tenantId 
-            ? 'bg-teal-600 dark:bg-teal-500 text-white shadow-md' 
-            : 'text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/5'
+            ? 'bg-cyan-950/30 text-cyan-400 border-cyan-500/30' 
+            : 'text-slate-500 border-transparent hover:bg-white/5'
         }`}
     >
         <span className="truncate">{label}</span>
-        {currentTenantId === tenantId && <CheckCircle2 size={10} />}
+        {currentTenantId === tenantId && <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_5px_cyan]"></div>}
     </button>
 );
 
-const ActivityIcon = () => (
+const ActivityIcon = ({ color }: { color: string }) => (
     <div className="flex gap-0.5">
-        <div className="w-0.5 h-2 bg-zinc-400 animate-pulse"></div>
-        <div className="w-0.5 h-3 bg-zinc-400 animate-pulse delay-75"></div>
-        <div className="w-0.5 h-1.5 bg-zinc-400 animate-pulse delay-150"></div>
+        <div className={`w-0.5 h-2 ${color} animate-pulse`}></div>
+        <div className={`w-0.5 h-3 ${color} animate-pulse delay-75`}></div>
+        <div className={`w-0.5 h-1.5 ${color} animate-pulse delay-150`}></div>
     </div>
 );

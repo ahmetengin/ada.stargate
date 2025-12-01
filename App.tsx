@@ -93,23 +93,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full w-full bg-slate-50 dark:bg-gunmetal-950 relative transition-colors duration-300">
+        <div className="flex flex-col h-full w-full bg-[#050a14] relative transition-colors duration-300">
             {/* Header */}
-            <div className="h-14 flex items-center justify-between px-4 border-b border-slate-200 dark:border-white/5 bg-white/80 dark:bg-gunmetal-900/80 backdrop-blur-md z-10 flex-shrink-0 transition-colors duration-300">
+            <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 bg-[#050a14] z-10 flex-shrink-0 transition-colors duration-300">
                 <div className="flex items-center gap-2 cursor-pointer" onClick={onTraceClick}>
-                    <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse"></div>
-                    <span className="text-[10px] font-bold text-slate-600 dark:text-zinc-400 tracking-[0.2em] uppercase">
+                    <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse shadow-[0_0_8px_cyan]"></div>
+                    <span className="text-[10px] font-display font-bold text-slate-300 tracking-[0.2em] uppercase hover:text-cyan-400 transition-colors">
                         {activeTenantConfig.id}.MARINA
                     </span>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-slate-100 dark:bg-white/5 rounded border border-slate-200 dark:border-white/10">
-                        <span className="text-[9px] font-bold text-slate-500 dark:text-zinc-400">VHF {activeChannel}</span>
+                    <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-white/5 rounded border border-white/10">
+                        <span className="text-[9px] font-mono font-bold text-zinc-400">VHF {activeChannel}</span>
                     </div>
                     <button 
                         onClick={onToggleTheme}
-                        className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 transition-colors"
+                        className="p-2 rounded-full hover:bg-white/10 text-slate-500 transition-colors"
                     >
                         {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Monitor size={14} />}
                     </button>
@@ -129,7 +129,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
 
             {/* Input Area */}
-            <div className="flex-shrink-0 bg-slate-50 dark:bg-gunmetal-950 border-t border-slate-200 dark:border-white/5 p-2 sm:p-4 pb-4 sm:pb-6 z-20 transition-colors duration-300">
+            <div className="flex-shrink-0 bg-[#050a14] border-t border-white/5 p-2 sm:p-4 pb-4 sm:pb-6 z-20 transition-colors duration-300">
                 <InputArea 
                     onSend={onSend}
                     isLoading={isLoading}
@@ -305,8 +305,7 @@ export default function App() {
           setUserProfile(profile);
           persistenceService.save(STORAGE_KEYS.USER_PROFILE, profile);
           
-          // CRITICAL FIX: Removed forced tab switching logic.
-          // The user stays on the current tab (Nav/Chat/Ops) regardless of role switch.
+          // No forced tab switching logic here anymore! 
       }
       setIsSwitchingAuth(false);
   };
@@ -368,7 +367,7 @@ export default function App() {
   if (isBooting) return <BootSequence />;
 
   return (
-    <div className="h-[100dvh] w-full bg-slate-50 dark:bg-gunmetal-950 text-slate-900 dark:text-zinc-300 font-sans overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
+    <div className="h-[100dvh] w-full bg-[#020617] text-slate-300 font-sans overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
         
         {/* THE MAGIC OVERLAY */}
         {isSwitchingAuth && <AuthOverlay targetRole={targetRole} onComplete={completeRoleSwitch} />}
@@ -429,24 +428,24 @@ export default function App() {
                 )}
             </div>
 
-            <div className="h-16 flex-shrink-0 bg-white dark:bg-gunmetal-900 border-t border-slate-200 dark:border-white/5 flex items-center justify-around px-2 z-50 pb-safe transition-colors duration-300">
+            <div className="h-16 flex-shrink-0 bg-[#050a14] border-t border-white/5 flex items-center justify-around px-2 z-50 pb-safe transition-colors duration-300">
                 <button 
                     onClick={() => setActiveMobileTab('nav')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'nav' ? 'text-teal-600 dark:text-teal-500' : 'text-slate-400 dark:text-zinc-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'nav' ? 'text-teal-400' : 'text-zinc-500'}`}
                 >
                     <Menu size={20} />
                     <span className="text-[9px] font-bold">NAV</span>
                 </button>
                 <button 
                     onClick={() => setActiveMobileTab('comms')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'comms' ? 'text-teal-600 dark:text-teal-500' : 'text-slate-400 dark:text-zinc-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'comms' ? 'text-teal-400' : 'text-zinc-500'}`}
                 >
                     <MessageSquare size={20} />
                     <span className="text-[9px] font-bold">CHAT</span>
                 </button>
                 <button 
                     onClick={() => setActiveMobileTab('ops')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'ops' ? 'text-teal-600 dark:text-teal-500' : 'text-slate-400 dark:text-zinc-400'}`}
+                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'ops' ? 'text-teal-400' : 'text-zinc-500'}`}
                 >
                     <Activity size={20} />
                     <span className="text-[9px] font-bold">OPS</span>
@@ -457,7 +456,7 @@ export default function App() {
         {/* --- DESKTOP VIEW --- */}
         <div className="hidden lg:flex h-full w-full">
             {/* 1. LEFT SIDEBAR */}
-            <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full border-r border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-gunmetal-950 transition-colors duration-300">
+            <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full border-r border-white/5 bg-[#020617] transition-colors duration-300">
                 <Sidebar 
                     nodeStates={nodeStates}
                     activeChannel={activeChannel}
@@ -474,14 +473,14 @@ export default function App() {
 
             {/* LEFT RESIZER */}
             <div 
-                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group"
+                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group bg-[#020617]"
                 onMouseDown={() => setIsResizingLeft(true)}
             >
-                <div className="h-8 w-0.5 bg-slate-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
+                <div className="h-8 w-0.5 bg-zinc-800 group-hover:bg-cyan-400 rounded-full"></div>
             </div>
 
             {/* 2. CENTER CHAT */}
-            <div className="flex-1 h-full min-w-[350px] border-r border-slate-200 dark:border-white/5">
+            <div className="flex-1 h-full min-w-[350px] border-r border-white/5">
                 <ChatInterface 
                     messages={messages}
                     activeChannel={activeChannel}
@@ -502,14 +501,14 @@ export default function App() {
 
             {/* RIGHT RESIZER */}
             <div 
-                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group"
+                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group bg-[#020617]"
                 onMouseDown={() => setIsResizingRight(true)}
             >
-                <div className="h-8 w-0.5 bg-slate-300 dark:bg-zinc-700 group-hover:bg-white rounded-full"></div>
+                <div className="h-8 w-0.5 bg-zinc-800 group-hover:bg-cyan-400 rounded-full"></div>
             </div>
 
             {/* 3. RIGHT OPS CANVAS */}
-            <div style={{ width: opsWidth }} className="flex-shrink-0 h-full bg-slate-100 dark:bg-[#050b14] transition-colors duration-300">
+            <div style={{ width: opsWidth }} className="flex-shrink-0 h-full bg-[#050b14] transition-colors duration-300">
                 <Canvas 
                     vesselsInPort={vesselsInPort}
                     registry={registry}

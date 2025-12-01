@@ -8,7 +8,7 @@ import { commercialExpert } from '../../services/agents/commercialAgent';
 import { analyticsExpert } from '../../services/agents/analyticsAgent';
 import { berthExpert } from '../../services/agents/berthAgent';
 import { reservationsExpert } from '../../services/agents/reservationsAgent';
-import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Layers, Zap, Users, BarChart3 } from 'lucide-react';
+import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Layers, Zap, Users, BarChart3, Scan } from 'lucide-react';
 
 import { OpsTab } from './gm/OpsTab';
 import { FleetTab } from './gm/FleetTab';
@@ -39,9 +39,7 @@ const DEPARTMENTS = [
         id: 'OPS',
         label: 'OPERATIONS',
         icon: Navigation,
-        color: 'text-indigo-500',
-        borderColor: 'border-indigo-500',
-        bgHover: 'hover:bg-indigo-500/10',
+        color: 'text-indigo-400',
         modules: [
             { id: 'ops', label: 'LIVE MAP' },
             { id: 'fleet', label: 'FLEET CMD' },
@@ -52,9 +50,7 @@ const DEPARTMENTS = [
         id: 'ENG',
         label: 'TECHNICAL',
         icon: Zap,
-        color: 'text-amber-500',
-        borderColor: 'border-amber-500',
-        bgHover: 'hover:bg-amber-500/10',
+        color: 'text-amber-400',
         modules: [
             { id: 'facility', label: 'INFRA & ECO' }
         ]
@@ -63,9 +59,7 @@ const DEPARTMENTS = [
         id: 'COM',
         label: 'COMMERCIAL',
         icon: DollarSign,
-        color: 'text-emerald-500',
-        borderColor: 'border-emerald-500',
-        bgHover: 'hover:bg-emerald-500/10',
+        color: 'text-emerald-400',
         modules: [
             { id: 'bookings', label: 'BOOKINGS' },
             { id: 'commercial', label: 'RETAIL' },
@@ -76,9 +70,7 @@ const DEPARTMENTS = [
         id: 'ADM',
         label: 'ADMIN',
         icon: Users,
-        color: 'text-blue-500',
-        borderColor: 'border-blue-500',
-        bgHover: 'hover:bg-blue-500/10',
+        color: 'text-blue-400',
         modules: [
             { id: 'hr', label: 'HR / STAFF' },
             { id: 'guest_entry', label: 'SECURITY' }
@@ -88,9 +80,7 @@ const DEPARTMENTS = [
         id: 'INT',
         label: 'INTEL',
         icon: BarChart3,
-        color: 'text-purple-500',
-        borderColor: 'border-purple-500',
-        bgHover: 'hover:bg-purple-500/10',
+        color: 'text-purple-400',
         modules: [
             { id: 'analytics', label: 'PREDICTIVE' },
             { id: 'observer', label: 'SYSTEM' }
@@ -155,23 +145,23 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   }, [activeModuleId]);
 
   return (
-    <div className="text-zinc-800 dark:text-zinc-300 font-mono h-full flex flex-col bg-transparent relative overflow-hidden">
+    <div className="text-slate-300 font-mono h-full flex flex-col bg-transparent relative overflow-hidden">
       
       {/* HEADER: Strategic Command HUD */}
-      <div className="flex-shrink-0 pt-4 pb-2 px-6 flex items-end justify-between border-b border-zinc-200 dark:border-white/5 relative z-20 bg-slate-50/90 dark:bg-gunmetal-900/90 backdrop-blur-md">
+      <div className="flex-shrink-0 pt-6 pb-2 px-8 flex items-end justify-between border-b border-white/5 relative z-20 glass-panel mt-2 mx-4 rounded-xl">
         
         {/* Left: Identity */}
-        <div>
-            <div className="flex items-center gap-3">
-                <div className="p-2 bg-zinc-900 dark:bg-white rounded-lg">
-                    <Hexagon size={20} className="text-white dark:text-black fill-current" />
+        <div className="pb-2">
+            <div className="flex items-center gap-4">
+                <div className="p-2 border border-cyan-500/30 rounded-lg bg-cyan-950/20">
+                    <Hexagon size={24} className="text-cyan-400 stroke-1" />
                 </div>
                 <div>
-                    <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">
+                    <h2 className="text-2xl font-display font-bold text-white tracking-widest leading-none neon-text">
                         {activeTenantConfig.name.toUpperCase()}
                     </h2>
-                    <div className="text-[9px] font-bold text-zinc-400 mt-1 uppercase tracking-[0.3em] flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <div className="text-[10px] font-mono font-bold text-cyan-600 mt-1 uppercase tracking-[0.3em] flex items-center gap-2">
+                        <Scan size={10} className="animate-spin-slow" />
                         Strategic Command
                     </div>
                 </div>
@@ -179,36 +169,36 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
         </div>
         
         {/* Right: Global Metrics & Tools */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-8 pb-2">
             
             {/* Quick Metrics */}
-            <div className="hidden lg:flex items-center gap-6 mr-6 border-r border-zinc-200 dark:border-white/10 pr-6">
+            <div className="hidden lg:flex items-center gap-8 border-r border-white/10 pr-8">
                 <div className="text-right">
-                    <div className="text-[9px] text-zinc-500 uppercase font-bold">Occupancy</div>
-                    <div className="text-lg font-black text-slate-800 dark:text-white leading-none">{vesselsInPort}/600</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Occupancy</div>
+                    <div className="text-2xl font-display font-bold text-white leading-none">{vesselsInPort}<span className="text-sm text-slate-600">/600</span></div>
                 </div>
                 <div className="text-right">
-                    <div className="text-[9px] text-zinc-500 uppercase font-bold">Radar</div>
-                    <div className="text-lg font-black text-indigo-500 leading-none">{aisTargets.length} <span className="text-[9px] text-zinc-400">TGT</span></div>
+                    <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Radar</div>
+                    <div className="text-2xl font-display font-bold text-cyan-400 leading-none">{aisTargets.length} <span className="text-[10px] text-cyan-900">TGT</span></div>
                 </div>
                 <div className="text-right">
-                    <div className="text-[9px] text-zinc-500 uppercase font-bold">Yield</div>
-                    <div className="text-lg font-black text-emerald-500 leading-none">€{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k</div>
+                    <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Yield</div>
+                    <div className="text-2xl font-display font-bold text-emerald-400 leading-none">€{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k</div>
                 </div>
             </div>
 
             {/* Utility Icons */}
-            <div className="flex items-center gap-3">
-                <button onClick={onOpenReport} className="p-2 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-indigo-500/10 hover:text-indigo-500 transition-colors" title="Generate Report">
+            <div className="flex items-center gap-2">
+                <button onClick={onOpenReport} className="p-2 rounded-lg border border-transparent hover:border-white/10 hover:bg-white/5 text-slate-400 hover:text-cyan-400 transition-all" title="Generate Report">
                     <FileText size={18} />
                 </button>
-                <button onClick={onOpenTrace} className="p-2 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors" title="Neural Trace">
+                <button onClick={onOpenTrace} className="p-2 rounded-lg border border-transparent hover:border-white/10 hover:bg-white/5 text-slate-400 hover:text-emerald-400 transition-all" title="Neural Trace">
                     <Activity size={18} />
                 </button>
-                <button className="p-2 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-red-500/10 hover:text-red-500 transition-colors relative" title="Alerts">
+                <button className="p-2 rounded-lg border border-transparent hover:border-white/10 hover:bg-white/5 text-slate-400 hover:text-red-400 transition-all relative" title="Alerts">
                     <Bell size={18} />
                     {criticalLogs.length > 0 && (
-                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse border border-zinc-900"></span>
+                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_red]"></span>
                     )}
                 </button>
             </div>
@@ -216,13 +206,13 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
       </div>
 
       {/* DEPARTMENTAL NAVIGATION BAR */}
-      <div className="flex-shrink-0 px-6 py-2 bg-white dark:bg-black/20 border-b border-zinc-200 dark:border-white/5 overflow-x-auto custom-scrollbar">
+      <div className="flex-shrink-0 px-8 py-3 overflow-x-auto custom-scrollbar border-b border-white/5">
           <div className="flex items-center gap-8 min-w-max">
               {DEPARTMENTS.map((dept) => (
                   <div key={dept.id} className="flex flex-col gap-2 group">
                       {/* Dept Header */}
-                      <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest ${dept.color} opacity-70 group-hover:opacity-100 transition-opacity`}>
-                          <dept.icon size={10} />
+                      <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${dept.color} opacity-60 group-hover:opacity-100 transition-all`}>
+                          <dept.icon size={12} />
                           {dept.label}
                       </div>
                       
@@ -235,16 +225,16 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                                       key={mod.id}
                                       onClick={() => setActiveModuleId(mod.id)}
                                       className={`
-                                          px-3 py-1.5 rounded text-[10px] font-bold uppercase transition-all relative overflow-hidden
+                                          px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all relative overflow-hidden border
                                           ${isActive 
-                                              ? `text-white bg-zinc-900 dark:bg-white dark:text-black shadow-lg` 
-                                              : `text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10`
+                                              ? `text-white border-${dept.color.split('-')[1]}-500/50 bg-${dept.color.split('-')[1]}-500/10 shadow-[0_0_10px_rgba(0,0,0,0.5)]` 
+                                              : `text-slate-500 border-transparent hover:border-white/10 hover:bg-white/5 hover:text-slate-300`
                                           }
                                       `}
                                   >
                                       {mod.label}
                                       {isActive && (
-                                          <div className={`absolute bottom-0 left-0 w-full h-[2px] ${dept.color.replace('text-', 'bg-')}`}></div>
+                                          <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-current opacity-50`}></div>
                                       )}
                                   </button>
                               )
@@ -256,7 +246,7 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
       </div>
 
       {/* CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto p-0 relative custom-scrollbar bg-slate-100/50 dark:bg-[#050b14]">
+      <div className="flex-1 overflow-y-auto p-0 relative custom-scrollbar">
         {activeModuleId === 'ops' && (
             <OpsTab 
                 vesselsInPort={vesselsInPort} 
