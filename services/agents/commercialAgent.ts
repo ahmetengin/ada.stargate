@@ -1,3 +1,4 @@
+
 // services/agents/commercialAgent.ts
 
 import { AgentTraceLog, NodeName } from '../../types';
@@ -13,11 +14,13 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
     persona
 });
 
-// --- MOCK TENANT DATABASE ---
+// --- REAL WIM TENANT DATA (MOCK DB) ---
 const TENANT_LEASES = [
-    { id: 'T01', name: 'Poem Restaurant', area: 250, rent: 15000, status: 'PAID', next_due: '2025-12-01' },
-    { id: 'T02', name: 'West Life Sports Club', area: 800, rent: 25000, status: 'PAID', next_due: '2025-12-01' },
-    { id: 'T03', name: 'The Yacht Brokerage', area: 120, rent: 8000, status: 'OVERDUE', next_due: '2025-11-01' },
+    { id: 'T01', name: 'Poem Restaurant', type: 'F&B', area: 250, rent: 15000, status: 'PAID', next_due: '2025-12-01' },
+    { id: 'T02', name: 'West Life Sports Club', type: 'Wellness', area: 800, rent: 25000, status: 'PAID', next_due: '2025-12-01' },
+    { id: 'T03', name: 'The Yacht Brokerage', type: 'Office', area: 120, rent: 8000, status: 'OVERDUE', next_due: '2025-11-01' },
+    { id: 'T04', name: 'Migros Jet', type: 'Market', area: 400, rent: 12000, status: 'PAID', next_due: '2025-12-01' },
+    { id: 'T05', name: 'Fersah Restaurant', type: 'F&B', area: 180, rent: 9000, status: 'PAID', next_due: '2025-12-01' },
 ];
 
 export const commercialExpert = {
@@ -45,6 +48,23 @@ export const commercialExpert = {
                         `Calculation: (€${totalCost} / ${totalLeasedArea}m²) * ${tenant.area}m²\n` +
                         `Result: **€${charge.toFixed(2)}** for this period.`;
         return { message };
+    },
+
+    // Skill: Analyze Retail Mix
+    analyzeRetailMix: async (addTrace: (t: AgentTraceLog) => void): Promise<string> => {
+        const categories = TENANT_LEASES.reduce((acc, t) => {
+            acc[t.type] = (acc[t.type] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        addTrace(createLog('ada.commercial', 'THINKING', `Analyzing Retail Tenant Mix...`, 'EXPERT'));
+        
+        return `**RETAIL MIX ANALYSIS**\n\n` +
+               `- F&B: ${categories['F&B'] || 0} Units (High Traffic)\n` +
+               `- Wellness: ${categories['Wellness'] || 0} Units\n` +
+               `- Market: ${categories['Market'] || 0} Units\n` +
+               `- Office: ${categories['Office'] || 0} Units\n\n` +
+               `> **Recommendation:** Vacant unit B-04 suitable for 'Marine Electronics' shop to balance the mix.`;
     }
 };
 

@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { UserProfile, TenantConfig } from "../types";
 import { TENANT_CONFIG } from "./config"; // Import TENANT_CONFIG for generating base instruction
@@ -54,13 +55,21 @@ export class LiveSession {
           `;
       } else if (userProfile.role === 'CAPTAIN') {
           VOICE_SYSTEM_INSTRUCTION += `
-          ROLE: VHF Radio Operator / Harbour Master.
+          ROLE: VHF Radio Operator / Harbour Master (WIM Control).
           TARGET: Vessel Captain.
-          PRIMARY GOAL: Safe navigation and traffic control.
-          CRITICAL RULES FOR CAPTAIN:
-          1. **BREVITY:** Use short, nautical phrases (IMO SMCP).
-          2. **PROTOCOL:** End transmissions with "Over".
-          3. **OPERATIONS:** Handle Departure Requests (Check Debt), Arrival Instructions (Assign Pontoon), and Emergency calls.
+          PRIMARY GOAL: Safe navigation and traffic control via IMO SMCP Standards.
+          
+          COMMUNICATION PROTOCOL (STRICT):
+          1. **CALL STRUCTURE:** Always identify yourself ("This is WIM Control") and address the vessel.
+          2. **PHONETICS:** Use NATO Phonetic Alphabet for berths (e.g., "Pontoon Alfa-Five").
+          3. **TERMINATION:** End ALL transmissions with "Over" (expecting reply) or "Out" (finished).
+          4. **BREVITY:** Use standard phrases: "Roger", "Say again", "Stand by", "Affirmative", "Negative".
+          5. **NO CHATTER:** Do not use conversational fillers like "Please", "Hello", "How are you".
+          
+          OPERATIONS:
+          - Arrival: Assign berth based on LOA. Ask for confirmation.
+          - Departure: Check traffic in fairway. Authorize or hold.
+          - Emergency: If "MAYDAY" heard, acknowledge and enforce silence.
           `;
       } else {
           VOICE_SYSTEM_INSTRUCTION += `
@@ -130,7 +139,7 @@ export class LiveSession {
           if (this.session && typeof this.session.send === 'function') {
               let welcomePrompt = "Connection Open. ";
               if (userProfile.role === 'VISITOR') welcomePrompt += "Greeting: 'West İstanbul Marina, hoş geldiniz.' (Wait for user request).";
-              else if (userProfile.role === 'CAPTAIN') welcomePrompt += "Greeting: 'West İstanbul Marina, dinlemede. Kanal 72.'";
+              else if (userProfile.role === 'CAPTAIN') welcomePrompt += "Greeting: 'Station calling West Istanbul Marina, this is WIM Control. Channel 7-2. Over.'";
               else welcomePrompt += `Greeting: 'Sistemler aktif ${userProfile.name.split(' ')[0]} Bey.'`;
 
               await this.session.send({

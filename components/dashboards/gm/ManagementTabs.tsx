@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Users, Store, TrendingUp, BookOpen, Clock, BadgeCheck, BarChart3, Globe } from 'lucide-react';
+import { Users, Store, TrendingUp, BookOpen, Clock, BadgeCheck, BarChart3, Globe, PieChart, ShoppingBag, Utensils } from 'lucide-react';
 
 // --- HR TAB ---
 export const HRTab: React.FC<{ hrData: any }> = ({ hrData }) => {
@@ -34,34 +34,53 @@ export const HRTab: React.FC<{ hrData: any }> = ({ hrData }) => {
   );
 };
 
-// --- COMMERCIAL TAB ---
+// --- COMMERCIAL TAB (RETAIL & REAL ESTATE) ---
 export const CommercialTab: React.FC<{ commercialData: any[] }> = ({ commercialData }) => {
   return (
     <div className="bg-white dark:bg-zinc-900/30 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in duration-300">
-      <h3 className="text-xs font-black text-slate-700 dark:text-zinc-200 mb-6 uppercase tracking-widest flex items-center gap-2">
-        <Store size={14} className="text-amber-500" /> Commercial Grid
-      </h3>
+      <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xs font-black text-slate-700 dark:text-zinc-200 uppercase tracking-widest flex items-center gap-2">
+            <Store size={14} className="text-purple-500" /> Commercial Estate (45 Units)
+          </h3>
+          <div className="text-[9px] font-bold bg-purple-500/10 text-purple-500 px-2 py-1 rounded border border-purple-500/20">
+              OCCUPANCY: 98%
+          </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {commercialData.map((tenant: any) => (
-          <div key={tenant.id} className="p-4 bg-slate-50 dark:bg-zinc-900/80 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-amber-500/30 transition-colors">
+          <div key={tenant.id} className="p-4 bg-slate-50 dark:bg-zinc-900/80 rounded-xl border border-slate-200 dark:border-zinc-800 hover:border-purple-500/30 transition-colors group">
             <div className="flex justify-between items-start mb-3">
-                <div className="font-bold text-sm text-slate-800 dark:text-zinc-200">{tenant.name}</div>
-                <div className={`w-2 h-2 rounded-full ${tenant.status === 'PAID' ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white dark:bg-zinc-800 rounded-lg border border-slate-100 dark:border-zinc-700 text-slate-400">
+                        {tenant.type === 'F&B' ? <Utensils size={14}/> : <ShoppingBag size={14}/>}
+                    </div>
+                    <div>
+                        <div className="font-bold text-sm text-slate-800 dark:text-zinc-200">{tenant.name}</div>
+                        <div className="text-[9px] text-slate-500 dark:text-zinc-500 uppercase">{tenant.type} • Block A</div>
+                    </div>
+                </div>
+                <div className={`w-2 h-2 rounded-full ${tenant.status === 'PAID' ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>
             </div>
-            <div className="flex justify-between text-[10px] text-slate-500 dark:text-zinc-500 mb-1">
-                <span>Lease Area</span>
-                <span className="font-mono">{tenant.area} m²</span>
+            
+            <div className="grid grid-cols-2 gap-2 my-3">
+                <div className="bg-white dark:bg-zinc-900/50 p-2 rounded border border-slate-100 dark:border-zinc-700/50">
+                    <span className="text-[9px] text-slate-400 block uppercase">Area</span>
+                    <span className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">{tenant.area} m²</span>
+                </div>
+                <div className="bg-white dark:bg-zinc-900/50 p-2 rounded border border-slate-100 dark:border-zinc-700/50">
+                    <span className="text-[9px] text-slate-400 block uppercase">Rent</span>
+                    <span className="font-mono text-xs font-bold text-slate-700 dark:text-zinc-300">€{tenant.rent}</span>
+                </div>
             </div>
-            <div className="flex justify-between text-[10px] text-slate-500 dark:text-zinc-500 mb-3">
-                <span>Monthly Rent</span>
-                <span className="font-mono">€{tenant.rent}</span>
-            </div>
-            <div className={`text-center py-1 rounded text-[10px] font-bold border ${
+
+            <div className={`text-center py-1.5 rounded text-[9px] font-bold border flex justify-between px-3 ${
                 tenant.status === 'PAID' 
-                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
-                : 'bg-red-500/10 text-red-600 border-red-500/20'
+                ? 'bg-emerald-500/5 text-emerald-600 border-emerald-500/20' 
+                : 'bg-red-500/5 text-red-600 border-red-500/20'
             }`}>
-                STATUS: {tenant.status}
+                <span>LEASE STATUS</span>
+                <span>{tenant.status}</span>
             </div>
           </div>
         ))}

@@ -33,11 +33,10 @@ interface GMDashboardProps {
   activeTenantConfig: TenantConfig;
 }
 
-// ... (DEPARTMENTS Array same as before) ...
 const DEPARTMENTS = [
     { id: 'OPS', label: 'OPERATIONS', icon: Navigation, color: 'text-indigo-500', modules: [{ id: 'ops', label: 'LIVE MAP' }, { id: 'fleet', label: 'FLEET CMD' }, { id: 'berths', label: 'HARBOR' }] },
     { id: 'ENG', label: 'TECHNICAL', icon: Zap, color: 'text-amber-500', modules: [{ id: 'facility', label: 'INFRA & ECO' }] },
-    { id: 'COM', label: 'COMMERCIAL', icon: DollarSign, color: 'text-emerald-500', modules: [{ id: 'bookings', label: 'BOOKINGS' }, { id: 'commercial', label: 'RETAIL' }, { id: 'congress', label: 'EVENTS' }] },
+    { id: 'COM', label: 'COMMERCIAL', icon: DollarSign, color: 'text-emerald-500', modules: [{ id: 'bookings', label: 'BOOKINGS' }, { id: 'commercial', label: 'RETAIL & LEASE' }, { id: 'congress', label: 'EVENTS' }] }, // Updated label
     { id: 'ADM', label: 'ADMIN', icon: Users, color: 'text-blue-500', modules: [{ id: 'hr', label: 'HR / STAFF' }, { id: 'guest_entry', label: 'SECURITY' }] },
     { id: 'INT', label: 'INTEL', icon: BarChart3, color: 'text-purple-500', modules: [{ id: 'analytics', label: 'PREDICTIVE' }, { id: 'observer', label: 'SYSTEM' }] }
 ];

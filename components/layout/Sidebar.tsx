@@ -42,7 +42,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         nodes: [
             { id: 'ada.marina', label: 'HARBOUR MASTER' },
             { id: 'ada.sea', label: 'SEA / COLREGS' },
-            { id: 'ada.technic', label: 'TECHNICAL' }
+            { id: 'ada.technic', label: 'BOATYARD / LIFT' } // Enhanced Label
         ]
     },
     { 
@@ -50,6 +50,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         color: 'text-emerald-400',
         nodes: [
             { id: 'ada.finance', label: 'LEDGER & INVOICE' },
+            { id: 'ada.commercial', label: 'COMMERCIAL / RETAIL' }, // NEW
             { id: 'ada.customer', label: 'CRM / LOYALTY' }
         ]
     },

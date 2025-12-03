@@ -109,6 +109,21 @@ export const technicExpert = {
         return TECHNIC_DB;
     },
 
+    // Skill: Check Boatyard Capacity
+    checkBoatyardCapacity: async (addTrace: (t: AgentTraceLog) => void): Promise<string> => {
+        addTrace(createLog('ada.technic', 'THINKING', `Analyzing Hardstanding Capacity (60.000m2)...`, 'EXPERT'));
+        
+        // Mock Logic
+        const capacity = 300;
+        const current = 145;
+        const occupancy = Math.round((current / capacity) * 100);
+        
+        return `**BOATYARD STATUS**\n` + 
+               `- Occupancy: ${occupancy}% (${current}/${capacity} Vessels)\n` +
+               `- 700T Lift: Operational\n` +
+               `- 75T Lift: Operational`;
+    },
+
     // Skill: Check Blue Card Status (Environmental Compliance)
     checkBlueCardStatus: async (vesselName: string, addTrace: (t: AgentTraceLog) => void): Promise<{ status: 'VALID' | 'EXPIRED', daysSinceLast: number, lastDate: string }> => {
         addTrace(createLog('ada.technic', 'THINKING', `Verifying Blue Card (Mavi Kart) waste discharge history for ${vesselName}...`, 'EXPERT'));

@@ -1,3 +1,4 @@
+
 // services/wimMasterData.ts
 
 export const wimMasterData = {
@@ -24,6 +25,10 @@ export const wimMasterData = {
         "customs_area": {
            "label": "Customs & Passport Control",
            "coordinates": { "lat": 40.9635, "lng": 28.6625 }
+        },
+        "boatyard": {
+            "label": "Technical Hardstanding (60.000m2)",
+            "coordinates": { "lat": 40.9640, "lng": 28.6650 }
         }
       },
       "pontoons": [
@@ -45,17 +50,31 @@ export const wimMasterData = {
       "phone": "+90 212 850 22 00"
     }
   },
+  "commercial_tenants": {
+      "count": 45,
+      "categories": ["Restaurants", "Boutiques", "Yacht Brokers", "Service Workshops"],
+      "lease_model": "Fixed Rent + % Turnover Share",
+      "common_area_charge_formula": "Total Cost / Total Leased Area * Tenant Area",
+      "key_tenants": [
+          { "name": "Poem Restaurant", "type": "F&B", "location": "Social Zone" },
+          { "name": "Fersah", "type": "F&B", "location": "Social Zone" },
+          { "name": "West Life Sports Club", "type": "Wellness", "location": "Block B" },
+          { "name": "Migros Jet", "type": "Market", "location": "Block A" },
+          { "name": "Yacht Brokerage Row", "type": "Office", "location": "Commercial Street" }
+      ]
+  },
+  "technical_facilities": {
+      "travel_lift_major": "700 Ton Travel Lift (Mega Yachts)",
+      "travel_lift_minor": "75 Ton Travel Lift",
+      "hardstanding_area": "60.000 m2 (Capacity: 300 Yachts)",
+      "hangars": "11 Climate Controlled Hangars (up to 90m)",
+      "services": ["Hull Washing", "Antifouling", "Engine Overhaul", "Teak Repair"]
+  },
   "hr_management": {
       "staff_count": 120,
       "departments": ["Operations", "Technical", "Security", "Front Office", "Cleaning"],
       "shift_pattern": "3 shifts (08-16, 16-24, 24-08)",
       "patrol_protocol": "Security must scan QR codes at 15 checkpoints every 2 hours."
-  },
-  "commercial_tenants": {
-      "count": 45,
-      "categories": ["Restaurants", "Boutiques", "Yacht Brokers", "Service Workshops"],
-      "lease_model": "Fixed Rent + % Turnover Share",
-      "common_area_charge_formula": "Total Cost / Total Leased Area * Tenant Area"
   },
   "analytics_data": {
       "historical_occupancy": { "2024_Q4": "88%", "2025_Q1": "75%", "2025_Q2": "92%" },
