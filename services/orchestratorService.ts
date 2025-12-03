@@ -2,19 +2,17 @@
 // services/orchestratorService.ts
 
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
-import { checkBackendHealth, sendToBackend } from './api';
 import { getCurrentMaritimeTime } from './utils';
 import { generateSimpleResponse } from './geminiService';
-import { MAX_HISTORY_LENGTH } from './geminiService';
 
-// --- EXPERT AGENTS ---
+// --- THE BIG 4 EXPERTS ---
 import { financeExpert } from './agents/financeAgent';
 import { legalExpert } from './agents/legalAgent';
+import { securityExpert } from './agents/securityAgent';
 import { marinaExpert } from './agents/marinaAgent';
-import { customerExpert } from './agents/customerAgent';
 import { technicExpert } from './agents/technicAgent';
-import { federationExpert } from './agents/federationAgent';
-import { systemUpdateExpert } from './skills/systemUpdater'; // NEW SKILL
+import { systemUpdateExpert } from './skills/systemUpdater';
+
 import { VESSEL_KEYWORDS } from './constants';
 
 // Helper
@@ -38,100 +36,108 @@ export const orchestratorService = {
         activeTenantConfig: TenantConfig
     ): Promise<OrchestratorResponse> {
         const traces: AgentTraceLog[] = [];
-        
-        // 1. Check Python Brain Health (Skip for now to show JS Skills)
-        const isBackendOnline = false; // Force Local for Demo
-
-        // --- LOCAL ORCHESTRATION LOGIC ---
         const actions: AgentAction[] = [];
         let responseText = "";
         const lower = prompt.toLowerCase();
+        
+        // 0. Context Extraction
         const findVesselInPrompt = (p: string) => VESSEL_KEYWORDS.find(v => p.toLowerCase().includes(v));
         const vesselName = findVesselInPrompt(prompt) || (user.role === 'CAPTAIN' ? 'S/Y Phisedelia' : 's/y phisedelia');
 
-        // --- SKILL: SYSTEM UPDATE (The "Self-Updating" Logic) ---
-        if (lower.includes('hız limiti') || lower.includes('speed limit') || lower.includes('kural güncelle') || lower.includes('update rule')) {
-            if (user.role !== 'GENERAL_MANAGER') {
-                responseText = "ACCESS DENIED. System Configuration requires GM clearance.";
-            } else {
-                traces.push(createLog('ada.system', 'PLANNING', 'Detected request to modify Operational Rules.', 'EXPERT'));
-                
-                // Extract value (naive regex)
-                const numberMatch = prompt.match(/(\d+)/);
-                const newVal = numberMatch ? parseInt(numberMatch[0]) : 5; // Default to 5 if no number
-                
-                // EXECUTE SKILL
-                const updateAction = await systemUpdateExpert.updateRule('speed_limit_knots', newVal);
-                actions.push(updateAction);
-                
-                traces.push(createLog('ada.system', 'TOOL_EXECUTION', `Patching 'marina_wim_rules.yaml' in memory... Value: ${newVal}`, 'WORKER'));
-                
-                responseText = `**SYSTEM UPDATE CONFIRMED**\n\nOperational Rule 'speed_limit_knots' has been updated to **${newVal} knots**.\n\n> *Protocol:* Immediate Effect.\n> *Broadcast:* All vessels notified via Link 16.`;
-            }
+        // --- 1. ROUTING LAYER (The Big 4 Classifier) ---
+        let routedDomain: 'LEGAL' | 'MARINA' | 'FINANCE' | 'STARGATE' = 'STARGATE';
+
+        // Simple Heuristic Routing
+        if (lower.includes('mayday') || lower.includes('fire') || lower.includes('yangın') || lower.includes('kural') || lower.includes('law') || lower.includes('contract') || lower.includes('security') || lower.includes('patrol')) {
+            routedDomain = 'LEGAL';
+        } else if (lower.includes('berth') || lower.includes('yanaş') || lower.includes('depart') || lower.includes('ayrıl') || lower.includes('hail') || lower.includes('radar') || lower.includes('technical') || lower.includes('repair') || lower.includes('waste') || lower.includes('mavi kart')) {
+            routedDomain = 'MARINA';
+        } else if (lower.includes('invoice') || lower.includes('fatura') || lower.includes('debt') || lower.includes('borç') || lower.includes('pay') || lower.includes('öde') || lower.includes('price') || lower.includes('fiyat')) {
+            routedDomain = 'FINANCE';
+        } else if (lower.includes('system') || lower.includes('update') || lower.includes('federation') || lower.includes('network') || lower.includes('connect')) {
+            routedDomain = 'STARGATE';
         }
-        // --- SKILL: ASSET REGISTRATION ---
-        else if (lower.includes('yeni bot') || lower.includes('add tender') || lower.includes('register asset')) {
-             if (user.role !== 'GENERAL_MANAGER') {
-                responseText = "ACCESS DENIED. Asset management restricted.";
-             } else {
-                traces.push(createLog('ada.system', 'PLANNING', 'New Asset Registration Protocol initiated.', 'EXPERT'));
-                const assetName = "Tender Delta (Fast)"; // Mock extraction
-                
-                // EXECUTE SKILL
-                const regAction = await systemUpdateExpert.registerAsset('Patrol Boat', assetName);
-                actions.push(regAction);
-                
-                traces.push(createLog('ada.system', 'CODE_OUTPUT', `Database updated. Asset ID: ${regAction.params.asset.id}`, 'WORKER'));
-                responseText = `**ASSET REGISTERED**\n\nUnit **${assetName}** has been added to the active fleet registry.\nStatus: **IDLE**\nAssignment: **READY**`;
-             }
-        }
-        // --- EXISTING LOGIC ---
-        else if (lower.includes('öde') || lower.includes('pay') || lower.includes('link')) {
-             if (user.role === 'VISITOR') {
-                 responseText = "**ACCESS DENIED.** Only registered Captains or Owners can settle vessel accounts.";
-             } else {
-                 traces.push(createLog('ada.finance', 'PLANNING', `User requested payment link. Initiating transaction protocol...`, 'EXPERT'));
-                 const status = await financeExpert.checkDebt(vesselName);
-                 if (status.status === 'DEBT') {
-                     const finActions = await financeExpert.process({
-                         intent: 'create_invoice',
-                         vesselName: vesselName,
-                         amount: status.amount,
-                         serviceType: 'DEBT_SETTLEMENT'
-                     }, user, (t) => traces.push(t));
-                     actions.push(...finActions);
-                     const linkAction = finActions.find(a => a.name === 'ada.finance.paymentLinkGenerated');
-                     const linkUrl = linkAction?.params?.link?.url || '#';
-                     responseText = `**PAYMENT LINK GENERATED**\n\nI have generated a secure link for your outstanding balance of **€${status.amount}**.\n\n[Click here to Pay via Iyzico 3D-Secure](${linkUrl})\n\n> *Reference: ${vesselName} Debt Settlement*`;
-                 } else {
-                     responseText = "**ACCOUNT CLEAR.**\n\nYou have no outstanding balance to pay at this time. Thank you.";
-                 }
-             }
-        }
-        else if (lower.includes('depart') || lower.includes('leaving') || lower.includes('çıkış')) {
-             traces.push(createLog('ada.marina', 'ROUTING', `Departure request detected. Initiating Multi-Agent Consensus Protocol...`, 'ORCHESTRATOR'));
-             const debtStatus = await financeExpert.checkDebt(vesselName);
-             const financeDecision = debtStatus.status === 'CLEAR' ? 'APPROVE' : 'DENY';
-             traces.push(createLog('ada.finance', 'VOTING', `Vote: ${financeDecision}. Reason: ${financeDecision === 'APPROVE' ? 'Account Clear' : 'Outstanding Debt'}`, 'EXPERT'));
-             
-             // Check Blue Card
-             const blueCard = await technicExpert.checkBlueCardStatus(vesselName, (t) => traces.push(t));
-             
-             if (financeDecision === 'DENY') {
-                 responseText = `**DEPARTURE DENIED**\n\nConsensus failed. Outstanding Debt: **€${debtStatus.amount}**.\n\n> **Legal Hold:** Right of Retention exercised pursuant to **WIM Contract Article H.2**.\nPlease clear balance at Finance Office.`;
-             } else {
-                 const res = await marinaExpert.processDeparture(vesselName, tenders, t => traces.push(t));
-                 responseText = res.message;
-                 if (blueCard.status === 'EXPIRED') {
-                     responseText += `\n\n⚠️ **ENVIRONMENTAL ALERT:** Blue Card expired. Please discharge waste at next port to avoid fines.`;
-                 }
-                 if (res.actions) actions.push(...res.actions);
-             }
-        }
-        else {
-            // General Fallback to Gemini
-            traces.push(createLog('ada.stargate', 'THINKING', `No deterministic handler matched. Forwarding to General Intelligence...`, 'ORCHESTRATOR'));
-            responseText = await generateSimpleResponse(prompt, user, registry, tenders, vesselsInPort, messages, activeTenantConfig); 
+
+        traces.push(createLog('ada.stargate', 'ROUTING', `Tenant: ${activeTenantConfig.id} | Intent Classification: ${routedDomain}`, 'ORCHESTRATOR'));
+
+        // --- 2. EXECUTION LAYER ---
+
+        switch (routedDomain) {
+            case 'LEGAL':
+                // Sub-routing for Legal
+                if (lower.includes('mayday') || lower.includes('fire') || lower.includes('code red')) {
+                    // Guardian Protocol
+                    traces.push(createLog('ada.legal', 'TOOL_EXECUTION', 'Activating GUARDIAN PROTOCOL (Safety First).', 'WORKER'));
+                    responseText = "**MAYDAY RELAY RECEIVED.**\n\n**GUARDIAN PROTOCOL ACTIVE.**\n\n> All stations maintain radio silence.\n> Emergency Services dispatched to Sector Alpha.\n> Casualty tracking initiated.";
+                    actions.push({ id: `alert_${Date.now()}`, kind: 'internal', name: 'ui.setAlertMode', params: { level: 'RED' } });
+                } else if (lower.includes('security') || lower.includes('patrol')) {
+                    // Security Ops
+                    const secStatus = await securityExpert.dispatchGuard('Sector A', 'ROUTINE', (t) => traces.push(t));
+                    responseText = "Security protocol initiated. Patrol dispatched.";
+                    actions.push(...secStatus);
+                } else {
+                    // General Legal/Contract Query (RAG)
+                    const legalRes = await legalExpert.process({ query: prompt }, user, (t) => traces.push(t));
+                    responseText = legalRes[0]?.params?.advice || "Legal advisory generated.";
+                }
+                break;
+
+            case 'MARINA':
+                // Sub-routing for Marina
+                if (lower.includes('depart') || lower.includes('ayrıl')) {
+                    const depRes = await marinaExpert.processDeparture(vesselName, tenders, (t) => traces.push(t));
+                    responseText = depRes.message;
+                    if(depRes.actions) actions.push(...depRes.actions);
+                } else if (lower.includes('arrive') || lower.includes('geliyor') || lower.includes('hail')) {
+                    const arrRes = await marinaExpert.processArrival(vesselName, tenders, { status: 'CLEAR', amount: 0 }, (t) => traces.push(t));
+                    responseText = arrRes.message;
+                    if(arrRes.actions) actions.push(...arrRes.actions);
+                } else if (lower.includes('tech') || lower.includes('repair')) {
+                    const techRes = await technicExpert.scheduleService(vesselName, 'GENERAL_REPAIR', 'Tomorrow', (t) => traces.push(t));
+                    responseText = techRes.message;
+                } else if (lower.includes('waste') || lower.includes('mavi kart')) {
+                    const envRes = await technicExpert.processBlueCard(vesselName, 'Pump-out Stn 1', 150, (t) => traces.push(t));
+                    responseText = envRes.message;
+                } else {
+                    // Default Marina Logic via Gemini with specific Tenant Context
+                    responseText = await generateSimpleResponse(prompt, user, registry, tenders, vesselsInPort, messages, activeTenantConfig);
+                }
+                break;
+
+            case 'FINANCE':
+                // Sub-routing for Finance
+                const status = await financeExpert.checkDebt(vesselName);
+                if (lower.includes('pay') || lower.includes('öde')) {
+                    const finActions = await financeExpert.process({
+                        intent: 'create_invoice',
+                        vesselName: vesselName,
+                        amount: status.amount,
+                        serviceType: 'DEBT_SETTLEMENT'
+                    }, user, (t) => traces.push(t));
+                    actions.push(...finActions);
+                    const linkAction = finActions.find(a => a.name === 'ada.finance.paymentLinkGenerated');
+                    responseText = `**PAYMENT LINK GENERATED**\n\nSecure link for **€${status.amount}**.\n\n[Pay via Iyzico](${linkAction?.params?.link?.url})`;
+                } else {
+                    responseText = `**FINANCIAL STATUS: ${vesselName.toUpperCase()}**\n\nBalance: **€${status.amount}**\nStatus: **${status.status}**`;
+                }
+                break;
+
+            case 'STARGATE':
+                // System Ops & Federation
+                if (lower.includes('update') || lower.includes('rule') || lower.includes('kural')) {
+                    if (user.role !== 'GENERAL_MANAGER') {
+                        responseText = "ACCESS DENIED. System Configuration requires GM clearance.";
+                    } else {
+                        const newVal = prompt.match(/(\d+)/)?.[0] || 'updated_value';
+                        await systemUpdateExpert.updateRule('operational_parameter', newVal);
+                        responseText = `**SYSTEM UPDATE**\n\nParameter updated to **${newVal}**. SEAL Protocol active.`;
+                        traces.push(createLog('ada.stargate', 'TOOL_EXECUTION', `Patching system config for ${activeTenantConfig.id}...`, 'WORKER'));
+                    }
+                } else {
+                    // Fallback to LLM for general chat
+                    responseText = await generateSimpleResponse(prompt, user, registry, tenders, vesselsInPort, messages, activeTenantConfig);
+                }
+                break;
         }
         
         return { text: responseText, actions: actions, traces: traces };

@@ -10,6 +10,20 @@ export interface MemoryItem {
   tags?: string[];
 }
 
+export interface AgentContext {
+  workingMemory: MemoryItem[];
+  episodicMemory: MemoryItem[];
+  semanticMemory: MemoryItem[];
+  proceduralMemory: MemoryItem[];
+}
+
+export interface DecisionStepLog {
+  timestamp: number;
+  step: string;
+  details?: any;
+  isError?: boolean;
+}
+
 export interface AgentObservation {
   source: 'user' | 'api' | 'sensor' | 'internal';
   payload: any;
@@ -21,18 +35,4 @@ export interface AgentAction {
   kind: 'internal' | 'external';
   name: string;
   params: any;
-}
-
-export interface DecisionStepLog {
-  step: number;
-  observation: AgentObservation;
-  chosenAction: AgentAction;
-  reasoningTrace?: string;
-}
-
-export interface AgentContext {
-  workingMemory: MemoryItem[];
-  episodicMemory: MemoryItem[];
-  semanticMemory: MemoryItem[];
-  proceduralMemory: MemoryItem[];
 }

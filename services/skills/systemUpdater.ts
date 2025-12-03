@@ -5,8 +5,7 @@ import { TENANT_CONFIG } from '../config';
 
 /**
  * ADA SYSTEM UPDATE ADAPTER
- * This service bridges the React Application with the logical skills defined 
- * in `.claude/skills/ada-system-ops/`.
+ * This service bridges the React Application with the logical skills.
  */
 
 export const systemUpdateExpert = {
@@ -14,8 +13,6 @@ export const systemUpdateExpert = {
     // Skill: Update Operational Rules (Mapping to 'update_operational_rule')
     updateRule: async (key: string, value: any): Promise<AgentAction> => {
         console.log(`[SYSTEM] Skill Triggered: update_operational_rule(${key}, ${value})`);
-        
-        // Logic mirrors .claude/skills/ada-system-ops/index.js
         
         // 1. Get Current Config & Overrides
         const currentRules = persistenceService.load('dynamic_rules_override', {}) || {};
@@ -26,7 +23,7 @@ export const systemUpdateExpert = {
         // 3. Persist
         persistenceService.save('dynamic_rules_override', currentRules);
 
-        // Also update the in-memory TENANT_CONFIG for immediate React reactivity if needed
+        // Also update the in-memory TENANT_CONFIG for immediate React reactivity
         if (TENANT_CONFIG.rules) {
             TENANT_CONFIG.rules[key] = value;
         }
@@ -39,7 +36,7 @@ export const systemUpdateExpert = {
         };
     },
 
-    // Skill: Add New Asset (Mapping to 'register_new_asset')
+    // Skill: Add New Asset
     registerAsset: async (assetType: string, assetName: string): Promise<AgentAction> => {
         console.log(`[SYSTEM] Skill Triggered: register_new_asset(${assetType}, ${assetName})`);
         

@@ -1,5 +1,3 @@
-
-
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { Message, ModelType, GroundingSource, RegistryEntry, Tender, UserProfile, TenantConfig } from "../types";
 import { generateBaseSystemInstruction, generateContextBlock } from "./prompts";
@@ -36,6 +34,7 @@ export const streamChatResponse = async (
     }
 
     // COST OPTIMIZATION: Slice history to prevent context bloating
+    // Remove the last message (current prompt) from history initialization
     const fullHistory = messages.slice(0, -1);
     const optimizedHistory = fullHistory.slice(-MAX_HISTORY_LENGTH);
     
@@ -111,8 +110,11 @@ export const generateSimpleResponse = async (
         const ai = createClient();
         const systemInstruction = generateBaseSystemInstruction(tenantConfig) + generateContextBlock(registry, tenders, userProfile, vesselsInPort);
         
-        // Use optimized history for simple response as well
-        const optimizedHistory = messages.slice(-MAX_HISTORY_LENGTH);
+        // FIX: We must exclude the current 'prompt' from the history initialization.
+        // 'messages' contains the current prompt as the last element.
+        // If we include it in history AND send it again in sendMessage, the API sees two consecutive user turns.
+        const historyMessages = messages.length > 0 ? messages.slice(0, -1) : [];
+        const optimizedHistory = historyMessages.slice(-MAX_HISTORY_LENGTH);
 
         const chat: Chat = ai.chats.create({
             model: 'gemini-2.5-flash',

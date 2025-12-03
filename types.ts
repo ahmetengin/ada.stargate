@@ -75,6 +75,7 @@ export interface Tender {
   status: 'Idle' | 'Busy' | 'Maintenance';
   assignment?: string;
   serviceCount?: number; 
+  type?: string;
 }
 
 export interface AisTarget {
@@ -88,23 +89,6 @@ export interface AisTarget {
     course?: number;
 }
 
-export interface KplerAisTarget {
-    id: string;
-    vessel_name: string;
-    status: 'INBOUND' | 'OUTBOUND' | 'HOLDING' | 'TAXIING' | 'DOCKED' | 'AT_ANCHOR';
-    latitude: number;
-    longitude: number;
-    speed_knots: number;
-    course_deg: number;
-}
-
-export interface TrafficEntry {
-  id: string;
-  vessel: string;
-  status: 'INBOUND' | 'OUTBOUND' | 'HOLDING' | 'TAXIING' | 'DOCKED' | 'AT_ANCHOR';
-}
-
-// UPDATED ROLES: VISITOR (Public), MEMBER (PassKit), CAPTAIN (Ops), MANAGER (Admin)
 export type UserRole = 'VISITOR' | 'MEMBER' | 'CAPTAIN' | 'GENERAL_MANAGER';
 
 export interface UserProfile {
@@ -154,58 +138,32 @@ export interface AgentTraceLog {
   isError?: boolean;
 }
 
-export interface TravelItinerary {
-  id: string;
-  passengerName: string;
-  tripName: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
-  totalCost: number;
-  flights: any[];
-  hotels: any[];
-  transfers: any[];
-}
+// --- UNIVERSAL OS CONFIG TYPES ---
 
-export interface MaintenanceLogEntry {
-  timestamp: string;
-  stage: 'SCHEDULED' | 'PARTS_ORDERED' | 'PARTS_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED';
-  details: string;
-}
-
-export interface MaintenanceJob {
-  id: string;
-  vesselName: string;
-  jobType: 'HAUL_OUT' | 'ENGINE_SERVICE' | 'GENERAL_REPAIR';
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED';
-  scheduledDate: string;
-  contractor: string;
-  partsStatus: 'N/A' | 'ORDERED' | 'ARRIVED';
-  notes: string;
-  logs: MaintenanceLogEntry[];
-}
-
-export interface WeatherForecast {
-  day: string;
-  temp: number;
-  condition: string;
-  windSpeed: number;
-  windDir: string;
-}
-
-export interface CongressEvent {
+export interface TenantConfig {
   id: string;
   name: string;
-  dates: { start: string; end: string };
-  venues: string[];
-  status: string;
-  delegateCount: number;
+  fullName: string;
+  network: string; // e.g. 'wim.ada.network'
+  node_address: string;
+  status: 'ONLINE' | 'OFFLINE';
+  api_endpoint?: string;
+  region?: string;
+  tier?: string;
+  mission: string;
+  contextSources: string[];
+  rules: Record<string, any>;
+  doctrine: string;
+  masterData: any; // Dynamic bag for specific tenant data
 }
 
-export interface Delegate {
-  id: string;
-  name: string;
-  company: string;
-  status: 'CHECKED_IN' | 'IN_TRANSIT' | 'REGISTERED';
-  location: string;
+export interface FederatedBerthAvailability {
+  marinaId: string;
+  date: string;
+  totalBerths: number;
+  availableBerths: number;
+  occupancyRate: number;
+  message: string;
 }
 
 export interface AgentAction {
@@ -270,47 +228,56 @@ export interface VesselSystemsStatus {
   };
 }
 
-export interface FederatedMarina {
-  id: string;
-  name: string;
-  node_address: string;
-  status: 'ONLINE' | 'OFFLINE';
-  api_endpoint?: string;
-  region?: string;
-  tier?: string;
+export interface WeatherForecast {
+  day: string;
+  temp: number;
+  condition: string;
+  windSpeed: number;
+  windDir: string;
 }
 
-export interface FederatedBerthAvailability {
-  marinaId: string;
-  date: string;
-  totalBerths: number;
-  availableBerths: number;
-  occupancyRate: number;
-  message: string;
-}
-
-export interface TenantConfig {
+export interface CongressEvent {
   id: string;
   name: string;
-  fullName: string;
-  network: string;
-  node_address: string;
-  status: 'ONLINE' | 'OFFLINE' | 'DEGRADED';
-  api_endpoint?: string;
-  region?: string;
-  tier?: string;
-  mission: string;
-  contextSources: string[];
-  rules: any;
-  doctrine: string;
-  masterData: any;
-  vesselType?: string;
-  flag?: string;
-  operationalLimits?: any;
-  racingRules?: any;
-  systemThresholds?: any;
-  communicationProtocols?: any;
-  requiredDocumentsRace?: string[];
-  sensors?: any;
-  autonomyLevels?: any;
+  dates: { start: string; end: string };
+  venues: string[];
+  status: string;
+  delegateCount: number;
+}
+
+export interface Delegate {
+  id: string;
+  name: string;
+  company: string;
+  status: 'CHECKED_IN' | 'IN_TRANSIT' | 'REGISTERED';
+  location: string;
+}
+
+export interface MaintenanceLogEntry {
+  timestamp: string;
+  stage: string;
+  details: string;
+}
+
+export interface MaintenanceJob {
+  id: string;
+  vesselName: string;
+  jobType: 'HAUL_OUT' | 'ENGINE_SERVICE' | 'GENERAL_REPAIR';
+  status: 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED';
+  scheduledDate: string;
+  contractor: string;
+  partsStatus: 'N/A' | 'ORDERED' | 'ARRIVED';
+  notes: string;
+  logs: MaintenanceLogEntry[];
+}
+
+export interface TravelItinerary {
+  id: string;
+  passengerName: string;
+  tripName: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  totalCost: number;
+  flights: any[];
+  hotels: any[];
+  transfers: any[];
 }

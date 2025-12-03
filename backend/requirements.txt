@@ -5,16 +5,14 @@ python-dotenv>=1.0.1
 google-genai>=0.3.0
 httpx>=0.26.0
 redis>=5.0.0
-# Hyperscale Stack
+# Cognitive Stack
 langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
-langchain-text-splitters
 qdrant-client
+asyncpg
 markdown
 beautifulsoup4
-pandas
-scikit-learn
-# TabPFN is optional for this demo to save build time, uncomment if needed
-# tabpfn 
+# Utilities
+loguru

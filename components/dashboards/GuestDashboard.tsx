@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Car, CheckCircle2, Zap, Utensils, Calendar, Wind, PartyPopper, QrCode, MapPin, Scan, LogIn, Lock } from 'lucide-react';
 import { UserProfile, TenantConfig } from '../../types';
@@ -156,14 +155,8 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
                     </div>
                     <div className="text-lg font-bold text-white mb-1">Poem Restaurant</div>
                     <div className="flex justify-between text-xs text-zinc-300 mb-3">
-                        <span>Today, 19:30</span>
-                        <span>4 Guests</span>
-                    </div>
-                    <div className="bg-white/10 p-2 rounded border border-white/10 text-[10px] space-y-1">
-                        <div className="flex justify-between">
-                            <span className="text-zinc-400">Pre-Order:</span>
-                            <span className="text-emerald-400">Sea Bass x2</span>
-                        </div>
+                        <span>Today, 20:00</span>
+                        <span>3 Guests</span>
                     </div>
                 </div>
             </div>

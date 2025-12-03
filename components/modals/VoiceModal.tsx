@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState } from 'react';
 import { X, Mic, Radio, SignalHigh, Waves, Power, AlertTriangle, RefreshCw, Activity, Server, Cloud } from 'lucide-react';
-import { LiveSession } from '../services/geminiService';
-import { LiveConnectionState, UserProfile } from '../types';
-import { wimMasterData } from '../services/wimMasterData';
-import { formatCoordinate } from '../services/utils';
+import { LiveSession } from '../../services/geminiService';
+import { LiveConnectionState, UserProfile } from '../../types';
+import { wimMasterData } from '../../services/wimMasterData';
+import { formatCoordinate } from '../../services/utils';
 
 interface VoiceModalProps {
   isOpen: boolean;

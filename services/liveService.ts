@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { UserProfile, TenantConfig } from "../types";
 import { TENANT_CONFIG } from "./config"; // Import TENANT_CONFIG for generating base instruction

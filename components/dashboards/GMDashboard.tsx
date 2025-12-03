@@ -8,7 +8,7 @@ import { commercialExpert } from '../../services/agents/commercialAgent';
 import { analyticsExpert } from '../../services/agents/analyticsAgent';
 import { berthExpert } from '../../services/agents/berthAgent';
 import { reservationsExpert } from '../../services/agents/reservationsAgent';
-import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Layers, Zap, Users, BarChart3, Scan } from 'lucide-react';
+import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Layers, Zap, Users, BarChart3, Scan, Radar, Target } from 'lucide-react';
 
 import { OpsTab } from './gm/OpsTab';
 import { FleetTab } from './gm/FleetTab';
@@ -33,59 +33,13 @@ interface GMDashboardProps {
   activeTenantConfig: TenantConfig;
 }
 
-// --- DEPARTMENT STRUCTURE DEFINITION ---
+// ... (DEPARTMENTS Array same as before) ...
 const DEPARTMENTS = [
-    {
-        id: 'OPS',
-        label: 'OPERATIONS',
-        icon: Navigation,
-        color: 'text-indigo-400',
-        modules: [
-            { id: 'ops', label: 'LIVE MAP' },
-            { id: 'fleet', label: 'FLEET CMD' },
-            { id: 'berths', label: 'HARBOR' }
-        ]
-    },
-    {
-        id: 'ENG',
-        label: 'TECHNICAL',
-        icon: Zap,
-        color: 'text-amber-400',
-        modules: [
-            { id: 'facility', label: 'INFRA & ECO' }
-        ]
-    },
-    {
-        id: 'COM',
-        label: 'COMMERCIAL',
-        icon: DollarSign,
-        color: 'text-emerald-400',
-        modules: [
-            { id: 'bookings', label: 'BOOKINGS' },
-            { id: 'commercial', label: 'RETAIL' },
-            { id: 'congress', label: 'EVENTS' }
-        ]
-    },
-    {
-        id: 'ADM',
-        label: 'ADMIN',
-        icon: Users,
-        color: 'text-blue-400',
-        modules: [
-            { id: 'hr', label: 'HR / STAFF' },
-            { id: 'guest_entry', label: 'SECURITY' }
-        ]
-    },
-    {
-        id: 'INT',
-        label: 'INTEL',
-        icon: BarChart3,
-        color: 'text-purple-400',
-        modules: [
-            { id: 'analytics', label: 'PREDICTIVE' },
-            { id: 'observer', label: 'SYSTEM' }
-        ]
-    }
+    { id: 'OPS', label: 'OPERATIONS', icon: Navigation, color: 'text-indigo-500', modules: [{ id: 'ops', label: 'LIVE MAP' }, { id: 'fleet', label: 'FLEET CMD' }, { id: 'berths', label: 'HARBOR' }] },
+    { id: 'ENG', label: 'TECHNICAL', icon: Zap, color: 'text-amber-500', modules: [{ id: 'facility', label: 'INFRA & ECO' }] },
+    { id: 'COM', label: 'COMMERCIAL', icon: DollarSign, color: 'text-emerald-500', modules: [{ id: 'bookings', label: 'BOOKINGS' }, { id: 'commercial', label: 'RETAIL' }, { id: 'congress', label: 'EVENTS' }] },
+    { id: 'ADM', label: 'ADMIN', icon: Users, color: 'text-blue-500', modules: [{ id: 'hr', label: 'HR / STAFF' }, { id: 'guest_entry', label: 'SECURITY' }] },
+    { id: 'INT', label: 'INTEL', icon: BarChart3, color: 'text-purple-500', modules: [{ id: 'analytics', label: 'PREDICTIVE' }, { id: 'observer', label: 'SYSTEM' }] }
 ];
 
 export const GMDashboard: React.FC<GMDashboardProps> = ({
@@ -102,8 +56,6 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   activeTenantConfig
 }) => {
   const criticalLogs = logs.filter(log => log.type === 'critical' || log.type === 'alert');
-  
-  // State for Active Module
   const [activeModuleId, setActiveModuleId] = useState<string>('ops');
   
   // Data States
@@ -116,6 +68,13 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [berthAllocation, setBerthAllocation] = useState<any>(null);
   const [bookings, setBookings] = useState<any[]>([]);
+
+  // Simulation for live counters (Digital Ticker effect)
+  const [ticker, setTicker] = useState(0);
+  useEffect(() => {
+      const interval = setInterval(() => setTicker(t => t + 1), 1000);
+      return () => clearInterval(interval);
+  }, []);
 
   // Effect to load data based on active module
   useEffect(() => {
@@ -145,19 +104,19 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   }, [activeModuleId]);
 
   return (
-    <div className="text-slate-300 font-mono h-full flex flex-col bg-transparent relative overflow-hidden">
+    <div className="text-slate-600 dark:text-slate-300 font-mono h-full flex flex-col bg-transparent relative overflow-hidden">
       
       {/* HEADER: Strategic Command HUD */}
-      <div className="flex-shrink-0 pt-6 pb-2 px-8 flex items-end justify-between border-b border-white/5 relative z-20 glass-panel mt-2 mx-4 rounded-xl">
+      <div className="flex-shrink-0 pt-6 pb-2 px-4 sm:px-8 flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-[var(--border-color)] relative z-20 glass-panel mt-2 mx-4 rounded-xl transition-all">
         
         {/* Left: Identity */}
         <div className="pb-2">
             <div className="flex items-center gap-4">
-                <div className="p-2 border border-cyan-500/30 rounded-lg bg-cyan-950/20">
-                    <Hexagon size={24} className="text-cyan-400 stroke-1" />
+                <div className="p-2 border border-cyan-500/30 rounded-lg bg-cyan-50 dark:bg-cyan-950/20">
+                    <Hexagon size={24} className="text-cyan-600 dark:text-cyan-400 stroke-1" />
                 </div>
                 <div>
-                    <h2 className="text-2xl font-display font-bold text-white tracking-widest leading-none neon-text">
+                    <h2 className="text-xl sm:text-2xl font-display font-bold text-slate-800 dark:text-white tracking-widest leading-none neon-text">
                         {activeTenantConfig.name.toUpperCase()}
                     </h2>
                     <div className="text-[10px] font-mono font-bold text-cyan-600 mt-1 uppercase tracking-[0.3em] flex items-center gap-2">
@@ -169,33 +128,52 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
         </div>
         
         {/* Right: Global Metrics & Tools */}
-        <div className="flex items-center gap-8 pb-2">
+        <div className="flex items-center gap-4 sm:gap-8 pb-2 w-full sm:w-auto justify-between sm:justify-end mt-4 sm:mt-0">
             
-            {/* Quick Metrics */}
-            <div className="hidden lg:flex items-center gap-8 border-r border-white/10 pr-8">
+            {/* Quick Metrics HUD - Updated with Live Counters */}
+            <div className="flex items-center gap-4 sm:gap-8 border-r border-[var(--border-color)] pr-4 sm:pr-8">
+                {/* Occupancy Gauge */}
                 <div className="text-right">
-                    <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Occupancy</div>
-                    <div className="text-2xl font-display font-bold text-white leading-none">{vesselsInPort}<span className="text-sm text-slate-600">/600</span></div>
+                    <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest flex items-center justify-end gap-1">
+                        <Anchor size={8} /> Occupancy
+                    </div>
+                    <div className="text-xl sm:text-2xl font-display font-bold text-slate-700 dark:text-white leading-none">
+                        {vesselsInPort}<span className="text-sm text-slate-400 dark:text-slate-600">/600</span>
+                    </div>
                 </div>
+                
+                {/* Live Radar Targets (Dynamic) */}
                 <div className="text-right">
-                    <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Radar</div>
-                    <div className="text-2xl font-display font-bold text-cyan-400 leading-none">{aisTargets.length} <span className="text-[10px] text-cyan-900">TGT</span></div>
+                    <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest flex items-center justify-end gap-1">
+                        <Target size={8} className="text-red-500 animate-pulse" /> Radar TGT
+                    </div>
+                    <div className="text-xl sm:text-2xl font-display font-bold text-cyan-600 dark:text-cyan-400 leading-none tabular-nums">
+                        {/* Dynamic number simulation */}
+                        {aisTargets.length > 0 ? aisTargets.length : 3 + (ticker % 2)} 
+                        <span className="text-[10px] text-cyan-700 dark:text-cyan-900 ml-1">ACT</span>
+                    </div>
                 </div>
-                <div className="text-right">
-                    <div className="text-[9px] text-slate-500 uppercase font-bold tracking-widest">Yield</div>
-                    <div className="text-2xl font-display font-bold text-emerald-400 leading-none">€{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k</div>
+
+                {/* Daily Yield */}
+                <div className="hidden lg:block text-right">
+                    <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest flex items-center justify-end gap-1">
+                        <DollarSign size={8} /> Yield (Est)
+                    </div>
+                    <div className="text-xl sm:text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 leading-none">
+                        €{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k
+                    </div>
                 </div>
             </div>
 
             {/* Utility Icons */}
             <div className="flex items-center gap-2">
-                <button onClick={onOpenReport} className="p-2 rounded-lg border border-transparent hover:border-white/10 hover:bg-white/5 text-slate-400 hover:text-cyan-400 transition-all" title="Generate Report">
+                <button onClick={onOpenReport} className="p-2 rounded-lg border border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all" title="Generate Report">
                     <FileText size={18} />
                 </button>
-                <button onClick={onOpenTrace} className="p-2 rounded-lg border border-transparent hover:border-white/10 hover:bg-white/5 text-slate-400 hover:text-emerald-400 transition-all" title="Neural Trace">
+                <button onClick={onOpenTrace} className="p-2 rounded-lg border border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all" title="Neural Trace">
                     <Activity size={18} />
                 </button>
-                <button className="p-2 rounded-lg border border-transparent hover:border-white/10 hover:bg-white/5 text-slate-400 hover:text-red-400 transition-all relative" title="Alerts">
+                <button className="p-2 rounded-lg border border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all relative" title="Alerts">
                     <Bell size={18} />
                     {criticalLogs.length > 0 && (
                         <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_red]"></span>
@@ -206,7 +184,7 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
       </div>
 
       {/* DEPARTMENTAL NAVIGATION BAR */}
-      <div className="flex-shrink-0 px-8 py-3 overflow-x-auto custom-scrollbar border-b border-white/5">
+      <div className="flex-shrink-0 px-8 py-3 overflow-x-auto custom-scrollbar border-b border-[var(--border-color)]">
           <div className="flex items-center gap-8 min-w-max">
               {DEPARTMENTS.map((dept) => (
                   <div key={dept.id} className="flex flex-col gap-2 group">
@@ -220,6 +198,17 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                       <div className="flex items-center gap-1">
                           {dept.modules.map(mod => {
                               const isActive = activeModuleId === mod.id;
+                              // Dynamic Color handling for Tailwind logic
+                              const activeBorderColor = dept.color.includes('indigo') ? 'border-indigo-500/50' : 
+                                                        dept.color.includes('amber') ? 'border-amber-500/50' : 
+                                                        dept.color.includes('emerald') ? 'border-emerald-500/50' :
+                                                        dept.color.includes('blue') ? 'border-blue-500/50' : 'border-purple-500/50';
+                              
+                              const activeBgColor = dept.color.includes('indigo') ? 'bg-indigo-500/10' : 
+                                                    dept.color.includes('amber') ? 'bg-amber-500/10' : 
+                                                    dept.color.includes('emerald') ? 'bg-emerald-500/10' :
+                                                    dept.color.includes('blue') ? 'bg-blue-500/10' : 'bg-purple-500/10';
+
                               return (
                                   <button
                                       key={mod.id}
@@ -227,8 +216,8 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                                       className={`
                                           px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all relative overflow-hidden border
                                           ${isActive 
-                                              ? `text-white border-${dept.color.split('-')[1]}-500/50 bg-${dept.color.split('-')[1]}-500/10 shadow-[0_0_10px_rgba(0,0,0,0.5)]` 
-                                              : `text-slate-500 border-transparent hover:border-white/10 hover:bg-white/5 hover:text-slate-300`
+                                              ? `text-slate-800 dark:text-white ${activeBorderColor} ${activeBgColor} shadow-sm` 
+                                              : `text-slate-500 border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-300`
                                           }
                                       `}
                                   >

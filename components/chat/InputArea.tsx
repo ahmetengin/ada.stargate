@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
 import { ArrowUp, AudioWaveform, ScanLine, Radio, Sparkles, Zap } from 'lucide-react'; 
-import { ModelType, UserRole } from '../types';
+import { ModelType, UserRole } from '../../types';
 import { QuickActions } from './QuickActions';
 
 interface InputAreaProps {
@@ -115,9 +115,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
       
       {/* Model Selector & Quick Actions */}
       <div className="flex justify-between items-end mb-3">
-          <div className="flex bg-[#020617]/60 p-1 rounded-lg border border-white/5 backdrop-blur-md">
-              <button onClick={() => onModelChange(ModelType.Flash)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold flex items-center gap-1.5 transition-all ${selectedModel === ModelType.Flash ? 'bg-cyan-950/50 text-cyan-400 border border-cyan-500/30 shadow-[0_0_10px_rgba(34,211,238,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}><Zap size={10}/> FLASH</button>
-              <button onClick={() => onModelChange(ModelType.Pro)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold flex items-center gap-1.5 transition-all ${selectedModel === ModelType.Pro ? 'bg-indigo-950/50 text-indigo-400 border border-indigo-500/30 shadow-[0_0_10px_rgba(99,102,241,0.1)]' : 'text-slate-500 hover:text-slate-300'}`}><Sparkles size={10}/> PRO</button>
+          <div className="flex bg-white/50 dark:bg-[#020617]/60 p-1 rounded-lg border border-[var(--border-color)] backdrop-blur-md">
+              <button onClick={() => onModelChange(ModelType.Flash)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold flex items-center gap-1.5 transition-all ${selectedModel === ModelType.Flash ? 'bg-[var(--accent-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}><Zap size={10}/> FLASH</button>
+              <button onClick={() => onModelChange(ModelType.Pro)} className={`px-2.5 py-1 rounded-md text-[9px] font-bold flex items-center gap-1.5 transition-all ${selectedModel === ModelType.Pro ? 'bg-indigo-600 text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}><Sparkles size={10}/> PRO</button>
           </div>
           
           {userRole && onQuickAction && (
@@ -128,13 +128,13 @@ export const InputArea: React.FC<InputAreaProps> = ({
       </div>
 
       {/* Main Input Capsule */}
-      <div className={`relative bg-[#0a101d]/80 backdrop-blur-xl rounded-3xl border shadow-2xl transition-all duration-300 flex items-end p-2 
-          ${isLoading ? 'border-cyan-500/30 shadow-[0_0_20px_rgba(34,211,238,0.1)]' : 'border-white/10 hover:border-cyan-500/30'}
+      <div className={`relative bg-white/80 dark:bg-[#0a101d]/80 backdrop-blur-xl rounded-3xl border shadow-sm transition-all duration-300 flex items-end p-2 
+          ${isLoading ? 'border-[var(--accent-color)] shadow-md' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]'}
           ${isDictating ? 'ring-1 ring-red-500/50 border-red-500/50' : ''}`}>
           
           {/* Tools */}
-          <div className="flex items-center gap-1 pr-2 border-r border-white/5 mr-2 mb-2">
-              <button onClick={onScanClick} className="p-2.5 text-slate-400 hover:text-cyan-400 rounded-full hover:bg-white/5 transition-colors" title="Scanner">
+          <div className="flex items-center gap-1 pr-2 border-r border-[var(--border-color)] mr-2 mb-2">
+              <button onClick={onScanClick} className="p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Scanner">
                   <ScanLine size={18} />
               </button>
               <button onClick={onRadioClick} className="p-2.5 text-red-500/80 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors relative" title="Radio">
@@ -150,14 +150,14 @@ export const InputArea: React.FC<InputAreaProps> = ({
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Listening on secure channel..." : "Execute command or query..."}
-            className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-slate-200 placeholder:text-slate-600 py-3.5 font-mono min-w-0 max-h-[200px] resize-none ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
+            className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] py-3.5 font-mono min-w-0 max-h-[200px] resize-none ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
             disabled={isLoading}
           />
 
           <div className="flex items-center gap-2 pl-2 mb-1.5">
               <button 
                 onClick={toggleDictation} 
-                className={`p-2.5 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+                className={`p-2.5 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5'}`}
                 title="Voice Input"
               >
                   <AudioWaveform size={18} />
@@ -165,14 +165,14 @@ export const InputArea: React.FC<InputAreaProps> = ({
               <button 
                 onClick={handleSend}
                 disabled={!text.trim() || isLoading}
-                className={`p-2.5 rounded-full transition-all flex items-center justify-center ${text.trim() ? 'bg-cyan-600 text-white shadow-[0_0_15px_rgba(8,145,178,0.4)] hover:bg-cyan-500 hover:scale-105' : 'bg-white/5 text-slate-600'}`}
+                className={`p-2.5 rounded-full transition-all flex items-center justify-center ${text.trim() ? 'bg-[var(--accent-color)] text-white shadow-md hover:scale-105' : 'bg-black/5 dark:bg-white/5 text-[var(--text-secondary)]'}`}
               >
                   {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <ArrowUp size={18} />}
               </button>
           </div>
       </div>
       
-      <div className="text-[9px] text-center text-slate-600 mt-3 uppercase tracking-[0.2em] font-bold opacity-50 flex items-center justify-center gap-2">
+      <div className="text-[9px] text-center text-[var(--text-secondary)] mt-3 uppercase tracking-[0.2em] font-bold opacity-50 flex items-center justify-center gap-2">
           <div className="w-1 h-1 bg-emerald-500 rounded-full"></div>
           Secure Connection Established • 256-BIT Encryption
       </div>

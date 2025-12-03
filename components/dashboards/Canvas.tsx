@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
-import { RegistryEntry, Tender, VhfLog, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../types';
-import { GuestDashboard } from './dashboards/GuestDashboard';
-import { CaptainDashboard } from './dashboards/CaptainDashboard';
-import { GMDashboard } from './dashboards/GMDashboard';
-import { EmergencyDashboard } from './dashboards/EmergencyDashboard';
+import { RegistryEntry, Tender, VhfLog, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
+import { GuestDashboard } from './GuestDashboard';
+import { CaptainDashboard } from './CaptainDashboard';
+import { GMDashboard } from './GMDashboard';
+import { EmergencyDashboard } from './EmergencyDashboard';
 
 interface CanvasProps {
   vesselsInPort: number;
@@ -20,14 +21,14 @@ interface CanvasProps {
 
 export const Canvas: React.FC<CanvasProps> = ({ 
   vesselsInPort, 
-  registry,
-  tenders,
-  vhfLogs = [],
-  aisTargets = [],
-  userProfile,
-  onOpenReport,
-  onOpenTrace,
-  agentTraces = [],
+  registry, 
+  tenders, 
+  vhfLogs = [], 
+  aisTargets = [], 
+  userProfile, 
+  onOpenReport, 
+  onOpenTrace, 
+  agentTraces = [], 
   activeTenantConfig
 }) => {
   // Live Data Simulation for "Static" fix

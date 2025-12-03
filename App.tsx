@@ -1,558 +1,434 @@
 
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AgentAction, VhfLog, AisTarget, ThemeMode, TenantConfig } from './types';
-import { Sidebar } from './components/Sidebar';
-import { Canvas } from './components/Canvas';
-import { InputArea } from './components/InputArea';
-import { MessageBubble } from './components/MessageBubble';
-import { BootSequence } from './components/BootSequence';
-import { VoiceModal } from './components/VoiceModal';
-import { PassportScanner } from './components/PassportScanner';
-import { AgentTraceModal } from './components/AgentTraceModal';
-import { DailyReportModal } from './components/DailyReportModal';
-import { AuthOverlay } from './components/AuthOverlay'; // IMPORTED
-import { streamChatResponse } from './services/geminiService';
+import React, { useState, useEffect } from 'react';
+import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, VhfLog, AisTarget, ThemeMode, TenantConfig } from './types';
+import { Sidebar } from './components/layout/Sidebar';
+import { Canvas } from './components/dashboards/Canvas';
+import { ChatInterface } from './components/chat/ChatInterface';
+import { BootSequence } from './components/layout/BootSequence';
+import { VoiceModal } from './components/modals/VoiceModal';
+import { PassportScanner } from './components/modals/PassportScanner';
+import { AgentTraceModal } from './components/modals/AgentTraceModal';
+import { DailyReportModal } from './components/modals/DailyReportModal';
+import { AuthOverlay } from './components/layout/AuthOverlay';
 import { orchestratorService } from './services/orchestratorService';
 import { marinaExpert } from './services/agents/marinaAgent';
-import { passkitExpert } from './services/agents/passkitAgent';
 import { wimMasterData } from './services/wimMasterData';
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
-import { Menu, Radio, Activity, MessageSquare, Sun, Moon, Monitor, Anchor, GripVertical } from 'lucide-react';
-import { FEDERATION_REGISTRY } from './services/config';
+import { streamChatResponse } from './services/geminiService';
+import { Menu, MessageSquare, Activity, X } from 'lucide-react';
+import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
+import { financeExpert } from './services/agents/financeAgent';
+import { customerExpert } from './services/agents/customerAgent'; // For Quick Actions
 
 // --- SIMULATED USER DATABASE ---
 const MOCK_USER_DATABASE: Record<string, UserProfile> = {
   'VISITOR': { id: 'usr_visitor', name: 'Anonymous Visitor', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
   'MEMBER': { id: 'usr_member_01', name: 'Caner Erkin', role: 'MEMBER', clearanceLevel: 1, legalStatus: 'GREEN' },
-  'CAPTAIN': { id: 'usr_cpt_99', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN', contractId: 'CNT-2025-PHISEDELIA' },
-  'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Levent Baktır', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
+  'CAPTAIN': { id: 'usr_cpt_01', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN' }, // Change to RED to test protocols
+  'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Ahmet Engin', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
 };
 
-const INITIAL_MESSAGE: Message = {
-  id: 'init-1',
-  role: MessageRole.System,
-  text: 'SYSTEM READY',
-  timestamp: Date.now()
-};
+const App: React.FC = () => {
+  // --- STATE: TENANCY & IDENTITY ---
+  const [activeTenantId, setActiveTenantId] = useState<string>(FEDERATION_REGISTRY.peers[0].id);
+  const [userProfile, setUserProfile] = useState<UserProfile>(MOCK_USER_DATABASE['GENERAL_MANAGER']);
+  const [showBootSequence, setShowBootSequence] = useState(true);
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false);
+  const [targetRole, setTargetRole] = useState<string>('');
 
-const BOOT_TRACES: any[] = [
-    { id: 'boot_1', timestamp: '08:00:01', node: 'ada.stargate', step: 'THINKING', content: 'Initializing Distributed Node Mesh...', persona: 'ORCHESTRATOR' },
-    { id: 'boot_2', timestamp: '08:00:02', node: 'ada.marina', step: 'TOOL_EXECUTION', content: 'Connecting to Kpler AIS Stream (Region: WIM)...', persona: 'WORKER' },
-];
+  // --- STATE: UI & THEME ---
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState<'chat' | 'canvas'>('chat'); // Mobile toggle
+  const [theme, setTheme] = useState<ThemeMode>('dark');
+  const [dragWidth, setDragWidth] = useState(320); // Sidebar width
+  const [dragChatWidth, setDragChatWidth] = useState(500); // Chat width
 
-// --- CHAT INTERFACE COMPONENT ---
-interface ChatInterfaceProps {
-    messages: Message[];
-    activeChannel: string;
-    isLoading: boolean;
-    selectedModel: ModelType;
-    userRole: any;
-    theme: ThemeMode;
-    activeTenantConfig: TenantConfig; 
-    onModelChange: (m: ModelType) => void;
-    onSend: (text: string, attachments: File[]) => void;
-    onQuickAction: (text: string) => void;
-    onScanClick: () => void;
-    onRadioClick: () => void;
-    onTraceClick: () => void;
-    onToggleTheme: () => void;
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({
-    messages,
-    activeChannel,
-    isLoading,
-    selectedModel,
-    userRole,
-    theme,
-    activeTenantConfig, 
-    onModelChange,
-    onSend,
-    onQuickAction,
-    onScanClick,
-    onRadioClick,
-    onTraceClick,
-    onToggleTheme
-}) => {
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const isUserAtBottomRef = useRef(true);
-
-    const handleScroll = useCallback(() => {
-        const container = scrollContainerRef.current;
-        if (!container) return;
-        const threshold = 100;
-        const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-        isUserAtBottomRef.current = distanceToBottom < threshold;
-    }, []);
-
-    useLayoutEffect(() => {
-        if (isUserAtBottomRef.current) {
-            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
-        }
-    }, [messages]);
-
-    return (
-        <div className="flex flex-col h-full w-full bg-[#050a14] relative transition-colors duration-300">
-            {/* Header */}
-            <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 bg-[#050a14] z-10 flex-shrink-0 transition-colors duration-300">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={onTraceClick}>
-                    <div className="w-2 h-2 bg-teal-500 rounded-full animate-pulse shadow-[0_0_8px_cyan]"></div>
-                    <span className="text-[10px] font-display font-bold text-slate-300 tracking-[0.2em] uppercase hover:text-cyan-400 transition-colors">
-                        {activeTenantConfig.id}.MARINA
-                    </span>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2 px-2 py-1 bg-white/5 rounded border border-white/10">
-                        <span className="text-[9px] font-mono font-bold text-zinc-400">VHF {activeChannel}</span>
-                    </div>
-                    <button 
-                        onClick={onToggleTheme}
-                        className="p-2 rounded-full hover:bg-white/10 text-slate-500 transition-colors"
-                    >
-                        {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Monitor size={14} />}
-                    </button>
-                </div>
-            </div>
-
-            {/* Messages Area */}
-            <div 
-                className="flex-1 overflow-y-auto px-2 sm:px-4 py-4 space-y-6 custom-scrollbar scroll-smooth" 
-                ref={scrollContainerRef}
-                onScroll={handleScroll}
-            >
-                {messages.map((msg) => (
-                    <MessageBubble key={msg.id} message={msg} />
-                ))}
-                <div ref={messagesEndRef} className="h-2" />
-            </div>
-
-            {/* Input Area */}
-            <div className="flex-shrink-0 bg-[#050a14] border-t border-white/5 p-2 sm:p-4 pb-4 sm:pb-6 z-20 transition-colors duration-300">
-                <InputArea 
-                    onSend={onSend}
-                    isLoading={isLoading}
-                    selectedModel={selectedModel}
-                    onModelChange={onModelChange}
-                    userRole={userRole}
-                    onQuickAction={onQuickAction}
-                    onScanClick={onScanClick}
-                    onRadioClick={onRadioClick}
-                />
-            </div>
-        </div>
-    );
-};
-
-export default function App() {
-  // --- STATE ---
-  const [isBooting, setIsBooting] = useState(true);
-  const [isSwitchingAuth, setIsSwitchingAuth] = useState(false); // NEW: Auth State
-  const [targetRole, setTargetRole] = useState<string>(''); // NEW: Target Role State
-
-  const [messages, setMessages] = useState<Message[]>(() => persistenceService.load(STORAGE_KEYS.MESSAGES, [INITIAL_MESSAGE]));
+  // --- STATE: AI & CHAT ---
+  const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
-  const [theme, setTheme] = useState<ThemeMode>(() => persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
+  const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Pro);
   
-  // Layout Resizing State
-  const [sidebarWidth, setSidebarWidth] = useState(260);
-  const [opsWidth, setOpsWidth] = useState(400);
-  const [isResizingLeft, setIsResizingLeft] = useState(false);
-  const [isResizingRight, setIsResizingRight] = useState(false);
-
-  const [activeMobileTab, setActiveMobileTab] = useState<'nav' | 'comms' | 'ops'>('comms');
-
-  // Modals
-  const [isVoiceOpen, setIsVoiceOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [isTraceOpen, setIsTraceOpen] = useState(false);
-  const [isReportOpen, setIsReportOpen] = useState(false);
-
-  // Tenant Management
-  const [activeTenantConfig, setActiveTenantConfig] = useState<TenantConfig>(() => {
-    const savedTenantId = persistenceService.load(STORAGE_KEYS.ACTIVE_TENANT_ID, 'wim');
-    return FEDERATION_REGISTRY.peers.find(p => p.id === savedTenantId) || FEDERATION_REGISTRY.peers[0];
+  // --- STATE: OPERATIONAL DATA ---
+  const [nodeStates, setNodeStates] = useState<Record<string, 'connected' | 'working' | 'disconnected'>>({
+    'ada.marina': 'connected',
+    'ada.finance': 'connected', 
+    'ada.legal': 'connected',
+    'ada.sea': 'connected',
+    'ada.technic': 'connected',
+    'ada.customer': 'connected',
+    'ada.security': 'connected',
+    'ada.orchestrator': 'working' // Always working as it's the core
   });
-
-
-  // Data
-  const [userProfile, setUserProfile] = useState<UserProfile>(() => persistenceService.load(STORAGE_KEYS.USER_PROFILE, MOCK_USER_DATABASE['CAPTAIN']));
-  const [tenders, setTenders] = useState<Tender[]>(() => persistenceService.load(STORAGE_KEYS.TENDERS, wimMasterData.assets.tenders as Tender[]));
-  const [registry, setRegistry] = useState<RegistryEntry[]>(() => persistenceService.load(STORAGE_KEYS.REGISTRY, []));
-  const [vesselsInPort, setVesselsInPort] = useState(542);
-  const [agentTraces, setAgentTraces] = useState<any[]>(BOOT_TRACES);
-  const [vhfLogs, setVhfLogs] = useState<VhfLog[]>([]); 
+  
+  const [registry, setRegistry] = useState<RegistryEntry[]>([]);
+  const [tenders, setTenders] = useState<Tender[]>([]);
+  const [vhfLogs, setVhfLogs] = useState<VhfLog[]>([]);
+  const [agentTraces, setAgentTraces] = useState<any[]>([]);
   const [aisTargets, setAisTargets] = useState<AisTarget[]>([]);
-  const [nodeStates, setNodeStates] = useState<Record<string, 'connected' | 'working' | 'disconnected'>>({});
-  const [activeChannel, setActiveChannel] = useState('72');
-  const [hailedVessels, setHailedVessels] = useState<Set<string>>(new Set());
+  const [vesselsInPort, setVesselsInPort] = useState(542);
+
+  // --- MODALS ---
+  const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isTraceModalOpen, setIsTraceModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  // --- DERIVED STATE ---
+  const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    const timer = setTimeout(() => setIsBooting(false), 2000); 
-    return () => clearTimeout(timer);
-  }, []);
+    // 1. Boot Sequence
+    setTimeout(() => setShowBootSequence(false), 3500);
 
-  useEffect(() => {
-    const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
-    if (theme === 'auto') {
-        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        root.classList.add(systemDark ? 'dark' : 'light');
-    } else {
-        root.classList.add(theme);
-    }
-    persistenceService.save(STORAGE_KEYS.THEME, theme);
-  }, [theme]);
+    // 2. Load Persistence
+    const savedProfile = persistenceService.load(STORAGE_KEYS.USER_PROFILE, MOCK_USER_DATABASE['GENERAL_MANAGER']);
+    setUserProfile(savedProfile);
+    
+    const savedTheme = persistenceService.load(STORAGE_KEYS.THEME, 'dark');
+    setTheme(savedTheme as ThemeMode);
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
-  // Node Heartbeat
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const nodes = ['ada.vhf', 'ada.sea', 'ada.marina', 'ada.finance'];
-      const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
-      setNodeStates(prev => ({ ...prev, [randomNode]: 'working' }));
-      setTimeout(() => setNodeStates(prev => ({ ...prev, [randomNode]: 'connected' })), 800);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
+    // 3. Load Mock Data
+    const loadData = async () => {
+        // Load Fleet/Tenders from persistence or defaults
+        setTenders(persistenceService.load(STORAGE_KEYS.TENDERS, wimMasterData.assets.tenders));
+        
+        // Initial Radar Scan
+        // FIX: Safe access to coordinates. Some tenants might not have deep nested structure initially.
+        const lat = activeTenantConfig.masterData?.identity?.location?.coordinates?.lat || 40.9634;
+        const lng = activeTenantConfig.masterData?.identity?.location?.coordinates?.lng || 28.6289;
 
-  // Proactive Hailing for Inbound Vessels
-  useEffect(() => {
-      if (isBooting) return;
-
-      const checkInboundVessels = async () => {
-          const currentFleet = marinaExpert.getAllFleetVessels();
-          const newInboundVessels = currentFleet.filter(
-              vessel => vessel.status === 'INBOUND' && vessel.voyage?.eta && !hailedVessels.has(vessel.name)
-          );
-
-          if (newInboundVessels.length > 0) {
-              for (const vessel of newInboundVessels) {
-                  const hailMessageText = await marinaExpert.generateProactiveHail(vessel.name);
-                  const hailMessage: Message = {
-                      id: `hail-${Date.now()}-${vessel.name}`,
-                      role: MessageRole.Model,
-                      text: hailMessageText,
-                      timestamp: Date.now()
-                  };
-                  setMessages(prev => [...prev, hailMessage]);
-                  setHailedVessels(prev => new Set(prev).add(vessel.name));
-              }
-          }
-      };
-
-      const interval = setInterval(checkInboundVessels, 10000);
-      checkInboundVessels();
-
-      return () => clearInterval(interval);
-  }, [isBooting, hailedVessels]);
-
-  // --- RESIZING LOGIC ---
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isResizingLeft) {
-        // Limit sidebar width between 220px and 450px
-        const newWidth = Math.min(Math.max(e.clientX, 220), 450);
-        setSidebarWidth(newWidth);
-      } else if (isResizingRight) {
-        // Calculate width from the right edge
-        const newWidth = Math.min(Math.max(window.innerWidth - e.clientX, 350), 800);
-        setOpsWidth(newWidth);
-      }
+        const targets = await marinaExpert.scanSector(lat, lng, 20, () => {});
+        setAisTargets(targets);
     };
+    loadData();
 
-    const handleMouseUp = () => {
-      setIsResizingLeft(false);
-      setIsResizingRight(false);
-      document.body.style.cursor = 'default';
-      document.body.style.userSelect = 'auto'; // Re-enable selection
-    };
-
-    if (isResizingLeft || isResizingRight) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
-      document.body.style.userSelect = 'none'; // Disable text selection while dragging
+    // 4. Initial System Greeting (Only if empty)
+    if (messages.length === 0) {
+        setMessages([{
+            id: 'init',
+            role: MessageRole.System,
+            text: 'System Online',
+            timestamp: Date.now()
+        }]);
+        
+        setTimeout(() => {
+            const welcomeMsg: Message = {
+                id: `wel_${Date.now()}`,
+                role: MessageRole.Model,
+                text: `**${activeTenantConfig.fullName} ONLINE.**\n\nI am ready to orchestrate operations. The **Big 4** Neural Grid (Marina, Finance, Legal, Stargate) is active.\n\n*Awaiting operational commands.*`,
+                timestamp: Date.now()
+            };
+            setMessages(prev => [...prev, welcomeMsg]);
+        }, 4000);
     }
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizingLeft, isResizingRight]);
+  }, [activeTenantId]); // Re-run when tenant changes
 
+  // --- HANDLERS ---
 
-  // --- ACTIONS ---
-  const toggleTheme = () => {
-      setTheme(curr => curr === 'auto' ? 'light' : curr === 'light' ? 'dark' : 'auto');
-  };
-
-  const handleRoleChange = (newRole: string) => {
-      if (newRole === userProfile.role) return;
-      
-      // 1. Trigger Animation
-      setTargetRole(newRole);
-      setIsSwitchingAuth(true);
-      
-      // 2. Data switch happens after animation (handled by onComplete)
-  };
-
-  const completeRoleSwitch = () => {
-      const profile = MOCK_USER_DATABASE[targetRole];
-      if (profile) {
-          setUserProfile(profile);
-          persistenceService.save(STORAGE_KEYS.USER_PROFILE, profile);
-          
-          // No forced tab switching logic here anymore! 
-      }
-      setIsSwitchingAuth(false);
-  };
-
-  // NEW: Handle Tenant Switch
   const handleTenantSwitch = (tenantId: string) => {
-    const newTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === tenantId);
-    if (newTenantConfig) {
-      setActiveTenantConfig(newTenantConfig);
-      persistenceService.save(STORAGE_KEYS.ACTIVE_TENANT_ID, tenantId);
-      // Optional: Clear messages or reset UI on tenant switch
-      setMessages([INITIAL_MESSAGE]);
-      setAgentTraces(BOOT_TRACES);
-      setVhfLogs([]);
-      console.log(`Switched to tenant: ${newTenantConfig.fullName}`);
+      // Logic to switch context
+      setActiveTenantId(tenantId);
+      // Add a system message indicating the switch
+      const switchMsg: Message = {
+          id: `switch_${Date.now()}`,
+          role: MessageRole.System,
+          text: `Switched Node to: ${tenantId.toUpperCase()}`,
+          timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, switchMsg]);
+      
+      // In a real app, we would reload specific data for that tenant here
+      if (tenantId === 'phisedelia') {
+          // Switch to vessel mode
+          setVesselsInPort(1); // Just itself
+      } else {
+          setVesselsInPort(542);
+      }
+  };
+
+  const handleRoleChange = (role: string) => {
+      if (role !== userProfile.role) {
+          setTargetRole(role);
+          setShowAuthOverlay(true);
+      }
+  };
+
+  const completeRoleChange = () => {
+      const newProfile = MOCK_USER_DATABASE[targetRole] || MOCK_USER_DATABASE['VISITOR'];
+      setUserProfile(newProfile);
+      persistenceService.save(STORAGE_KEYS.USER_PROFILE, newProfile);
+      setShowAuthOverlay(false);
+      
+      // Notify System
+      const sysMsg: Message = {
+          id: `auth_${Date.now()}`,
+          role: MessageRole.System,
+          text: `Identity Switched: ${newProfile.name} (${newProfile.role})`,
+          timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, sysMsg]);
+  };
+
+  const handleSendMessage = async (text: string, attachments: File[]) => {
+    // 1. Add User Message
+    const userMsg: Message = {
+        id: `usr_${Date.now()}`,
+        role: MessageRole.User,
+        text,
+        timestamp: Date.now()
+    };
+    setMessages(prev => [...prev, userMsg]);
+    setIsLoading(true);
+
+    // 2. Orchestrate (Thinking...)
+    try {
+        // A. Quick Local Check (Orchestrator Heuristics)
+        const orchestratorResult = await orchestratorService.processRequest(
+            text, 
+            userProfile, 
+            tenders, 
+            registry, 
+            vesselsInPort, 
+            messages,
+            activeTenantConfig // Pass dynamic tenant config
+        );
+
+        // B. Add Traces & Actions from Orchestrator
+        if (orchestratorResult.traces) {
+            setAgentTraces(prev => [...prev, ...orchestratorResult.traces]);
+            // Update node states based on active traces
+            const newStates = { ...nodeStates };
+            orchestratorResult.traces.forEach(t => {
+                if (t.node) newStates[t.node] = 'working';
+            });
+            setNodeStates(newStates);
+            setTimeout(() => setNodeStates(prev => {
+                const idle = { ...prev };
+                Object.keys(idle).forEach(k => idle[k] = 'connected');
+                return idle;
+            }), 2000);
+        }
+
+        // C. Stream Response (Gemini) or Use Static Response
+        // If Orchestrator provided a direct text response (e.g., from a tool), use it.
+        // Otherwise, stream from Gemini.
+        
+        let finalText = "";
+        
+        if (orchestratorResult.text && orchestratorResult.text.length > 5) {
+             // Direct response from tool/orchestrator
+             finalText = orchestratorResult.text;
+             const modelMsg: Message = {
+                id: `ai_${Date.now()}`,
+                role: MessageRole.Model,
+                text: finalText,
+                timestamp: Date.now()
+            };
+            setMessages(prev => [...prev, modelMsg]);
+        } else {
+             // Fallback to Generative Response (Streaming)
+             let streamText = "";
+             await streamChatResponse(
+                 [...messages, userMsg],
+                 selectedModel,
+                 true, // useSearch
+                 false, // useThinking
+                 registry,
+                 tenders,
+                 userProfile,
+                 vesselsInPort,
+                 activeTenantConfig, // Tenant Context
+                 (chunk) => {
+                     streamText += chunk;
+                     setMessages(prev => {
+                         const last = prev[prev.length - 1];
+                         if (last.role === MessageRole.Model && last.id === `stream_${userMsg.id}`) {
+                             return [...prev.slice(0, -1), { ...last, text: streamText }];
+                         } else {
+                             return [...prev, { id: `stream_${userMsg.id}`, role: MessageRole.Model, text: streamText, timestamp: Date.now() }];
+                         }
+                     });
+                 }
+             );
+        }
+
+    } catch (error) {
+        console.error("Orchestration Error:", error);
+        setMessages(prev => [...prev, {
+            id: `err_${Date.now()}`,
+            role: MessageRole.Model,
+            text: "**SYSTEM ERROR:** Neural link unstable. Please retry.",
+            timestamp: Date.now()
+        }]);
+    } finally {
+        setIsLoading(false);
     }
   };
 
-  const handleVhfClick = (channel: string) => {
-      setActiveChannel(channel);
-      setIsVoiceOpen(true);
+  const handleQuickAction = (text: string) => {
+      handleSendMessage(text, []);
   };
 
-  const handleSendMessage = (text: string, attachments: File[]) => {
-      setIsLoading(true);
-      const newMessages = [...messages, { id: Date.now().toString(), role: MessageRole.User, text, timestamp: Date.now() }];
-      setMessages(newMessages);
-
-      orchestratorService.processRequest(text, userProfile, tenders, registry, vesselsInPort, newMessages, activeTenantConfig).then(res => {
-          if (res.traces) setAgentTraces(prev => [...res.traces, ...prev]);
-          if (res.actions) {
-              res.actions.forEach(act => {
-                  if (act.name === 'ada.ui.openModal') {
-                      if (act.params.modal === 'SCANNER') setIsScannerOpen(true);
-                  }
-              });
-          }
-          
-          const responseMsg: Message = { id: (Date.now()+1).toString(), role: MessageRole.Model, text: res.text, timestamp: Date.now() };
-          setMessages(prev => [...prev, responseMsg]);
-          setIsLoading(false);
-      }).catch(() => setIsLoading(false));
+  const handleThemeToggle = () => {
+      const newTheme = theme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+      document.documentElement.classList.toggle('dark', newTheme === 'dark');
+      persistenceService.save(STORAGE_KEYS.THEME, newTheme);
   };
-
-  const handleVoiceTranscript = (userText: string, modelText: string) => {
-      const newLogs: VhfLog[] = [
-          { id: `vhf-${Date.now()}-u`, timestamp: new Date().toLocaleTimeString(), channel: activeChannel, speaker: 'VESSEL', message: userText },
-          { id: `vhf-${Date.now()}-m`, timestamp: new Date().toLocaleTimeString(), channel: activeChannel, speaker: 'CONTROL', message: modelText }
-      ];
-      setVhfLogs(prev => [...newLogs, ...prev]);
-      
-      setMessages(prev => [
-          ...prev, 
-          { id: Date.now().toString(), role: MessageRole.User, text: `[VHF CH${activeChannel}] ${userText}`, timestamp: Date.now() },
-          { id: (Date.now()+1).toString(), role: MessageRole.Model, text: modelText, timestamp: Date.now() }
-      ]);
-  };
-
-  if (isBooting) return <BootSequence />;
 
   return (
-    <div className="h-[100dvh] w-full bg-[#020617] text-slate-300 font-sans overflow-hidden flex flex-col lg:flex-row transition-colors duration-300">
+    <>
+      {showBootSequence && <BootSequence />}
+      {showAuthOverlay && <AuthOverlay targetRole={targetRole} onComplete={completeRoleChange} />}
+
+      <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
         
-        {/* THE MAGIC OVERLAY */}
-        {isSwitchingAuth && <AuthOverlay targetRole={targetRole} onComplete={completeRoleSwitch} />}
+        {/* MOBILE OVERLAY */}
+        {isSidebarOpen && (
+            <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setIsSidebarOpen(false)}></div>
+        )}
 
-        {/* --- MOBILE VIEW --- */}
-        <div className="lg:hidden flex flex-col h-full w-full relative overflow-hidden">
-            
-            <div className="flex-1 overflow-hidden relative">
-                {activeMobileTab === 'nav' && (
-                    <div className="h-full w-full overflow-y-auto">
-                        <Sidebar 
-                            nodeStates={nodeStates}
-                            activeChannel={activeChannel}
-                            isMonitoring={true}
-                            userProfile={userProfile}
-                            onRoleChange={handleRoleChange}
-                            onVhfClick={handleVhfClick}
-                            onScannerClick={() => setIsScannerOpen(true)}
-                            onPulseClick={() => setIsReportOpen(true)}
-                            onTenantSwitch={handleTenantSwitch} 
-                            activeTenantId={activeTenantConfig.id} 
-                        />
-                    </div>
-                )}
-                
-                {activeMobileTab === 'comms' && (
-                    <ChatInterface 
-                        messages={messages}
-                        activeChannel={activeChannel}
-                        isLoading={isLoading}
-                        selectedModel={selectedModel}
-                        userRole={userProfile.role}
-                        theme={theme}
-                        activeTenantConfig={activeTenantConfig} 
-                        onModelChange={setSelectedModel}
-                        onSend={handleSendMessage}
-                        onQuickAction={(text) => handleSendMessage(text, [])}
-                        onScanClick={() => setIsScannerOpen(true)}
-                        onRadioClick={() => setIsVoiceOpen(true)}
-                        onTraceClick={() => setIsTraceOpen(true)}
-                        onToggleTheme={toggleTheme}
-                    />
-                )}
-
-                {activeMobileTab === 'ops' && (
-                    <Canvas 
-                        vesselsInPort={vesselsInPort}
-                        registry={registry}
-                        tenders={tenders}
-                        vhfLogs={vhfLogs}
-                        aisTargets={aisTargets}
-                        userProfile={userProfile}
-                        onOpenReport={() => setIsReportOpen(true)}
-                        onOpenTrace={() => setIsTraceOpen(true)}
-                        agentTraces={agentTraces}
-                        activeTenantConfig={activeTenantConfig}
-                    />
-                )}
-            </div>
-
-            <div className="h-16 flex-shrink-0 bg-[#050a14] border-t border-white/5 flex items-center justify-around px-2 z-50 pb-safe transition-colors duration-300">
-                <button 
-                    onClick={() => setActiveMobileTab('nav')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'nav' ? 'text-teal-400' : 'text-zinc-500'}`}
-                >
-                    <Menu size={20} />
-                    <span className="text-[9px] font-bold">NAV</span>
-                </button>
-                <button 
-                    onClick={() => setActiveMobileTab('comms')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'comms' ? 'text-teal-400' : 'text-zinc-500'}`}
-                >
-                    <MessageSquare size={20} />
-                    <span className="text-[9px] font-bold">CHAT</span>
-                </button>
-                <button 
-                    onClick={() => setActiveMobileTab('ops')}
-                    className={`flex flex-col items-center justify-center w-16 h-full gap-1 ${activeMobileTab === 'ops' ? 'text-teal-400' : 'text-zinc-500'}`}
-                >
-                    <Activity size={20} />
-                    <span className="text-[9px] font-bold">OPS</span>
-                </button>
-            </div>
+        {/* LEFT: SIDEBAR (Navigation & Status) */}
+        <div 
+            className={`fixed lg:relative z-50 h-full transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+            style={{ width: isSidebarOpen ? dragWidth : 0 }}
+        >
+            <Sidebar 
+                nodeStates={nodeStates}
+                activeChannel="72"
+                isMonitoring={true}
+                userProfile={userProfile}
+                onRoleChange={handleRoleChange}
+                onScannerClick={() => setIsScannerOpen(true)}
+                onPulseClick={() => setIsTraceModalOpen(true)}
+                onTenantSwitch={handleTenantSwitch}
+                activeTenantId={activeTenantId}
+            />
+            {/* Drag Handle */}
+            <div 
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-50 hidden lg:block"
+                onMouseDown={(e) => {
+                    const startX = e.clientX;
+                    const startWidth = dragWidth;
+                    const onMove = (e: MouseEvent) => setDragWidth(Math.max(250, Math.min(400, startWidth + e.clientX - startX)));
+                    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                }}
+            />
         </div>
 
-        {/* --- DESKTOP VIEW --- */}
-        <div className="hidden lg:flex h-full w-full">
-            {/* 1. LEFT SIDEBAR */}
-            <div style={{ width: sidebarWidth }} className="flex-shrink-0 h-full border-r border-white/5 bg-[#020617] transition-colors duration-300">
-                <Sidebar 
-                    nodeStates={nodeStates}
-                    activeChannel={activeChannel}
-                    isMonitoring={true}
-                    userProfile={userProfile}
-                    onRoleChange={handleRoleChange}
-                    onVhfClick={handleVhfClick}
-                    onScannerClick={() => setIsScannerOpen(true)}
-                    onPulseClick={() => setIsReportOpen(true)}
-                    onTenantSwitch={handleTenantSwitch} 
-                    activeTenantId={activeTenantConfig.id} 
-                />
+        {/* CENTER: CHAT INTERFACE */}
+        <div 
+            className={`flex flex-col h-full relative transition-all duration-300 ${activeTab === 'chat' ? 'flex-1' : 'hidden lg:flex'}`}
+            style={{ width: window.innerWidth > 1024 ? dragChatWidth : '100%' }}
+        >
+            {/* Mobile Header */}
+            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-between bg-[var(--glass-bg)] backdrop-blur-md">
+                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}><Menu size={24} /></button>
+                <span className="font-display font-bold">ADA.MARINA</span>
+                <button onClick={() => setActiveTab(activeTab === 'chat' ? 'canvas' : 'chat')}>
+                    {activeTab === 'chat' ? <Activity size={24}/> : <MessageSquare size={24}/>}
+                </button>
             </div>
 
-            {/* LEFT RESIZER */}
+            <ChatInterface 
+                messages={messages}
+                activeChannel="72"
+                isLoading={isLoading}
+                selectedModel={selectedModel}
+                userRole={userProfile.role}
+                theme={theme}
+                activeTenantConfig={activeTenantConfig}
+                onModelChange={setSelectedModel}
+                onSend={handleSendMessage}
+                onQuickAction={handleQuickAction}
+                onScanClick={() => setIsScannerOpen(true)}
+                onRadioClick={() => setIsVoiceModalOpen(true)}
+                onTraceClick={() => setIsTraceModalOpen(true)}
+                onToggleTheme={handleThemeToggle}
+            />
+
+            {/* Drag Handle (Right) */}
             <div 
-                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group bg-[#020617]"
-                onMouseDown={() => setIsResizingLeft(true)}
-            >
-                <div className="h-8 w-0.5 bg-zinc-800 group-hover:bg-cyan-400 rounded-full"></div>
-            </div>
-
-            {/* 2. CENTER CHAT */}
-            <div className="flex-1 h-full min-w-[350px] border-r border-white/5">
-                <ChatInterface 
-                    messages={messages}
-                    activeChannel={activeChannel}
-                    isLoading={isLoading}
-                    selectedModel={selectedModel}
-                    userRole={userProfile.role}
-                    theme={theme}
-                    activeTenantConfig={activeTenantConfig} 
-                    onModelChange={setSelectedModel}
-                    onSend={handleSendMessage}
-                    onQuickAction={(text) => handleSendMessage(text, [])}
-                    onScanClick={() => setIsScannerOpen(true)}
-                    onRadioClick={() => setIsVoiceOpen(true)}
-                    onTraceClick={() => setIsTraceOpen(true)}
-                    onToggleTheme={toggleTheme}
-                />
-            </div>
-
-            {/* RIGHT RESIZER */}
-            <div 
-                className="w-1 cursor-col-resize hover:bg-teal-500/50 active:bg-teal-500 transition-colors z-50 flex items-center justify-center group bg-[#020617]"
-                onMouseDown={() => setIsResizingRight(true)}
-            >
-                <div className="h-8 w-0.5 bg-zinc-800 group-hover:bg-cyan-400 rounded-full"></div>
-            </div>
-
-            {/* 3. RIGHT OPS CANVAS */}
-            <div style={{ width: opsWidth }} className="flex-shrink-0 h-full bg-[#050b14] transition-colors duration-300">
-                <Canvas 
-                    vesselsInPort={vesselsInPort}
-                    registry={registry}
-                    tenders={tenders}
-                    vhfLogs={vhfLogs}
-                    aisTargets={aisTargets}
-                    userProfile={userProfile}
-                    onOpenReport={() => setIsReportOpen(true)}
-                    onOpenTrace={() => setIsTraceOpen(true)}
-                    agentTraces={agentTraces}
-                    activeTenantConfig={activeTenantConfig}
-                />
-            </div>
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-50 hidden lg:block"
+                onMouseDown={(e) => {
+                    const startX = e.clientX;
+                    const startWidth = dragChatWidth;
+                    const onMove = (e: MouseEvent) => setDragChatWidth(Math.max(400, Math.min(800, startWidth + e.clientX - startX)));
+                    const onUp = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+                    window.addEventListener('mousemove', onMove);
+                    window.addEventListener('mouseup', onUp);
+                }}
+            />
         </div>
 
-        {/* MODALS */}
-        <VoiceModal 
-            isOpen={isVoiceOpen} 
-            onClose={() => setIsVoiceOpen(false)} 
-            userProfile={userProfile} 
-            onTranscriptReceived={handleVoiceTranscript} 
-            channel={activeChannel}
-        />
-        <PassportScanner 
-            isOpen={isScannerOpen} 
-            onClose={() => setIsScannerOpen(false)} 
-            onScanComplete={(res) => handleSendMessage(`Identity Verified: ${res.data.name}`, [])} 
-        />
-        <AgentTraceModal 
-            isOpen={isTraceOpen} 
-            onClose={() => setIsTraceOpen(false)} 
-            traces={agentTraces} 
-        />
-        <DailyReportModal 
-            isOpen={isReportOpen} 
-            onClose={() => setIsReportOpen(false)} 
-            registry={registry} 
-            logs={agentTraces} 
-            vesselsInPort={vesselsInPort} 
-            userProfile={userProfile} 
-            weatherData={[{ day: 'Today', temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }]} 
-            activeTenantConfig={activeTenantConfig} 
-        />
+        {/* RIGHT: OPERATIONS CANVAS (Visuals) */}
+        <div className={`flex-1 h-full bg-[var(--bg-secondary)] border-l border-[var(--border-color)] relative ${activeTab === 'canvas' ? 'block' : 'hidden lg:block'}`}>
+            <Canvas 
+                vesselsInPort={vesselsInPort}
+                registry={registry}
+                tenders={tenders}
+                userProfile={userProfile}
+                agentTraces={agentTraces}
+                vhfLogs={vhfLogs}
+                aisTargets={aisTargets}
+                onOpenReport={() => setIsReportModalOpen(true)}
+                onOpenTrace={() => setIsTraceModalOpen(true)}
+                activeTenantConfig={activeTenantConfig}
+            />
+        </div>
 
-    </div>
+      </div>
+
+      {/* MODALS */}
+      <VoiceModal 
+        isOpen={isVoiceModalOpen} 
+        onClose={() => setIsVoiceModalOpen(false)} 
+        userProfile={userProfile}
+        onTranscriptReceived={(userText, modelText) => {
+            setMessages(prev => [
+                ...prev, 
+                { id: `v_usr_${Date.now()}`, role: MessageRole.User, text: `[VOICE] ${userText}`, timestamp: Date.now() },
+                { id: `v_mdl_${Date.now()}`, role: MessageRole.Model, text: `[VOICE] ${modelText}`, timestamp: Date.now() }
+            ]);
+        }}
+        channel="72"
+      />
+
+      <PassportScanner 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanComplete={(result) => {
+            const text = result.type === 'PASSPORT' 
+                ? `Scanned Passport for ${result.data.name} (${result.data.nationality}). ID: ${result.data.id}. Expiry: ${result.data.expiry}`
+                : `Scanned Card for ${result.data.holder}. Network: ${result.data.network}.`;
+            handleSendMessage(text, []);
+        }}
+      />
+
+      <AgentTraceModal 
+        isOpen={isTraceModalOpen}
+        onClose={() => setIsTraceModalOpen(false)}
+        traces={agentTraces}
+      />
+
+      <DailyReportModal 
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        registry={registry}
+        logs={agentTraces.filter(t => t.step === 'ERROR' || t.content.includes('ALERT'))}
+        vesselsInPort={vesselsInPort}
+        userProfile={userProfile}
+        weatherData={[{ temp: 24, condition: 'Clear', windSpeed: 12, windDir: 'NW', day: 'Today' }]}
+        activeTenantConfig={activeTenantConfig}
+      />
+
+    </>
   );
-}
+};
+
+export default App;

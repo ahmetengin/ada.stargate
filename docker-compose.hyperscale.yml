@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
     container_name: ada_core_hyperscale
     ports:
-      - "8000:8000"
+      - "8000:8000" # API Only
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
@@ -18,9 +18,9 @@ services:
       - ada-qdrant
     volumes:
       - ./backend:/app
-      - ./docs:/docs
+      - ./docs:/docs # RAG access
 
-  # 2. MEMORY (Vector DB)
+  # 2. MEMORY (Vector DB - Long Term)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
@@ -29,7 +29,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-  # 3. TRUTH (Relational DB)
+  # 3. TRUTH (Relational DB - Entities)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -42,7 +42,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # 4. NERVOUS SYSTEM (Event Bus)
+  # 4. NERVOUS SYSTEM (Event Bus - Short Term)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
@@ -51,7 +51,7 @@ services:
     volumes:
       - redis_data:/data
 
-  # 5. FRONTEND (React)
+  # 5. FRONTEND (React Interface)
   ada-frontend:
     build:
       context: .

@@ -1,4 +1,3 @@
-
 export type TelemetryCallback = (data: any) => void;
 
 class TelemetryStreamService {
@@ -15,16 +14,15 @@ class TelemetryStreamService {
         }
 
         // Secure WebSocket Protocol Selection
-        // CRITICAL FIX: If on HTTPS, we MUST use WSS. Browser will block WS.
-        // We check specific protocol strings to be robust across browsers.
         const isSecure = window.location.protocol === 'https:' || window.location.protocol.includes('https');
         const protocol = isSecure ? 'wss:' : 'ws:';
-        const host = window.location.host;
         
-        // Construct URL - Handle potential double slashes if host implies protocol
+        // Robust host detection with fallback for sandboxed environments
+        const host = window.location.host || 'localhost';
+        
+        // Construct URL
         const wsUrl = `${protocol}//${host}/ws/telemetry`;
 
-        // Only log connection attempts occasionally to reduce noise in console
         if (this.retryCount === 0 || this.retryCount % 5 === 0) {
             console.debug(`[Telemetry] Connecting to ${wsUrl} (Attempt ${this.retryCount + 1})...`);
         }
@@ -32,7 +30,6 @@ class TelemetryStreamService {
         try {
             this.socket = new WebSocket(wsUrl);
         } catch (error) {
-            // If constructor throws (e.g. syntax error), handle gracefully
             console.warn("[Telemetry] Socket constructor failed:", error);
             this.handleReconnect();
             return;
@@ -40,30 +37,28 @@ class TelemetryStreamService {
 
         this.socket.onopen = () => {
             console.log("📡 Telemetry Stream Connected");
-            this.retryCount = 0; // Reset backoff on successful connection
+            this.retryCount = 0;
         };
 
         this.socket.onmessage = (event) => {
             if (!event.data) return;
             try {
+                // Protect against malformed JSON from the server
                 const data = JSON.parse(event.data);
                 this.notifyListeners(data);
             } catch (e) {
-                // Silent fail on parse error
+                console.warn("[Telemetry] Malformed message received:", e);
             }
         };
 
         this.socket.onclose = (event) => {
-            this.socket = null; // Clean up reference
-            // Don't reconnect if it was a clean close (code 1000)
+            this.socket = null;
             if (event.code !== 1000) {
                 this.handleReconnect();
             }
         };
 
         this.socket.onerror = (err) => {
-            // WebSocket errors are often uninformative in JS due to security.
-            // We just ensure socket is closed to trigger cleanup.
             if (this.socket && this.socket.readyState !== WebSocket.CLOSED) {
                 this.socket.close();
             }
@@ -73,8 +68,6 @@ class TelemetryStreamService {
     private handleReconnect() {
         if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
 
-        // Exponential Backoff: 1s, 2s, 4s, 8s... up to 30s
-        // This prevents "9+ errors" appearing instantly in the logs.
         const delay = Math.min(1000 * Math.pow(2, this.retryCount), this.maxRetryDelay);
         
         this.reconnectTimer = setTimeout(() => {
@@ -85,7 +78,6 @@ class TelemetryStreamService {
 
     subscribe(callback: TelemetryCallback) {
         this.listeners.push(callback);
-        // Ensure connection is active when someone subscribes
         if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
             this.connect();
         }

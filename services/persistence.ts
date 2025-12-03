@@ -1,5 +1,6 @@
+
 // services/persistence.ts
-import { RegistryEntry, Tender, TrafficEntry, UserProfile, VesselIntelligenceProfile, MaintenanceJob, Message } from '../types';
+import { RegistryEntry, Tender, UserProfile, VesselIntelligenceProfile, MaintenanceJob, Message } from '../types';
 
 export const STORAGE_KEYS = {
   FLEET: 'ada_fleet_v1',
@@ -12,7 +13,7 @@ export const STORAGE_KEYS = {
   TRAFFIC: 'ada_traffic_queue_v1',
   USER_PROFILE: 'ada_user_profile_v1',
   THEME: 'theme',
-  ACTIVE_TENANT_ID: 'active_tenant_id', // NEW: To persist the active tenant choice
+  ACTIVE_TENANT_ID: 'active_tenant_id',
 };
 
 class PersistenceService {
@@ -31,25 +32,36 @@ class PersistenceService {
   load<T>(key: string, defaultValue: T): T {
     try {
       const serialized = localStorage.getItem(key);
-      if (serialized === null) {
+      if (serialized === null || serialized === "undefined" || serialized === "" || serialized === "null") {
         return defaultValue;
       }
       return JSON.parse(serialized) as T;
     } catch (error) {
-      console.warn(`[Persistence] Error loading/parsing ${key}, using default value.`, error);
+      console.warn(`[Persistence] Error loading/parsing ${key}. Resetting to default.`, error);
+      // Return default value to prevent app crash on corrupted data
+      // Optional: Clear the corrupted key
+      localStorage.removeItem(key);
       return defaultValue;
     }
   }
 
   // Clear specific key
   remove(key: string): void {
-    localStorage.removeItem(key);
+    try {
+        localStorage.removeItem(key);
+    } catch (error) {
+        console.error(`[Persistence] Error removing ${key}:`, error);
+    }
   }
 
   // Nuke everything (Factory Reset)
   clearAll(): void {
-    Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
-    window.location.reload();
+    try {
+        Object.values(STORAGE_KEYS).forEach(key => localStorage.removeItem(key));
+        window.location.reload();
+    } catch (error) {
+        console.error("[Persistence] Error clearing all data:", error);
+    }
   }
 }
 

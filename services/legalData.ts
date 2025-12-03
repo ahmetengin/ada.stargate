@@ -1,4 +1,5 @@
 
+
 // services/legalData.ts
 
 export const LEGAL_DOCUMENTS: Record<string, string> = {

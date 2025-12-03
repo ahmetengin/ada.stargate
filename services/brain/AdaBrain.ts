@@ -25,24 +25,31 @@ export class AdaBrain {
   }
 
   async handleObservation(obs: AgentObservation, mdapGraphId: string): Promise<AgentAction[]> {
-    this.context.workingMemory.push({
-      id: `wm_${Date.now()}`,
-      type: 'working',
+    this.logs.push({
       timestamp: Date.now(),
-      key: 'last_observation',
-      data: obs,
+      step: 'OBSERVATION_RECEIVED',
+      details: obs
     });
 
-    const actions = await runMdapGraph(mdapGraphId, this.context, obs);
-
-    actions.forEach((a) => {
+    try {
+      const actions = await runMdapGraph(mdapGraphId, this.context, obs);
+      
       this.logs.push({
-        step: this.logs.length + 1,
-        observation: obs,
-        chosenAction: a,
+        timestamp: Date.now(),
+        step: 'MDAP_EXECUTION_COMPLETE',
+        details: { actionCount: actions.length }
       });
-    });
 
-    return actions;
+      return actions;
+    } catch (error: any) {
+      console.error("AdaBrain execution error:", error);
+      this.logs.push({
+        timestamp: Date.now(),
+        step: 'EXECUTION_ERROR',
+        details: { message: error.message },
+        isError: true
+      });
+      return [];
+    }
   }
 }
