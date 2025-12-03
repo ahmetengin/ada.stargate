@@ -100,6 +100,22 @@ export interface UserProfile {
   contractId?: string;
 }
 
+// --- NEW: SCORING TYPES ---
+export interface TrustScoreBreakdown {
+    financial: number;   // 0-100 (Payment habits)
+    operational: number; // 0-100 (Safety compliance)
+    commercial: number;  // 0-100 (Spending power)
+    social: number;      // 0-100 (Behavior/Complaints)
+}
+
+export interface CustomerRiskProfile {
+    totalScore: number; // 0-1000 (Base 500)
+    segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
+    breakdown: TrustScoreBreakdown;
+    lastAssessmentDate: string;
+    flags: string[]; // e.g., ["Late Payer", "Speeding Violation"]
+}
+
 export interface VesselIntelligenceProfile {
   name: string;
   imo: string;
@@ -121,6 +137,8 @@ export interface VesselIntelligenceProfile {
   utilities?: { electricityKwh: number; waterM3: number; lastReading: string; status: 'ACTIVE' | 'DISCONNECTED' };
   outstandingDebt?: number;
   loyaltyScore?: number;
+  // Linked Risk Profile
+  riskProfile?: CustomerRiskProfile;
 }
 
 export type NodeName = string | 'ada.stargate'; 

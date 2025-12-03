@@ -15,7 +15,7 @@ import { marinaExpert } from './services/agents/marinaAgent';
 import { wimMasterData } from './services/wimMasterData';
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
 import { streamChatResponse } from './services/geminiService';
-import { Menu, MessageSquare, Activity, X } from 'lucide-react';
+import { Menu, MessageSquare, Activity, X, Anchor, LayoutDashboard, Radio } from 'lucide-react';
 import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
 import { financeExpert } from './services/agents/financeAgent';
 import { customerExpert } from './services/agents/customerAgent'; // For Quick Actions
@@ -37,8 +37,8 @@ const App: React.FC = () => {
   const [targetRole, setTargetRole] = useState<string>('');
 
   // --- STATE: UI & THEME ---
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'canvas'>('chat'); // Mobile toggle
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Desktop default open
+  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'canvas'>('chat'); // Mobile toggle
   const [theme, setTheme] = useState<ThemeMode>('dark');
   const [dragWidth, setDragWidth] = useState(320); // Sidebar width
   const [dragChatWidth, setDragChatWidth] = useState(500); // Chat width
@@ -89,13 +89,17 @@ const App: React.FC = () => {
     setTheme(savedTheme as ThemeMode);
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
+    // Mobile check for sidebar
+    if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+    }
+
     // 3. Load Mock Data
     const loadData = async () => {
         // Load Fleet/Tenders from persistence or defaults
         setTenders(persistenceService.load(STORAGE_KEYS.TENDERS, wimMasterData.assets.tenders));
         
         // Initial Radar Scan
-        // FIX: Safe access to coordinates. Some tenants might not have deep nested structure initially.
         const lat = activeTenantConfig.masterData?.identity?.location?.coordinates?.lat || 40.9634;
         const lng = activeTenantConfig.masterData?.identity?.location?.coordinates?.lng || 28.6289;
 
@@ -129,9 +133,7 @@ const App: React.FC = () => {
   // --- HANDLERS ---
 
   const handleTenantSwitch = (tenantId: string) => {
-      // Logic to switch context
       setActiveTenantId(tenantId);
-      // Add a system message indicating the switch
       const switchMsg: Message = {
           id: `switch_${Date.now()}`,
           role: MessageRole.System,
@@ -140,13 +142,11 @@ const App: React.FC = () => {
       };
       setMessages(prev => [...prev, switchMsg]);
       
-      // In a real app, we would reload specific data for that tenant here
-      if (tenantId === 'phisedelia') {
-          // Switch to vessel mode
-          setVesselsInPort(1); // Just itself
-      } else {
-          setVesselsInPort(542);
-      }
+      if (tenantId === 'phisedelia') setVesselsInPort(1);
+      else setVesselsInPort(542);
+      
+      // Auto close sidebar on mobile after switch
+      if (window.innerWidth < 1024) setIsSidebarOpen(false);
   };
 
   const handleRoleChange = (role: string) => {
@@ -185,7 +185,6 @@ const App: React.FC = () => {
 
     // 2. Orchestrate (Thinking...)
     try {
-        // A. Quick Local Check (Orchestrator Heuristics)
         const orchestratorResult = await orchestratorService.processRequest(
             text, 
             userProfile, 
@@ -196,10 +195,8 @@ const App: React.FC = () => {
             activeTenantConfig // Pass dynamic tenant config
         );
 
-        // B. Add Traces & Actions from Orchestrator
         if (orchestratorResult.traces) {
             setAgentTraces(prev => [...prev, ...orchestratorResult.traces]);
-            // Update node states based on active traces
             const newStates = { ...nodeStates };
             orchestratorResult.traces.forEach(t => {
                 if (t.node) newStates[t.node] = 'working';
@@ -212,14 +209,9 @@ const App: React.FC = () => {
             }), 2000);
         }
 
-        // C. Stream Response (Gemini) or Use Static Response
-        // If Orchestrator provided a direct text response (e.g., from a tool), use it.
-        // Otherwise, stream from Gemini.
-        
         let finalText = "";
         
         if (orchestratorResult.text && orchestratorResult.text.length > 5) {
-             // Direct response from tool/orchestrator
              finalText = orchestratorResult.text;
              const modelMsg: Message = {
                 id: `ai_${Date.now()}`,
@@ -229,7 +221,6 @@ const App: React.FC = () => {
             };
             setMessages(prev => [...prev, modelMsg]);
         } else {
-             // Fallback to Generative Response (Streaming)
              let streamText = "";
              await streamChatResponse(
                  [...messages, userMsg],
@@ -284,30 +275,39 @@ const App: React.FC = () => {
       {showBootSequence && <BootSequence />}
       {showAuthOverlay && <AuthOverlay targetRole={targetRole} onComplete={completeRoleChange} />}
 
-      <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans">
+      <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans transition-colors duration-300">
         
         {/* MOBILE OVERLAY */}
         {isSidebarOpen && (
-            <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setIsSidebarOpen(false)}></div>
+            <div className="fixed inset-0 z-40 bg-black/50 lg:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
         )}
 
         {/* LEFT: SIDEBAR (Navigation & Status) */}
+        {/* Mobile: Drawer style. Desktop: Resizable pane. */}
         <div 
-            className={`fixed lg:relative z-50 h-full transition-all duration-300 ease-in-out transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
-            style={{ width: isSidebarOpen ? dragWidth : 0 }}
+            className={`fixed lg:relative z-50 h-full transition-all duration-300 ease-in-out transform border-r border-[var(--border-color)] bg-[var(--bg-primary)] 
+                ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0 lg:shadow-none'}
+            `}
+            style={{ width: window.innerWidth >= 1024 ? dragWidth : '85%' }}
         >
-            <Sidebar 
-                nodeStates={nodeStates}
-                activeChannel="72"
-                isMonitoring={true}
-                userProfile={userProfile}
-                onRoleChange={handleRoleChange}
-                onScannerClick={() => setIsScannerOpen(true)}
-                onPulseClick={() => setIsTraceModalOpen(true)}
-                onTenantSwitch={handleTenantSwitch}
-                activeTenantId={activeTenantId}
-            />
-            {/* Drag Handle */}
+            <div className="h-full flex flex-col">
+                <div className="lg:hidden p-4 flex justify-end">
+                    <button onClick={() => setIsSidebarOpen(false)}><X className="text-[var(--text-secondary)]" /></button>
+                </div>
+                <Sidebar 
+                    nodeStates={nodeStates}
+                    activeChannel="72"
+                    isMonitoring={true}
+                    userProfile={userProfile}
+                    onRoleChange={handleRoleChange}
+                    onScannerClick={() => setIsScannerOpen(true)}
+                    onPulseClick={() => setIsTraceModalOpen(true)}
+                    onTenantSwitch={handleTenantSwitch}
+                    activeTenantId={activeTenantId}
+                />
+            </div>
+            
+            {/* Desktop Drag Handle */}
             <div 
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-50 hidden lg:block"
                 onMouseDown={(e) => {
@@ -323,16 +323,16 @@ const App: React.FC = () => {
 
         {/* CENTER: CHAT INTERFACE */}
         <div 
-            className={`flex flex-col h-full relative transition-all duration-300 ${activeTab === 'chat' ? 'flex-1' : 'hidden lg:flex'}`}
+            className={`flex flex-col h-full relative transition-all duration-300 
+                ${activeMobileTab === 'chat' ? 'flex-1 z-10' : 'hidden lg:flex'}
+            `}
             style={{ width: window.innerWidth > 1024 ? dragChatWidth : '100%' }}
         >
-            {/* Mobile Header */}
-            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-between bg-[var(--glass-bg)] backdrop-blur-md">
-                <button onClick={() => setIsSidebarOpen(!isSidebarOpen)}><Menu size={24} /></button>
-                <span className="font-display font-bold">ADA.MARINA</span>
-                <button onClick={() => setActiveTab(activeTab === 'chat' ? 'canvas' : 'chat')}>
-                    {activeTab === 'chat' ? <Activity size={24}/> : <MessageSquare size={24}/>}
-                </button>
+            {/* Mobile Top Header (Minimal) */}
+            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-between bg-[var(--glass-bg)] backdrop-blur-md z-20">
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2"><Menu size={20} className="text-[var(--text-secondary)]" /></button>
+                <span className="font-display font-bold text-[var(--text-primary)]">ADA.<span className="text-[var(--accent-color)]">MOBILE</span></span>
+                <button onClick={() => setIsVoiceModalOpen(true)} className="p-2 bg-red-500/10 text-red-500 rounded-full animate-pulse"><Radio size={16} /></button>
             </div>
 
             <ChatInterface 
@@ -352,7 +352,7 @@ const App: React.FC = () => {
                 onToggleTheme={handleThemeToggle}
             />
 
-            {/* Drag Handle (Right) */}
+            {/* Desktop Drag Handle (Right) */}
             <div 
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-50 hidden lg:block"
                 onMouseDown={(e) => {
@@ -367,7 +367,16 @@ const App: React.FC = () => {
         </div>
 
         {/* RIGHT: OPERATIONS CANVAS (Visuals) */}
-        <div className={`flex-1 h-full bg-[var(--bg-secondary)] border-l border-[var(--border-color)] relative ${activeTab === 'canvas' ? 'block' : 'hidden lg:block'}`}>
+        <div className={`flex-1 h-full bg-[var(--bg-secondary)] border-l border-[var(--border-color)] relative 
+            ${activeMobileTab === 'canvas' ? 'block z-10' : 'hidden lg:block'}
+        `}>
+            {/* Mobile Header for Canvas */}
+            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-between bg-[var(--glass-bg)] backdrop-blur-md sticky top-0 z-20">
+                 <button onClick={() => setIsSidebarOpen(true)} className="p-2"><Menu size={20} className="text-[var(--text-secondary)]" /></button>
+                 <span className="font-display font-bold text-[var(--text-primary)]">OPS CENTER</span>
+                 <div className="w-8"></div> {/* Spacer */}
+            </div>
+
             <Canvas 
                 vesselsInPort={vesselsInPort}
                 registry={registry}
@@ -380,6 +389,34 @@ const App: React.FC = () => {
                 onOpenTrace={() => setIsTraceModalOpen(true)}
                 activeTenantConfig={activeTenantConfig}
             />
+        </div>
+
+        {/* MOBILE BOTTOM NAVIGATION BAR */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[var(--bg-primary)] border-t border-[var(--border-color)] flex items-center justify-around z-50 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
+            <button 
+                onClick={() => setActiveMobileTab('chat')}
+                className={`flex flex-col items-center gap-1 p-2 w-16 ${activeMobileTab === 'chat' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
+            >
+                <MessageSquare size={20} className={activeMobileTab === 'chat' ? 'fill-current' : ''} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Comms</span>
+            </button>
+
+            <button 
+                onClick={() => setIsVoiceModalOpen(true)}
+                className="flex flex-col items-center justify-center -mt-6 bg-[var(--bg-primary)] p-1.5 rounded-full border border-[var(--border-color)] shadow-lg"
+            >
+                <div className="w-12 h-12 bg-red-600 hover:bg-red-500 transition-colors rounded-full flex items-center justify-center text-white shadow-md shadow-red-500/30">
+                    <Radio size={24} />
+                </div>
+            </button>
+
+            <button 
+                onClick={() => setActiveMobileTab('canvas')}
+                className={`flex flex-col items-center gap-1 p-2 w-16 ${activeMobileTab === 'canvas' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
+            >
+                <LayoutDashboard size={20} className={activeMobileTab === 'canvas' ? 'fill-current' : ''} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Ops</span>
+            </button>
         </div>
 
       </div>

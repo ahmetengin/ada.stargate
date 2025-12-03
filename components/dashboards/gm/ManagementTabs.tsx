@@ -1,6 +1,9 @@
 
-import React from 'react';
-import { Users, Store, TrendingUp, BookOpen, Clock, BadgeCheck, BarChart3, Globe, PieChart, ShoppingBag, Utensils } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Store, TrendingUp, BookOpen, Clock, BadgeCheck, BarChart3, Globe, PieChart, ShoppingBag, Utensils, ShieldAlert, Award, AlertTriangle } from 'lucide-react';
+import { customerExpert } from '../../../services/agents/customerAgent';
+import { marinaExpert } from '../../../services/agents/marinaAgent';
+import { CustomerRiskProfile } from '../../../types';
 
 // --- HR TAB ---
 export const HRTab: React.FC<{ hrData: any }> = ({ hrData }) => {
@@ -32,6 +35,100 @@ export const HRTab: React.FC<{ hrData: any }> = ({ hrData }) => {
       </div>
     </div>
   );
+};
+
+// --- CUSTOMER INTELLIGENCE TAB (NEW) ---
+export const CustomerTab: React.FC = () => {
+    const [profiles, setProfiles] = useState<any[]>([]);
+
+    useEffect(() => {
+        const loadProfiles = async () => {
+            const vessels = marinaExpert.getAllFleetVessels();
+            // Here we ask the Customer Agent to interrogate other agents about each vessel
+            const analyzed = await Promise.all(vessels.map(async (v) => {
+                const risk = await customerExpert.evaluateCustomerRisk(v.name, () => {});
+                return { ...v, riskProfile: risk };
+            }));
+            setProfiles(analyzed);
+        };
+        loadProfiles();
+    }, []);
+
+    const getSegmentColor = (segment: string) => {
+        switch(segment) {
+            case 'WHALE': return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
+            case 'VIP': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+            case 'RISKY': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
+            case 'BLACKLISTED': return 'text-red-500 bg-red-500/10 border-red-500/20';
+            default: return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20';
+        }
+    };
+
+    return (
+        <div className="bg-white dark:bg-zinc-900/30 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-black text-slate-700 dark:text-zinc-200 uppercase tracking-widest flex items-center gap-2">
+                    <ShieldAlert size={14} className="text-blue-500" /> Customer Risk Matrix
+                </h3>
+                <div className="text-[10px] text-zinc-500">
+                    Ada Trust Score (ATS) Analysis
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {profiles.map((p) => (
+                    <div key={p.name} className="p-3 bg-slate-50 dark:bg-zinc-900/80 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <div className="font-bold text-sm text-slate-800 dark:text-zinc-200">{p.name}</div>
+                                <div className="text-[10px] text-slate-500 font-mono">Owner: {p.ownerName}</div>
+                            </div>
+                            <div className={`px-2 py-1 rounded border text-[10px] font-bold uppercase ${getSegmentColor(p.riskProfile?.segment)}`}>
+                                {p.riskProfile?.segment}
+                            </div>
+                        </div>
+                        
+                        {/* Score Bar */}
+                        <div className="mt-3 flex items-center gap-3">
+                            <div className="flex-1 h-2 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                <div 
+                                    className={`h-full rounded-full ${p.riskProfile?.totalScore < 500 ? 'bg-red-500' : 'bg-emerald-500'}`} 
+                                    style={{ width: `${(p.riskProfile?.totalScore / 1000) * 100}%` }}
+                                ></div>
+                            </div>
+                            <div className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
+                                {p.riskProfile?.totalScore}
+                            </div>
+                        </div>
+
+                        {/* Breakdown */}
+                        <div className="grid grid-cols-3 gap-2 mt-3 text-[9px] text-slate-500 dark:text-zinc-500 uppercase font-bold text-center">
+                            <div className="bg-white dark:bg-black/20 p-1 rounded border border-slate-100 dark:border-zinc-800">
+                                Finance: <span className={p.riskProfile?.breakdown.financial < 50 ? 'text-red-500' : 'text-emerald-500'}>{p.riskProfile?.breakdown.financial}</span>
+                            </div>
+                            <div className="bg-white dark:bg-black/20 p-1 rounded border border-slate-100 dark:border-zinc-800">
+                                Ops: <span className={p.riskProfile?.breakdown.operational < 50 ? 'text-red-500' : 'text-emerald-500'}>{p.riskProfile?.breakdown.operational}</span>
+                            </div>
+                            <div className="bg-white dark:bg-black/20 p-1 rounded border border-slate-100 dark:border-zinc-800">
+                                Value: <span className="text-purple-500">{p.riskProfile?.breakdown.commercial}</span>
+                            </div>
+                        </div>
+
+                        {/* Flags */}
+                        {p.riskProfile?.flags.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-slate-200 dark:border-zinc-800 flex gap-2 flex-wrap">
+                                {p.riskProfile.flags.map((flag: string) => (
+                                    <span key={flag} className="flex items-center gap-1 text-[9px] text-red-600 bg-red-100 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
+                                        <AlertTriangle size={8} /> {flag}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
 };
 
 // --- COMMERCIAL TAB (RETAIL & REAL ESTATE) ---

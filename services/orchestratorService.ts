@@ -48,7 +48,7 @@ export const orchestratorService = {
         let routedDomain: 'LEGAL' | 'MARINA' | 'FINANCE' | 'STARGATE' = 'STARGATE';
 
         // Simple Heuristic Routing
-        if (lower.includes('mayday') || lower.includes('fire') || lower.includes('yangın') || lower.includes('kural') || lower.includes('law') || lower.includes('contract') || lower.includes('security') || lower.includes('patrol')) {
+        if (lower.includes('mayday') || lower.includes('fire') || lower.includes('yangın') || lower.includes('kural') || lower.includes('law') || lower.includes('contract') || lower.includes('sözleşme') || lower.includes('security') || lower.includes('patrol')) {
             routedDomain = 'LEGAL';
         } else if (lower.includes('berth') || lower.includes('yanaş') || lower.includes('depart') || lower.includes('ayrıl') || lower.includes('hail') || lower.includes('radar') || lower.includes('technical') || lower.includes('repair') || lower.includes('waste') || lower.includes('mavi kart')) {
             routedDomain = 'MARINA';
@@ -76,7 +76,7 @@ export const orchestratorService = {
                     responseText = "Security protocol initiated. Patrol dispatched.";
                     actions.push(...secStatus);
                 } else {
-                    // General Legal/Contract Query (RAG)
+                    // General Legal/Contract Query (Client-Side RAG)
                     const legalRes = await legalExpert.process({ query: prompt }, user, (t) => traces.push(t));
                     responseText = legalRes[0]?.params?.advice || "Legal advisory generated.";
                 }

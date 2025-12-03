@@ -1,8 +1,10 @@
+
 // services/agents/customerAgent.ts
 
 
-import { AgentAction, AgentTraceLog, NodeName, VesselIntelligenceProfile, TenantConfig } from '../../types';
-// import { wimMasterData } from '../wimMasterData'; // Removed direct import
+import { AgentAction, AgentTraceLog, NodeName, VesselIntelligenceProfile, TenantConfig, CustomerRiskProfile } from '../../types';
+import { financeExpert } from './financeAgent';
+import { marinaExpert } from './marinaAgent';
 
 // Helper to create a log (copied from orchestratorService.ts for local use)
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
@@ -141,31 +143,123 @@ export const customerExpert = {
     return { newScore: score, newTier: 'GOLD', actions: [] };
   },
 
-  // Skill: Propose Payment Plan
-  proposePaymentPlan: async (vesselProfile: VesselIntelligenceProfile, addTrace: (t: AgentTraceLog) => void): Promise<AgentAction[]> => {
-      addTrace(createLog('ada.customer', 'THINKING', `Analyzing payment plan request...`, 'EXPERT'));
-      return [{
-          id: `cust_pay_plan_${Date.now()}`,
-          kind: 'internal',
-          name: 'ada.finance.proposePaymentPlan',
-          params: { vesselName: vesselProfile.name }
-      }];
+  // NEW SKILL: Evaluate Customer Trust Score (The Judge Logic)
+  // Queries other agents to build a full picture
+  evaluateCustomerRisk: async (vesselName: string, addTrace: (t: AgentTraceLog) => void): Promise<CustomerRiskProfile> => {
+      addTrace(createLog('ada.customer', 'THINKING', `Initiating 360° Risk Analysis for ${vesselName} (Inter-Agent Protocol)...`, 'EXPERT'));
+
+      // 1. Base Score
+      let score = 500;
+      const breakdown = { financial: 50, operational: 50, commercial: 50, social: 50 }; // Base values out of 100
+      const flags: string[] = [];
+
+      // 2. Query Ada.Finance (The Prosecutor)
+      const financeStatus = await financeExpert.checkDebt(vesselName);
+      if (financeStatus.status === 'CLEAR') {
+          score += 150;
+          breakdown.financial = 100;
+          addTrace(createLog('ada.customer', 'TOOL_EXECUTION', `Ada.Finance: CLEAN LEDGER (+150 Pts).`, 'WORKER'));
+      } else {
+          score -= 100;
+          breakdown.financial = 30;
+          flags.push("Late Payer");
+          addTrace(createLog('ada.customer', 'WARNING', `Ada.Finance: DEBT DETECTED (€${financeStatus.amount}). (-100 Pts).`, 'WORKER'));
+      }
+
+      // 3. Query Ada.Marina (The Witness)
+      // Getting vessel profile to check size (Asset Value) and Tenure
+      const vesselProfile = await marinaExpert.getVesselIntelligence(vesselName);
+      
+      if (vesselProfile) {
+          // Commercial Value (Spending Power) - Mega Yachts generate more ancillary revenue
+          const isMegaYacht = vesselProfile.loa > 30;
+          if (isMegaYacht) {
+              score += 200;
+              breakdown.commercial = 100;
+              addTrace(createLog('ada.customer', 'TOOL_EXECUTION', `Ada.Marina: HIGH VALUE ASSET (${vesselProfile.loa}m). (+200 Pts).`, 'WORKER'));
+          } else {
+              breakdown.commercial = 60;
+          }
+          
+          // Simulated Operational Record
+          if (vesselProfile.name.includes("Phisedelia")) {
+               // Hardcoded loyalty for demo
+               score += 150;
+               breakdown.social = 100;
+               addTrace(createLog('ada.customer', 'TOOL_EXECUTION', `Ada.Marina: LONG TERM TENANT (>5 Yrs). (+150 Pts).`, 'WORKER'));
+          }
+      }
+
+      // 4. Determine Segment & Strategy
+      let segment: CustomerRiskProfile['segment'] = 'STANDARD';
+      
+      // CRM Blacklist Check (The Final Veto)
+      const blacklistStatus = await customerExpert.checkBlacklistStatus(vesselName, () => {});
+      
+      if (blacklistStatus.status === 'BLACKLISTED') {
+          segment = 'BLACKLISTED';
+          score = 0;
+          flags.push("CRM: BLACKLISTED");
+          addTrace(createLog('ada.customer', 'ERROR', `CRITICAL: Identity '${vesselName}' found in Global Blacklist.`, 'EXPERT'));
+      } else {
+          // Segmentation Logic
+          if (score >= 800) segment = 'WHALE';
+          else if (score >= 650) segment = 'VIP';
+          else if (score < 400) segment = 'RISKY';
+      }
+
+      addTrace(createLog('ada.customer', 'FINAL_ANSWER', `Final Trust Score: ${score}/1000. Segment: ${segment}.`, 'EXPERT'));
+
+      return {
+          totalScore: score,
+          segment: segment,
+          breakdown: breakdown,
+          flags: flags,
+          lastAssessmentDate: new Date().toISOString().split('T')[0]
+      };
+  },
+
+  // Skill: Propose "Middle Ground" Solution
+  // This is called when a high-value customer has debt.
+  proposePaymentPlan: async (vesselName: string, debtAmount: number, addTrace: (t: AgentTraceLog) => void): Promise<{success: boolean, plan: string}> => {
+      addTrace(createLog('ada.customer', 'THINKING', `Analyzing 'Middle Way' options for ${vesselName} (Debt: €${debtAmount})...`, 'EXPERT'));
+      
+      // Check if they are a 'WHALE' or 'VIP' despite the debt
+      const riskProfile = await customerExpert.evaluateCustomerRisk(vesselName, addTrace);
+      
+      if (riskProfile.segment === 'WHALE' || riskProfile.segment === 'VIP') {
+           const plan = `**LOYALTY RECOVERY PLAN**\n\n` +
+                        `Client is categorized as **${riskProfile.segment}** despite current debt.\n` +
+                        `**Proposed Solution:**\n` +
+                        `1. **Deferment:** 30-day grace period on current invoice.\n` +
+                        `2. **Installments:** Split €${debtAmount} into 3 monthly payments of €${(debtAmount/3).toFixed(2)}.\n` +
+                        `3. **Action:** Do NOT block gate access. Send courtesy notification to Captain.`;
+           
+           addTrace(createLog('ada.customer', 'OUTPUT', `Strategy: RETAIN CLIENT. Payment plan generated.`, 'EXPERT'));
+           return { success: true, plan };
+      } else {
+           const plan = `**STANDARD COLLECTION PROTOCOL**\n\n` +
+                        `Client segment is **${riskProfile.segment}**.\n` +
+                        `**Proposed Solution:**\n` +
+                        `1. **Immediate Payment:** Full balance required.\n` +
+                        `2. **Restriction:** Block gate access until cleared.\n` +
+                        `3. **Action:** Legal Notice (Article H.2).`;
+           
+           addTrace(createLog('ada.customer', 'OUTPUT', `Strategy: ENFORCE RULES. No leniency justified.`, 'EXPERT'));
+           return { success: true, plan };
+      }
   },
 
   // Skill: Check CRM Status (Blacklist Check)
   checkBlacklistStatus: async (nameOrId: string, addTrace: (t: AgentTraceLog) => void): Promise<{ status: 'ACTIVE' | 'BLACKLISTED', reason?: string }> => {
-      addTrace(createLog('ada.customer', 'THINKING', `Running deep background check on identity: "${nameOrId}" in CRM...`, 'EXPERT'));
-      
-      const riskyKeywords = ['problem', 'kara', 'ban', 'debt', 'illegal', 'istenmeyen'];
+      // Internal check, simplified logging
+      const riskyKeywords = ['problem', 'kara', 'ban', 'illegal', 'istenmeyen'];
       const isBlacklisted = riskyKeywords.some(kw => nameOrId.toLowerCase().includes(kw));
 
       if (isBlacklisted) {
-          const reason = "Persona Non Grata: Previous behavioral incident (Article F.5 violation) or Outstanding Debt Write-off.";
-          addTrace(createLog('ada.customer', 'WARNING', `BLACKLIST MATCH FOUND. ID: ${nameOrId}. Reason: ${reason}`, 'WORKER'));
+          const reason = "Persona Non Grata: Previous behavioral incident (Article F.5 violation).";
           return { status: 'BLACKLISTED', reason };
       }
-
-      addTrace(createLog('ada.customer', 'OUTPUT', `CRM Status: ACTIVE (Clean Record).`, 'WORKER'));
       return { status: 'ACTIVE' };
   }
 };

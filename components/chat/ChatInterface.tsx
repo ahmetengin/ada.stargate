@@ -57,15 +57,15 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full w-full relative transition-colors duration-300">
+        <div className="flex flex-col h-full w-full relative transition-colors duration-300 pb-20 lg:pb-0">
             {/* Background Base - Now uses CSS Variables */}
             <div className="absolute inset-0 bg-[var(--bg-primary)] z-0"></div>
             
             {/* Atmospheric Glow - Only visible in Dark Mode */}
             <div className="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-cyan-500/5 blur-[120px] pointer-events-none z-0"></div>
 
-            {/* Header */}
-            <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors">
+            {/* Header - Hidden on Mobile (Handled by App.tsx Top Bar) */}
+            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors">
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={onTraceClick}>
                     <div className="relative">
                         <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-[0_0_10px_#14b8a6] group-hover:scale-110 transition-transform"></div>
