@@ -113,15 +113,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
   return (
     <div className="w-full max-w-4xl mx-auto">
       
-      {/* Model Selector & Quick Actions */}
-      <div className="flex justify-between items-end mb-2 sm:mb-3">
-          <div className="flex bg-white/50 dark:bg-[#020617]/60 p-1 rounded-lg border border-[var(--border-color)] backdrop-blur-md">
-              <button onClick={() => onModelChange(ModelType.Flash)} className={`px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-bold flex items-center gap-1 transition-all ${selectedModel === ModelType.Flash ? 'bg-[var(--accent-color)] text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}><Zap size={10}/> FLASH</button>
-              <button onClick={() => onModelChange(ModelType.Pro)} className={`px-2 py-1 rounded-md text-[8px] sm:text-[9px] font-bold flex items-center gap-1 transition-all ${selectedModel === ModelType.Pro ? 'bg-indigo-600 text-white shadow-md' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'}`}><Sparkles size={10}/> PRO</button>
-          </div>
-          
+      {/* Quick Actions */}
+      <div className="flex justify-end items-end mb-2 sm:mb-3">
           {userRole && onQuickAction && (
-              <div className="opacity-80 hover:opacity-100 transition-opacity max-w-[60%] sm:max-w-none">
+              <div className="opacity-80 hover:opacity-100 transition-opacity w-full">
                   <QuickActions userRole={userRole} onAction={onQuickAction} />
               </div>
           )}
@@ -132,14 +127,14 @@ export const InputArea: React.FC<InputAreaProps> = ({
           ${isLoading ? 'border-[var(--accent-color)] shadow-md' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]'}
           ${isDictating ? 'ring-1 ring-red-500/50 border-red-500/50' : ''}`}>
           
-          {/* Tools */}
+          {/* Tools: Scanner & Radio */}
           <div className="flex items-center gap-0.5 sm:gap-1 pr-1.5 sm:pr-2 border-r border-[var(--border-color)] mr-1.5 sm:mr-2 mb-1.5">
               <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Scanner">
                   <ScanLine size={16} />
               </button>
               <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-red-500/80 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors relative" title="Radio">
                   <Radio size={16} />
-                  <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_5px_red]"></span>
+                  <span className="absolute top-2 right-2 w-1 h-1 bg-red-500 rounded-full animate-pulse shadow-[0_0_5px_red]"></span>
               </button>
           </div>
           

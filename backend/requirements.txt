@@ -14,5 +14,10 @@ qdrant-client
 asyncpg
 markdown
 beautifulsoup4
-# Utilities
+# Voice Stack
+fastrtc>=0.1.0
+gradio>=5.0.0
+numpy
+scipy
 loguru
+tabpfn

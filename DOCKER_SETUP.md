@@ -1,131 +1,183 @@
 
-# 🐳 Ada Stargate: Docker Deployment Guide
+# 🐳 Ada Stargate: Production Deployment Kit
 
 Bu ortamda sistem dosyaları oluşturulamadığı için, lütfen aşağıdaki dosyaları projenizin kök dizininde manuel olarak oluşturun.
 
-## 1. Hazırlık: Dosya Yapısı
+---
 
-Projeniz şu yapıda olmalıdır:
+## 1. Dizin Yapısı (Klasörleri Oluşturun)
 
-```text
-/Ada-Stargate
-├── backend/
-│   ├── Dockerfile          <-- (Aşağıdan kopyalayın)
-│   ├── main.py
-│   └── ...
-├── nginx/
-│   └── nginx.conf          <-- (Aşağıdan kopyalayın)
-├── package.json            <-- (Aşağıdan kopyalayın)
-├── vite.config.ts          <-- (Aşağıdan kopyalayın)
-├── Dockerfile              <-- (Aşağıdan kopyalayın)
-├── docker-compose.yml      <-- (Aşağıdan kopyalayın)
-└── ...
+Proje klasörünüzde terminali açıp şu komutu çalıştırın:
+
+```bash
+mkdir -p backend/agents backend/workers backend/orchestrator nginx
 ```
 
 ---
 
-## 2. Dosya İçerikleri
+## 2. FastRTC Telsiz Modülü (Ses Çözümü)
 
-### 📄 Dosya 1: `package.json`
-*(React uygulamasını derlemek için gereklidir)*
+Docker içinde ses kartı olmasa bile, **WebRTC** sayesinde tarayıcının mikrofonunu kullanarak çalışan telsiz modülü.
 
-```json
-{
-  "name": "ada-stargate",
-  "version": "4.6.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@google/genai": "^0.14.0",
-    "lucide-react": "^0.400.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-markdown": "^9.0.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.9",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.1",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.39",
-    "tailwindcss": "^3.4.4",
-    "typescript": "^5.5.3",
-    "vite": "^5.3.3"
-  }
-}
+**Dosya:** `backend/vhf_radio.py`
+
+```python
+import sys
+import os
+from fastrtc import ReplyOnPause, Stream, get_stt_model, get_tts_model
+from loguru import logger
+from backend.nano import NanoAgent
+
+# 1. Modelleri Yükle (Local - Hız için)
+stt_model = get_stt_model()  # Moonshine (Speech-to-Text)
+tts_model = get_tts_model()  # Kokoro (Text-to-Speech)
+
+# 2. Akıllı Ajanı Başlat (Gemini - Zeka için)
+vhf_brain = NanoAgent(
+    name="Ada.VHF",
+    system_instruction="""
+    ROL: West Istanbul Marina (WIM) VHF Telsiz Operatörü.
+    KANAL: 72.
+    
+    KURALLAR:
+    1. Kısa, net ve denizcilik jargonuna (SMCP) uygun konuş.
+    2. Cevaplarını Türkçe ver.
+    3. Asla markdown kullanma.
+    4. Cümlelerini "Tamam" (Over) ile bitir.
+    """
+)
+
+def echo(audio):
+    """
+    Ses Döngüsü: Ses -> Metin -> Zeka -> Metin -> Ses
+    """
+    # Sesi yazıya çevir
+    transcript = stt_model.stt(audio)
+    if not transcript or len(transcript.strip()) < 2:
+        return
+        
+    logger.info(f"Kaptan: {transcript}")
+    
+    # Zekaya sor
+    response_text = vhf_brain.chat(transcript)
+    logger.info(f"Ada: {response_text}")
+    
+    # Yazıyı sese çevir ve yayınla
+    for audio_chunk in tts_model.stream_tts_sync(response_text):
+        yield audio_chunk
+
+# 3. Yayını Başlat (0.0.0.0 Önemli!)
+stream = Stream(
+    ReplyOnPause(echo),
+    modality="audio",
+    mode="send-receive",
+    ui_args={"title": "Ada VHF Radio (Ch 72)"}
+)
+
+if __name__ == "__main__":
+    # 0.0.0.0 ayarı Docker dışından erişim için şarttır
+    stream.ui.launch(server_name="0.0.0.0", server_port=7860)
 ```
 
-### 📄 Dosya 2: `vite.config.ts`
-*(Vite yapılandırması)*
+---
 
-```typescript
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+## 3. Backend Ana Sunucu
 
-export default defineConfig({
-  plugins: [react()],
-  define: {
-    'process.env': process.env
-  },
-  server: {
-    host: true,
-    port: 3000,
-    proxy: {
-      '/api': {
-        target: 'http://ada-core:8000',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://ada-core:8000',
-        changeOrigin: true,
-        ws: true
-      },
-      '/radio': {
-        target: 'http://ada-core:8000',
-        changeOrigin: true
-      }
-    }
-  }
-});
+LangGraph beynini ve Telsizi tek çatı altında çalıştırır.
+
+**Dosya:** `backend/main.py`
+
+```python
+import os
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import gradio as gr 
+
+# Importlar (Hata önleyici blok ile)
+try:
+    from backend.vhf_radio import stream as radio_stream
+    # from backend.architecture_graph import build_graph # (Opsiyonel)
+except ImportError:
+    from vhf_radio import stream as radio_stream
+
+app = FastAPI(title="Ada Stargate Hyperscale API", version="4.6")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get("/health")
+def health():
+    return {"status": "ONLINE", "modules": ["FastAPI", "FastRTC"]}
+
+# Telsizi /radio adresine bağla
+app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
+
+if __name__ == "__main__":
+    # 0.0.0.0:8000 -> API
+    # 0.0.0.0:7860 -> WebRTC (Doğrudan erişim için)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-### 📄 Dosya 3: `Dockerfile` (Frontend)
-*(React uygulamasını derler ve Nginx ile sunar)*
+---
 
-```dockerfile
-# Stage 1: Build React App
-FROM node:18-alpine as build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-# API Key'i build time'da gömmek için argüman
-ARG API_KEY
-ENV VITE_API_KEY=$API_KEY
-RUN npm run build
+## 4. Docker Konfigürasyonu (Mac M4 Uyumlu)
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+**Dosya:** `docker-compose.hyperscale.yml`
+
+```yaml
+version: '3.9'
+
+services:
+  # Python Backend & Telsiz
+  ada-core:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ada_core_hyperscale
+    ports:
+      - "8000:8000" # API
+      - "7860:7860" # FastRTC / Ses (Kritik Port)
+    environment:
+      - API_KEY=${API_KEY}
+      - GRADIO_SERVER_NAME=0.0.0.0
+    volumes:
+      - ./backend:/app
+      - ./docs:/docs
+
+  # React Frontend (Nginx)
+  ada-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - API_KEY=${API_KEY}
+    container_name: ada_frontend_hyperscale
+    ports:
+      - "3000:80" # Mac çakışmasını önlemek için 3000
+    depends_on:
+      - ada-core
 ```
 
-### 📄 Dosya 4: `backend/Dockerfile`
-*(Python Backend ve Ses Kütüphaneleri)*
+---
+
+## 5. Backend Dockerfile
+
+Ses kütüphanelerini Linux imajına yükler.
+
+**Dosya:** `backend/Dockerfile`
 
 ```dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Audio/FastRTC
+# Ses işleme için gerekli sistem kütüphaneleri (FastRTC için)
 RUN apt-get update && apt-get install -y \
     libasound2-dev \
     portaudio19-dev \
@@ -139,21 +191,21 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Run API
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### 📄 Dosya 5: `nginx/nginx.conf`
-*(Gateway ve Reverse Proxy Ayarları)*
+---
+
+## 6. Nginx Ayarı (WebSocket Desteği)
+
+**Dosya:** `nginx/nginx.conf`
 
 ```nginx
-events {
-    worker_connections 1024;
-}
+events { worker_connections 1024; }
 
 http {
-    include       mime.types;
-    default_type  application/octet-stream;
+    include mime.types;
+    default_type application/octet-stream;
 
     server {
         listen 80;
@@ -164,23 +216,13 @@ http {
             try_files $uri $uri/ /index.html;
         }
 
-        # API Proxy
+        # API Yönlendirme
         location /api/ {
             proxy_pass http://ada-core:8000/api/;
             proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
         }
 
-        # WebSocket Proxy
-        location /ws/ {
-            proxy_pass http://ada-core:8000/ws/;
-            proxy_http_version 1.1;
-            proxy_set_header Upgrade $http_upgrade;
-            proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
-        }
-
-        # FastRTC / Radio Proxy
+        # Telsiz Yönlendirme (Websocket Upgrade Şart)
         location /radio/ {
             proxy_pass http://ada-core:8000/radio/;
             proxy_http_version 1.1;
@@ -192,106 +234,16 @@ http {
 }
 ```
 
-### 📄 Dosya 6: `docker-compose.yml`
-*(Orkestrasyon Dosyası - Güncel)*
-
-```yaml
-version: '3.9'
-
-services:
-  ada-core:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: ada_core_hyperscale
-    restart: always
-    ports:
-      - "8000:8000"
-      - "7860:7860"
-    environment:
-      - API_KEY=${API_KEY}
-      - REDIS_URL=redis://ada-redis:6379
-      - QDRANT_URL=http://ada-qdrant:6333
-      - MQTT_BROKER=ada-mqtt
-    depends_on:
-      - ada-redis
-      - ada-qdrant
-      - ada-mqtt
-    volumes:
-      - ./backend:/app
-      - ./docs:/docs
-
-  ada-frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - API_KEY=${API_KEY}
-    container_name: ada_frontend_hyperscale
-    restart: always
-    ports:
-      - "80:80" # Mac kullanıyorsanız "3000:80" yapın
-    depends_on:
-      - ada-core
-
-  ada-qdrant:
-    image: qdrant/qdrant
-    container_name: ada_qdrant
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant_data:/qdrant/storage
-
-  ada-postgres:
-    image: postgres:15-alpine
-    container_name: ada_postgres
-    environment:
-      POSTGRES_USER: ada
-      POSTGRES_PASSWORD: adapassword
-      POSTGRES_DB: wim_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  ada-redis:
-    image: redis:alpine
-    container_name: ada_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  ada-mqtt:
-    image: eclipse-mosquitto:2
-    container_name: ada_mqtt_broker
-    ports:
-      - "1883:1883"
-      - "9001:9001"
-    volumes:
-      - mqtt_data:/mosquitto/data
-      - mqtt_log:/mosquitto/log
-
-volumes:
-  postgres_data:
-  qdrant_data:
-  redis_data:
-  mqtt_data:
-  mqtt_log:
-```
-
 ---
 
-## 3. Çalıştırma Komutu
+## 🚀 Çalıştırma
 
-Dosyaları oluşturduktan ve `.env` dosyanıza `API_KEY` ekledikten sonra terminalde:
-
-```bash
-docker-compose up --build
-```
-
-Bu işlem:
-1.  React uygulamasını derler (`npm run build`).
-2.  Python kütüphanelerini yükler.
-3.  Tüm veritabanlarını ve servisleri başlatır.
-4.  Uygulamayı `http://localhost` (veya Mac'te `http://localhost:3000`) adresinde sunar.
+1.  Bu dosyaları bilgisayarınızda oluşturun.
+2.  `.env` dosyasına `API_KEY=...` ekleyin.
+3.  Komutu çalıştırın:
+    ```bash
+    docker-compose -f docker-compose.hyperscale.yml up --build
+    ```
+4.  **Erişim:**
+    *   **Telsiz (Sesli):** `http://localhost:8000/radio` (Doğrudan port ile bağlanın, Nginx bazen sesi geciktirebilir).
+    *   **Panel:** `http://localhost:3000`

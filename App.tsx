@@ -15,16 +15,14 @@ import { marinaExpert } from './services/agents/marinaAgent';
 import { wimMasterData } from './services/wimMasterData';
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
 import { streamChatResponse } from './services/geminiService';
-import { Menu, MessageSquare, Activity, X, Anchor, LayoutDashboard, Radio } from 'lucide-react';
+import { MessageSquare, LayoutDashboard, Menu as MenuIcon, X, Radio } from 'lucide-react';
 import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
-import { financeExpert } from './services/agents/financeAgent';
-import { customerExpert } from './services/agents/customerAgent'; // For Quick Actions
 
 // --- SIMULATED USER DATABASE ---
 const MOCK_USER_DATABASE: Record<string, UserProfile> = {
   'VISITOR': { id: 'usr_visitor', name: 'Anonymous Visitor', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
   'MEMBER': { id: 'usr_member_01', name: 'Caner Erkin', role: 'MEMBER', clearanceLevel: 1, legalStatus: 'GREEN' },
-  'CAPTAIN': { id: 'usr_cpt_01', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN' }, // Change to RED to test protocols
+  'CAPTAIN': { id: 'usr_cpt_01', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN' }, 
   'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Ahmet Engin', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
 };
 
@@ -37,8 +35,8 @@ const App: React.FC = () => {
   const [targetRole, setTargetRole] = useState<string>('');
 
   // --- STATE: UI & THEME ---
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Desktop default open
-  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'canvas'>('chat'); // Mobile toggle
+  // Mobile View State: Now handles 3 distinct views
+  const [mobileView, setMobileView] = useState<'sidebar' | 'chat' | 'ops'>('chat');
   const [theme, setTheme] = useState<ThemeMode>('dark');
   const [dragWidth, setDragWidth] = useState(320); // Sidebar width
   const [dragChatWidth, setDragChatWidth] = useState(500); // Chat width
@@ -57,7 +55,7 @@ const App: React.FC = () => {
     'ada.technic': 'connected',
     'ada.customer': 'connected',
     'ada.security': 'connected',
-    'ada.orchestrator': 'working' // Always working as it's the core
+    'ada.orchestrator': 'working' 
   });
   
   const [registry, setRegistry] = useState<RegistryEntry[]>([]);
@@ -89,14 +87,8 @@ const App: React.FC = () => {
     setTheme(savedTheme as ThemeMode);
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
-    // Mobile check for sidebar
-    if (window.innerWidth < 1024) {
-        setIsSidebarOpen(false);
-    }
-
     // 3. Load Mock Data
     const loadData = async () => {
-        // Load Fleet/Tenders from persistence or defaults
         setTenders(persistenceService.load(STORAGE_KEYS.TENDERS, wimMasterData.assets.tenders));
         
         // Initial Radar Scan
@@ -128,7 +120,7 @@ const App: React.FC = () => {
         }, 4000);
     }
 
-  }, [activeTenantId]); // Re-run when tenant changes
+  }, [activeTenantId]); 
 
   // --- HANDLERS ---
 
@@ -144,9 +136,6 @@ const App: React.FC = () => {
       
       if (tenantId === 'phisedelia') setVesselsInPort(1);
       else setVesselsInPort(542);
-      
-      // Auto close sidebar on mobile after switch
-      if (window.innerWidth < 1024) setIsSidebarOpen(false);
   };
 
   const handleRoleChange = (role: string) => {
@@ -162,7 +151,6 @@ const App: React.FC = () => {
       persistenceService.save(STORAGE_KEYS.USER_PROFILE, newProfile);
       setShowAuthOverlay(false);
       
-      // Notify System
       const sysMsg: Message = {
           id: `auth_${Date.now()}`,
           role: MessageRole.System,
@@ -173,7 +161,6 @@ const App: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string, attachments: File[]) => {
-    // 1. Add User Message
     const userMsg: Message = {
         id: `usr_${Date.now()}`,
         role: MessageRole.User,
@@ -183,7 +170,6 @@ const App: React.FC = () => {
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
-    // 2. Orchestrate (Thinking...)
     try {
         const orchestratorResult = await orchestratorService.processRequest(
             text, 
@@ -192,7 +178,7 @@ const App: React.FC = () => {
             registry, 
             vesselsInPort, 
             messages,
-            activeTenantConfig // Pass dynamic tenant config
+            activeTenantConfig 
         );
 
         if (orchestratorResult.traces) {
@@ -231,7 +217,7 @@ const App: React.FC = () => {
                  tenders,
                  userProfile,
                  vesselsInPort,
-                 activeTenantConfig, // Tenant Context
+                 activeTenantConfig,
                  (chunk) => {
                      streamText += chunk;
                      setMessages(prev => {
@@ -277,23 +263,16 @@ const App: React.FC = () => {
 
       <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans transition-colors duration-300">
         
-        {/* MOBILE OVERLAY */}
-        {isSidebarOpen && (
-            <div className="fixed inset-0 z-40 bg-black/50 lg:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
-        )}
-
         {/* LEFT: SIDEBAR (Navigation & Status) */}
-        {/* Mobile: Drawer style. Desktop: Resizable pane. */}
+        {/* Desktop: Always Visible. Mobile: Visible based on mobileView state */}
         <div 
-            className={`fixed lg:relative z-50 h-full transition-all duration-300 ease-in-out transform border-r border-[var(--border-color)] bg-[var(--bg-primary)] 
-                ${isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0 lg:shadow-none'}
+            className={`
+                lg:block lg:relative h-full transition-all duration-300 ease-in-out border-r border-[var(--border-color)] bg-[var(--bg-primary)] z-30
+                ${mobileView === 'sidebar' ? 'block absolute inset-0 w-full' : 'hidden'}
             `}
-            style={{ width: window.innerWidth >= 1024 ? dragWidth : '85%' }}
+            style={{ width: window.innerWidth >= 1024 ? dragWidth : '100%' }}
         >
             <div className="h-full flex flex-col">
-                <div className="lg:hidden p-4 flex justify-end">
-                    <button onClick={() => setIsSidebarOpen(false)}><X className="text-[var(--text-secondary)]" /></button>
-                </div>
                 <Sidebar 
                     nodeStates={nodeStates}
                     activeChannel="72"
@@ -323,16 +302,15 @@ const App: React.FC = () => {
 
         {/* CENTER: CHAT INTERFACE */}
         <div 
-            className={`flex flex-col h-full relative transition-all duration-300 
-                ${activeMobileTab === 'chat' ? 'flex-1 z-10' : 'hidden lg:flex'}
+            className={`
+                flex flex-col h-full relative transition-all duration-300 
+                ${mobileView === 'chat' ? 'flex-1 z-10 w-full' : 'hidden lg:flex'}
             `}
             style={{ width: window.innerWidth > 1024 ? dragChatWidth : '100%' }}
         >
-            {/* Mobile Top Header (Minimal) */}
-            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-between bg-[var(--glass-bg)] backdrop-blur-md z-20">
-                <button onClick={() => setIsSidebarOpen(true)} className="p-2"><Menu size={20} className="text-[var(--text-secondary)]" /></button>
+            {/* Mobile Top Header (Minimal - Logo Only, Menu removed) */}
+            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-center bg-[var(--glass-bg)] backdrop-blur-md z-20">
                 <span className="font-display font-bold text-[var(--text-primary)]">ADA.<span className="text-[var(--accent-color)]">MOBILE</span></span>
-                <button onClick={() => setIsVoiceModalOpen(true)} className="p-2 bg-red-500/10 text-red-500 rounded-full animate-pulse"><Radio size={16} /></button>
             </div>
 
             <ChatInterface 
@@ -367,14 +345,13 @@ const App: React.FC = () => {
         </div>
 
         {/* RIGHT: OPERATIONS CANVAS (Visuals) */}
-        <div className={`flex-1 h-full bg-[var(--bg-secondary)] border-l border-[var(--border-color)] relative 
-            ${activeMobileTab === 'canvas' ? 'block z-10' : 'hidden lg:block'}
+        <div className={`
+            lg:block flex-1 h-full bg-[var(--bg-secondary)] border-l border-[var(--border-color)] relative 
+            ${mobileView === 'ops' ? 'block absolute inset-0 z-20 w-full' : 'hidden'}
         `}>
             {/* Mobile Header for Canvas */}
-            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-between bg-[var(--glass-bg)] backdrop-blur-md sticky top-0 z-20">
-                 <button onClick={() => setIsSidebarOpen(true)} className="p-2"><Menu size={20} className="text-[var(--text-secondary)]" /></button>
+            <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-center bg-[var(--glass-bg)] backdrop-blur-md sticky top-0 z-20">
                  <span className="font-display font-bold text-[var(--text-primary)]">OPS CENTER</span>
-                 <div className="w-8"></div> {/* Spacer */}
             </div>
 
             <Canvas 
@@ -391,30 +368,33 @@ const App: React.FC = () => {
             />
         </div>
 
-        {/* MOBILE BOTTOM NAVIGATION BAR */}
+        {/* MOBILE BOTTOM NAVIGATION BAR (3 Tabs) */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[var(--bg-primary)] border-t border-[var(--border-color)] flex items-center justify-around z-50 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
+            
+            {/* Tab 1: Sidebar / Menu */}
             <button 
-                onClick={() => setActiveMobileTab('chat')}
-                className={`flex flex-col items-center gap-1 p-2 w-16 ${activeMobileTab === 'chat' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
+                onClick={() => setMobileView('sidebar')}
+                className={`flex flex-col items-center justify-center w-full h-full gap-1 ${mobileView === 'sidebar' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
             >
-                <MessageSquare size={20} className={activeMobileTab === 'chat' ? 'fill-current' : ''} />
+                <MenuIcon size={20} className={mobileView === 'sidebar' ? 'stroke-2' : ''} />
+                <span className="text-[9px] font-bold uppercase tracking-wider">Menu</span>
+            </button>
+
+            {/* Tab 2: Chat / Comms */}
+            <button 
+                onClick={() => setMobileView('chat')}
+                className={`flex flex-col items-center justify-center w-full h-full gap-1 ${mobileView === 'chat' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
+            >
+                <MessageSquare size={20} className={mobileView === 'chat' ? 'fill-current' : ''} />
                 <span className="text-[9px] font-bold uppercase tracking-wider">Comms</span>
             </button>
 
+            {/* Tab 3: Ops / Canvas */}
             <button 
-                onClick={() => setIsVoiceModalOpen(true)}
-                className="flex flex-col items-center justify-center -mt-6 bg-[var(--bg-primary)] p-1.5 rounded-full border border-[var(--border-color)] shadow-lg"
+                onClick={() => setMobileView('ops')}
+                className={`flex flex-col items-center justify-center w-full h-full gap-1 ${mobileView === 'ops' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
             >
-                <div className="w-12 h-12 bg-red-600 hover:bg-red-500 transition-colors rounded-full flex items-center justify-center text-white shadow-md shadow-red-500/30">
-                    <Radio size={24} />
-                </div>
-            </button>
-
-            <button 
-                onClick={() => setActiveMobileTab('canvas')}
-                className={`flex flex-col items-center gap-1 p-2 w-16 ${activeMobileTab === 'canvas' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
-            >
-                <LayoutDashboard size={20} className={activeMobileTab === 'canvas' ? 'fill-current' : ''} />
+                <LayoutDashboard size={20} className={mobileView === 'ops' ? 'fill-current' : ''} />
                 <span className="text-[9px] font-bold uppercase tracking-wider">Ops</span>
             </button>
         </div>
