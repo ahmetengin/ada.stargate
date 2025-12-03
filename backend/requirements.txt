@@ -14,13 +14,10 @@ qdrant-client
 asyncpg
 markdown
 beautifulsoup4
-# Voice Stack
+# Voice Stack (FastRTC)
 fastrtc>=0.1.0
 gradio>=5.0.0
 numpy
 scipy
 soundfile
 loguru
-# Berth Allocation Math
-shapely
-scikit-learn

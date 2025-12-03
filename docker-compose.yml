@@ -1,46 +1,86 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  # 1. FRONTEND (Nginx + React Build)
-  ada-frontend:
-    container_name: ada_frontend
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - API_KEY=${API_KEY}
-    ports:
-      - "80:80"
-    restart: always
-    depends_on:
-      - ada-backend
-    environment:
-      - API_KEY=${API_KEY}
-
-  # 2. BACKEND (Python FastAPI Big 3)
-  ada-backend:
-    container_name: ada_backend
-    build:
+  # 1. THE BRAIN (Python LangGraph + FastRTC + IoT)
+  ada-core:
+    build: 
       context: ./backend
       dockerfile: Dockerfile
-    expose:
-      - "8000"
-    restart: always
+    container_name: ada_core_hyperscale
+    ports:
+      - "8000:8000" # API & Websocket
+      - "7860:7860" # FastRTC UI
     environment:
       - API_KEY=${API_KEY}
-      - REDIS_HOST=ada-redis
+      - REDIS_URL=redis://ada-redis:6379
+      - QDRANT_URL=http://ada-qdrant:6333
+      - MQTT_BROKER=ada-mqtt 
     depends_on:
       - ada-redis
+      - ada-qdrant
+      - ada-mqtt
+    volumes:
+      - ./backend:/app
+      - ./docs:/docs
 
-  # 3. MESSAGE BUS
+  # 2. MEMORY (Vector DB - Long Term)
+  ada-qdrant:
+    image: qdrant/qdrant
+    container_name: ada_qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # 3. TRUTH (Relational DB - Entities)
+  ada-postgres:
+    image: postgres:15-alpine
+    container_name: ada_postgres
+    environment:
+      POSTGRES_USER: ada
+      POSTGRES_PASSWORD: adapassword
+      POSTGRES_DB: wim_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 4. NERVOUS SYSTEM (Event Bus - Short Term)
   ada-redis:
     image: redis:alpine
-    container_name: ada_redis_broker
-    expose:
-      - "6379"
-    restart: always
+    container_name: ada_redis
+    ports:
+      - "6379:6379"
     volumes:
       - redis_data:/data
 
+  # --- NEW: THE SENSORY SYSTEM (IoT Broker) ---
+  ada-mqtt:
+    image: eclipse-mosquitto:2
+    container_name: ada_mqtt_broker
+    ports:
+      - "1883:1883" # MQTT Port
+      - "9001:9001" # Websocket Port
+    volumes:
+      - mqtt_data:/mosquitto/data
+      - mqtt_log:/mosquitto/log
+
+  # 5. FRONTEND (React Interface)
+  ada-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ada_frontend_hyperscale
+    ports:
+      - "80:80"
+    environment:
+      - API_KEY=${API_KEY}
+    depends_on:
+      - ada-core
+
 volumes:
+  postgres_data:
+  qdrant_data:
   redis_data:
+  mqtt_data:
+  mqtt_log:

@@ -4,8 +4,9 @@
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
 import { getCurrentMaritimeTime } from './utils';
 import { generateSimpleResponse } from './geminiService';
+import { checkBackendHealth, sendToBackend } from './api';
 
-// --- THE BIG 4 EXPERTS ---
+// --- THE BIG 4 EXPERTS (Local Fallbacks) ---
 import { financeExpert } from './agents/financeAgent';
 import { legalExpert } from './agents/legalAgent';
 import { securityExpert } from './agents/securityAgent';
@@ -38,16 +39,58 @@ export const orchestratorService = {
         const traces: AgentTraceLog[] = [];
         const actions: AgentAction[] = [];
         let responseText = "";
+        
+        // --- 0. HYPERSCALE CHECK (The Hybrid Bridge) ---
+        const isBackendOnline = await checkBackendHealth();
+
+        if (isBackendOnline) {
+            traces.push(createLog('ada.stargate', 'ROUTING', `Hyperscale Link: ACTIVE. Routing to Python Brain (LangGraph)...`, 'ORCHESTRATOR'));
+            
+            try {
+                // Delegate to Python Backend
+                const backendResponse = await sendToBackend(prompt, user, {
+                    vessels_in_port: vesselsInPort,
+                    active_tenant: activeTenantConfig.id
+                });
+
+                if (backendResponse) {
+                    // Map Backend Traces to Frontend UI
+                    if (backendResponse.traces) {
+                        backendResponse.traces.forEach((t: any) => {
+                            traces.push(createLog(t.node || 'ada.core', t.step || 'THINKING', t.content, 'EXPERT'));
+                        });
+                    }
+                    
+                    // Map Backend Actions (if any)
+                    if (backendResponse.actions) {
+                        actions.push(...backendResponse.actions);
+                    }
+
+                    return {
+                        text: backendResponse.text,
+                        actions: actions,
+                        traces: traces
+                    };
+                }
+            } catch (err) {
+                console.error("Backend Handover Failed:", err);
+                traces.push(createLog('ada.stargate', 'ERROR', `Hyperscale Link Failed. Reverting to Local Logic.`, 'ORCHESTRATOR'));
+            }
+        } else {
+            traces.push(createLog('ada.stargate', 'ROUTING', `Hyperscale Link: OFFLINE. Using Local Edge Logic.`, 'ORCHESTRATOR'));
+        }
+
+        // --- LOCAL FALLBACK LOGIC (The Original Orchestrator) ---
+        
         const lower = prompt.toLowerCase();
         
-        // 0. Context Extraction
+        // Context Extraction
         const findVesselInPrompt = (p: string) => VESSEL_KEYWORDS.find(v => p.toLowerCase().includes(v));
         const vesselName = findVesselInPrompt(prompt) || (user.role === 'CAPTAIN' ? 'S/Y Phisedelia' : 's/y phisedelia');
 
         // --- 1. ROUTING LAYER (The Big 4 Classifier) ---
         let routedDomain: 'LEGAL' | 'MARINA' | 'FINANCE' | 'STARGATE' = 'STARGATE';
 
-        // Simple Heuristic Routing
         if (lower.includes('mayday') || lower.includes('fire') || lower.includes('yangın') || lower.includes('kural') || lower.includes('law') || lower.includes('contract') || lower.includes('sözleşme') || lower.includes('security') || lower.includes('patrol')) {
             routedDomain = 'LEGAL';
         } else if (lower.includes('berth') || lower.includes('yanaş') || lower.includes('depart') || lower.includes('ayrıl') || lower.includes('hail') || lower.includes('radar') || lower.includes('technical') || lower.includes('repair') || lower.includes('waste') || lower.includes('mavi kart')) {
