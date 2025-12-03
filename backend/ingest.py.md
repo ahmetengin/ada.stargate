@@ -3,7 +3,8 @@
 import os
 import glob
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+# Use Local Embeddings instead of Google's to ensure vector DB works offline
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 try:
@@ -13,25 +14,28 @@ except ImportError:
 
 DOCS_DIR = "../docs"
 
-print(f"🚀 Ingesting Knowledge Base from: {DOCS_DIR}")
+print(f"🚀 Ingesting Knowledge Base (Hybrid Mode)...")
 
 # 1. Connect to Qdrant
 client = QdrantClient(url=Config.QDRANT_URL)
 
 # 2. Reset Collection
+# Standardizes vector size to 384 (MiniLM standard) instead of 768
 client.recreate_collection(
     collection_name=Config.COLLECTION_NAME, 
-    vectors_config=models.VectorParams(size=768, distance=models.Distance.COSINE)
+    vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE)
 )
 
-# 3. Embeddings
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=Config.API_KEY)
+# 3. Initialize Local Embeddings (CPU optimized)
+# This downloads the model to the Docker container once and runs locally.
+print("   -> Loading Local Embedding Model (all-MiniLM-L6-v2)...")
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 # 4. Read Files
 files = glob.glob(f"{DOCS_DIR}/**/*.md", recursive=True)
 print(f"📄 Found {len(files)} documents.")
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
 points = []
 
 # 5. Process
@@ -42,7 +46,7 @@ for idx, file_path in enumerate(files):
             chunks = text_splitter.create_documents([content])
             
             for i, chunk in enumerate(chunks):
-                print(f"   -> Embedding chunk {i} from {os.path.basename(file_path)}")
+                print(f"   -> Local Embedding chunk {i} from {os.path.basename(file_path)}")
                 vector = embeddings.embed_query(chunk.page_content)
                 
                 points.append(models.PointStruct(
@@ -59,7 +63,7 @@ for idx, file_path in enumerate(files):
 # 6. Upload
 if points:
     client.upsert(collection_name=Config.COLLECTION_NAME, points=points)
-    print(f"✅ SUCCESS: {len(points)} memory fragments implanted into Qdrant.")
+    print(f"✅ SUCCESS: {len(points)} hybrid memories implanted.")
 else:
     print("⚠️ No data found to ingest.")
 ```

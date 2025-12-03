@@ -14,7 +14,10 @@ qdrant-client
 asyncpg
 markdown
 beautifulsoup4
-# Voice Stack (The Mouth/Ears - Critical for FastRTC)
+# Hybrid / Offline Stack
+langchain-ollama
+sentence-transformers
+# Voice Stack (The Mouth/Ears)
 fastrtc>=0.1.0
 gradio>=5.0.0
 numpy

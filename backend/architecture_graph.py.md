@@ -2,11 +2,12 @@
 ```python
 import operator
 import re
-import traceback
 from typing import Annotated, TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.embeddings import HuggingFaceEmbeddings # Local
+from langchain_community.chat_models import ChatOllama # Local
 from qdrant_client import QdrantClient
 try:
     from backend.config import Config
@@ -24,143 +25,100 @@ class AgentState(TypedDict):
     memories: List[str]
     final_response: str
 
-# --- LLM FACTORY ---
-def get_llm(model=Config.SMART_MODEL, temp=0.1):
-    return ChatGoogleGenerativeAI(model=model, google_api_key=Config.API_KEY, temperature=temp)
+# --- FACTORY ---
+def get_llm():
+    """Hybrid Factory: Tries Cloud, falls back to Ollama"""
+    try:
+        if Config.API_KEY:
+            return ChatGoogleGenerativeAI(model=Config.SMART_MODEL, google_api_key=Config.API_KEY, temperature=0.1)
+    except:
+        pass
+    
+    print("⚠️ Using Local LLM (Gemma)")
+    return ChatOllama(model=Config.OFFLINE_MODEL, base_url=Config.OLLAMA_URL)
 
 # --- NODES ---
 
 async def router_node(state: AgentState):
-    """
-    Router: Decides if we need Code (Maker), Memory (RAG), or just Chat.
-    """
     msg = state['messages'][-1].content.lower()
     print(f"--- [ROUTER] Analyzing: {msg} ---")
     
-    # MAKER: Math, Logic, Complex Calculation
-    if any(x in msg for x in ["calculate", "compute", "solve", "math", "load", "formula", "hesapla"]):
+    if any(x in msg for x in ["calculate", "solve", "math", "hesapla"]):
         return {"intent": "MAKER", "next_node": "maker_agent"}
     
-    # RAG: Legal, Rules, Policy
-    if any(x in msg for x in ["rule", "law", "contract", "policy", "kural", "yönetmelik"]):
+    if any(x in msg for x in ["rule", "law", "contract", "kural", "yönetmelik"]):
         return {"intent": "LEGAL", "next_node": "rag_retriever"}
         
     return {"intent": "GENERAL", "next_node": "generator"}
 
 async def maker_agent_node(state: AgentState):
-    """
-    MAKER: Writes a Python script to solve the problem (Zero Hallucination).
-    """
     print("--- [MAKER] Writing Python Code ---")
     query = state['messages'][-1].content
+    prompt = f"Write Python code to solve: {query}. Output ONLY code inside ```python``` blocks. Use print() for output."
     
-    prompt = f"""
-    You are an expert Python Engineer. Write a script to solve: {query}
-    
-    RULES:
-    1. Define `def solve():` returning a result.
-    2. End with `print(solve())`.
-    3. Use ONLY standard libraries (math, datetime, json, random).
-    4. Output ONLY the code inside ```python ... ``` blocks.
-    """
-    
-    llm = get_llm(model=Config.SMART_MODEL)
+    llm = get_llm()
     res = await llm.ainvoke(prompt)
     
-    # Extract Code
     code_match = re.search(r"```python(.*?)```", res.content, re.DOTALL)
     code = code_match.group(1).strip() if code_match else res.content.strip()
-        
     return {"generated_code": code, "next_node": "executor"}
 
 async def executor_node(state: AgentState):
-    """
-    EXECUTOR: Runs the generated code in a safe environment.
-    """
     print("--- [EXECUTOR] Running Code ---")
     code = state.get("generated_code", "")
-    
     try:
         import math, datetime, json, random, io, sys
-        
-        # Sandbox Globals
-        safe_globals = {
-            "math": math, "datetime": datetime, "json": json, "random": random,
-            "__builtins__": {} # Restrict builtins
-        }
-        
-        # Capture Stdout
+        safe_globals = {"math": math, "datetime": datetime, "json": json, "random": random}
         old_stdout = sys.stdout
         redirected_output = io.StringIO()
         sys.stdout = redirected_output
-        
         try:
             exec(code, safe_globals)
         except Exception as e:
             print(f"Runtime Error: {e}")
-            
         sys.stdout = old_stdout
         result = redirected_output.getvalue().strip()
-        
-        if not result: result = "Code executed but returned no output."
-        
-        print(f"   >>> Result: {result}")
+        if not result: result = "No output."
         return {"execution_result": result, "next_node": "generator"}
-        
     except Exception as e:
-        return {"execution_result": f"Execution Error: {str(e)}", "next_node": "generator"}
+        return {"execution_result": f"Error: {str(e)}", "next_node": "generator"}
 
 async def rag_retriever_node(state: AgentState):
     """
-    RAG: Queries Qdrant Vector DB for Rules/Contracts.
+    Hybrid RAG: Uses Local Embeddings to search Qdrant (works offline).
     """
-    print("--- [RAG] Searching Memory ---")
+    print("--- [RAG] Searching Memory (Local Embeddings) ---")
     try:
         client = QdrantClient(url=Config.QDRANT_URL)
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=Config.API_KEY)
+        # MUST use the same model as ingest.py
+        embeddings = HuggingFaceEmbeddings(model_name=Config.OFFLINE_EMBEDDING)
         vector = embeddings.embed_query(state['messages'][-1].content)
         
         hits = client.search(collection_name=Config.COLLECTION_NAME, query_vector=vector, limit=2)
         memories = [hit.payload["text"] for hit in hits]
         
-        if not memories: memories = ["No specific documents found."]
+        if not memories: memories = ["No documents found."]
     except Exception as e:
         print(f"RAG Error: {e}")
-        memories = ["Memory offline (Qdrant unreachable)."]
+        memories = ["Memory offline."]
         
     return {"memories": memories, "next_node": "generator"}
 
 async def generator_node(state: AgentState):
-    """
-    GENERATOR: Synthesizes the final answer using Context + Calculation.
-    """
     print("--- [GENERATOR] Speaking ---")
-    
     context = ""
-    if state.get("memories"): context += f"RELEVANT RULES:\n{state['memories']}\n"
-    if state.get("execution_result"): context += f"CALCULATION RESULT:\n{state['execution_result']}\n"
+    if state.get("memories"): context += f"RULES:\n{state['memories']}\n"
+    if state.get("execution_result"): context += f"CALCULATION:\n{state['execution_result']}\n"
     
-    prompt = f"""
-    You are Ada, an advanced Marina AI.
+    prompt = f"Context:\n{context}\nUser: {state['messages'][-1].content}\nAnswer:"
     
-    CONTEXT:
-    {context}
-    
-    USER QUERY:
-    {state['messages'][-1].content}
-    
-    INSTRUCTION:
-    Provide a professional, concise response. If there was a calculation, explain it.
-    """
-    
-    llm = get_llm(model=Config.PRO_MODEL)
+    llm = get_llm()
     res = await llm.ainvoke(prompt)
     return {"final_response": res.content, "next_node": END}
 
 # --- GRAPH BUILDER ---
 def build_graph():
     workflow = StateGraph(AgentState)
-    
     workflow.add_node("router", router_node)
     workflow.add_node("maker_agent", maker_agent_node)
     workflow.add_node("executor", executor_node)
@@ -172,11 +130,7 @@ def build_graph():
     workflow.add_conditional_edges(
         "router",
         lambda x: x["next_node"],
-        {
-            "maker_agent": "maker_agent",
-            "rag_retriever": "rag_retriever",
-            "generator": "generator"
-        }
+        {"maker_agent": "maker_agent", "rag_retriever": "rag_retriever", "generator": "generator"}
     )
     
     workflow.add_edge("maker_agent", "executor")
