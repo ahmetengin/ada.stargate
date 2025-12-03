@@ -91,6 +91,19 @@ export interface AisTarget {
 
 export type UserRole = 'VISITOR' | 'MEMBER' | 'CAPTAIN' | 'GENERAL_MANAGER';
 
+// --- LOYALTY PROGRAM TYPES ---
+export type LoyaltyTier = 'MARINER' | 'COMMANDER' | 'ADMIRAL'; // Classic, Elite, Elite Plus
+
+export interface LoyaltyStatus {
+    tier: LoyaltyTier;
+    totalMiles: number; // Lifetime accumulation
+    spendableMiles: number; // Current balance
+    nextTierProgress: number; // Percentage 0-100
+    milesToNextTier: number;
+    memberSince: string;
+    cardNumber: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -98,6 +111,7 @@ export interface UserProfile {
   clearanceLevel: number;
   legalStatus: 'GREEN' | 'RED';
   contractId?: string;
+  loyalty?: LoyaltyStatus; // Linked Loyalty Program
 }
 
 // --- NEW: SCORING TYPES ---
@@ -113,7 +127,26 @@ export interface CustomerRiskProfile {
     segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
     breakdown: TrustScoreBreakdown;
     lastAssessmentDate: string;
-    flags: string[]; // e.g., ["Late Payer", "Speeding Violation"]
+    flags: string[]; // e.g. ["Late Payer", "Speeding Violation"]
+}
+
+// --- NEW: ROBOTICS & HULL SCAN TYPES ---
+export interface HullScanReport {
+    date: string;
+    status: 'CLEAN' | 'FOULING_MILD' | 'FOULING_SEVERE' | 'DAMAGE_DETECTED';
+    anodesStatus: number; // 0-100%
+    propellerStatus: 'CLEAR' | 'ENTANGLEMENT';
+    summary: string;
+    imageUrl?: string; // URL to scan image
+}
+
+export interface RoboticAsset {
+    id: string;
+    name: string;
+    type: 'UAV_DRONE' | 'ROV_SUBSEA' | 'UGV_CART';
+    status: 'IDLE' | 'ON_MISSION' | 'CHARGING' | 'MAINTENANCE';
+    batteryLevel: number;
+    currentMission?: string;
 }
 
 export interface VesselIntelligenceProfile {
@@ -139,6 +172,8 @@ export interface VesselIntelligenceProfile {
   loyaltyScore?: number;
   // Linked Risk Profile
   riskProfile?: CustomerRiskProfile;
+  // New: Hull Scan
+  lastHullScan?: HullScanReport;
 }
 
 export type NodeName = string | 'ada.stargate'; 
@@ -154,6 +189,33 @@ export interface AgentTraceLog {
   source?: string;
   message?: string;
   isError?: boolean;
+}
+
+// --- CONCIERGE TYPES ---
+export interface MarketItem {
+    id: string;
+    name: string;
+    category: 'PROVISIONS' | 'BEVERAGE' | 'CLEANING' | 'BAKERY';
+    price: number;
+    unit: string;
+    imageIcon?: string;
+}
+
+export interface CateringMenu {
+    id: string;
+    restaurant: string;
+    itemName: string;
+    description: string;
+    price: number;
+    prepTime: number; // mins
+}
+
+export interface ServiceRequest {
+    id: string;
+    type: 'HOUSEKEEPING' | 'LAUNDRY' | 'FLORIST';
+    details: string;
+    status: 'PENDING' | 'DISPATCHED' | 'COMPLETED';
+    requestedTime: string;
 }
 
 // --- UNIVERSAL OS CONFIG TYPES ---
@@ -191,6 +253,18 @@ export interface MasterDataStructure {
   };
   technical_facilities: TechnicalFacilitySpecs;
   campus_stats: CampusStats;
+  loyalty_program?: { // Added logic for loyalty program rules
+      program_name?: string;
+      earning_rates: Record<string, number>;
+      redemption_catalog: Array<{ item: string, cost: number }>;
+      tiers: Record<string, number>;
+  };
+  robotics_fleet?: RoboticAsset[]; // New Robotics Fleet
+  concierge_services?: { // NEW
+      market_inventory: MarketItem[];
+      catering_menus: CateringMenu[];
+      housekeeping_services: { type: string, rate: number }[];
+  };
   [key: string]: any;
 }
 
@@ -334,4 +408,24 @@ export interface TravelItinerary {
   flights: any[];
   hotels: any[];
   transfers: any[];
+}
+
+// --- NEW: ENERGY & SECURITY TYPES ---
+export interface EnergyGridStatus {
+    loadPercentage: number; // 0-100
+    gridStability: 'STABLE' | 'FLUCTUATING' | 'CRITICAL';
+    activeConsumers: number;
+    peakShavingActive: boolean;
+    carbonFootprint: number; // kg CO2
+}
+
+export interface SecurityThreat {
+    id: string;
+    type: 'DRONE' | 'DIVER' | 'UNAUTHORIZED_VESSEL';
+    coordinates: { lat: number; lng: number };
+    altitudeDepth: number; // meters (negative for diver)
+    speed: number;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    detectedBy: 'RADAR' | 'SONAR' | 'RF_SCANNER';
+    timestamp: string;
 }

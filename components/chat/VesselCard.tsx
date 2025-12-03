@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Activity, ShieldCheck, User, Zap, Droplets, Gauge, Thermometer } from 'lucide-react';
+import { Activity, ShieldCheck, User, Zap, Droplets, Gauge, Thermometer, ScanEye } from 'lucide-react';
 import { VesselIntelligenceProfile, VesselSystemsStatus } from '../../types';
 import { maskFullName } from '../../services/utils';
 import { marinaExpert } from '../../services/agents/marinaAgent';
@@ -12,6 +12,7 @@ interface VesselCardProps {
 export const VesselCard: React.FC<VesselCardProps> = ({ profile }) => {
     const [telemetry, setTelemetry] = useState<VesselSystemsStatus | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [showScan, setShowScan] = useState(false);
 
     const handleFetchTelemetry = async () => {
         if (telemetry) {
@@ -81,23 +82,26 @@ export const VesselCard: React.FC<VesselCardProps> = ({ profile }) => {
                 )}
             </div>
 
-            {/* Telemetry Action */}
-            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-white/5">
+            {/* Buttons Row */}
+            <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-white/5 grid grid-cols-2 gap-2">
                 <button 
                     onClick={handleFetchTelemetry}
                     disabled={isLoading}
-                    className={`w-full flex items-center justify-center gap-2 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${
+                    className={`flex items-center justify-center gap-2 py-2 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${
                         telemetry 
                         ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700' 
-                        : 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 hover:bg-teal-100 dark:hover:bg-teal-500/20 hover:border-teal-300 dark:hover:border-teal-500/50'
+                        : 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 hover:bg-teal-100 dark:hover:bg-teal-500/20'
                     }`}
                 >
-                    {isLoading ? (
-                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                        <Gauge size={12} />
-                    )}
-                    {telemetry ? 'Hide System Status' : 'View Full Telemetry'}
+                    {isLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div> : <Gauge size={12} />}
+                    {telemetry ? 'Hide' : 'Telemetry'}
+                </button>
+
+                <button 
+                    onClick={() => setShowScan(!showScan)}
+                    className="flex items-center justify-center gap-2 py-2 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all"
+                >
+                    <ScanEye size={12} /> Hull Scan
                 </button>
             </div>
 
@@ -158,6 +162,37 @@ export const VesselCard: React.FC<VesselCardProps> = ({ profile }) => {
                                 <div className="text-sm font-bold text-indigo-900 dark:text-white">{telemetry.comfort.climate.currentTemp}°C</div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Hull Scan Visualizer */}
+            {showScan && (
+                <div className="mt-3 bg-blue-900/10 rounded-lg p-3 border border-blue-500/20 animate-in zoom-in-95">
+                    <div className="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-2 flex justify-between">
+                        <span>Ada.Subsea Report</span>
+                        <span>{new Date().toLocaleDateString()}</span>
+                    </div>
+                    
+                    {/* Simulated Heatmap */}
+                    <div className="relative h-24 w-full bg-blue-900/80 rounded overflow-hidden mb-2 border border-blue-500/30 group cursor-crosshair">
+                        <div className="absolute inset-0 opacity-30 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%,transparent_100%)] bg-[length:20px_20px]"></div>
+                        {/* Simulated Hull Shape */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[60%] bg-blue-500/20 rounded-full blur-xl"></div>
+                        {/* Foul Spots */}
+                        <div className="absolute top-[40%] left-[30%] w-2 h-2 bg-yellow-400 rounded-full blur-[2px] animate-pulse"></div>
+                        <div className="absolute top-[60%] right-[30%] w-3 h-3 bg-green-400 rounded-full blur-[2px]"></div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-[9px] text-zinc-500 dark:text-zinc-400">
+                        <div>
+                            <span className="block uppercase font-bold text-blue-400">Propeller</span>
+                            <span className="text-emerald-500">CLEAN</span>
+                        </div>
+                        <div className="text-right">
+                            <span className="block uppercase font-bold text-blue-400">Anodes</span>
+                            <span className="text-amber-500">85% (GOOD)</span>
+                        </div>
                     </div>
                 </div>
             )}

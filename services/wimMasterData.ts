@@ -226,6 +226,69 @@ export const wimMasterData: MasterDataStructure = {
         }
     }
   },
+  "loyalty_program": {
+      "program_name": "Ada Sea Miles",
+      "tiers": {
+          "MARINER": 0, // 0 - 10,000 (Classic)
+          "COMMANDER": 10000, // 10,000 - 50,000 (Elite)
+          "ADMIRAL": 50000 // 50,000+ (Elite Plus)
+      },
+      "earning_rates": {
+          "mooring_eur": 10, // 10 Miles per 1 Euro spent
+          "fuel_eur": 1, // 1 Mile per 1 Euro spent
+          "restaurant_eur": 5, // 5 Miles per 1 Euro spent
+          "technical_eur": 2 // 2 Miles per 1 Euro spent
+      },
+      "redemption_catalog": [
+          { "item": "Free Pump-out (Blue Card)", "cost": 500 },
+          { "item": "VIP Transfer (Airport)", "cost": 2500 },
+          { "item": "Dinner for Two (Poem)", "cost": 5000 },
+          { "item": "Free Lift & Launch (Up to 15m)", "cost": 50000 },
+          { "item": "Guest Pass (1 Day)", "cost": 1000 }
+      ]
+  },
+  "robotics_fleet": [
+      {
+          "id": "ROV-01",
+          "name": "DeepEye-1",
+          "type": "ROV_SUBSEA",
+          "status": "IDLE",
+          "batteryLevel": 92,
+          "currentMission": "Standby at Pontoon A"
+      },
+      {
+          "id": "UAV-01",
+          "name": "SkyPorter-1",
+          "type": "UAV_DRONE",
+          "status": "CHARGING",
+          "batteryLevel": 45,
+          "currentMission": "Base Station"
+      }
+  ],
+  "concierge_services": {
+      "market_inventory": [
+          { "id": "MKT-01", "name": "Fresh Sourdough Bread", "category": "BAKERY", "price": 4.5, "unit": "Loaf" },
+          { "id": "MKT-02", "name": "Local Organic Eggs (6pk)", "category": "PROVISIONS", "price": 5.0, "unit": "Pack" },
+          { "id": "MKT-03", "name": "Daily Milk (Glass Bottle)", "category": "PROVISIONS", "price": 3.0, "unit": "L" },
+          { "id": "MKT-04", "name": "Wagyu Beef Ribeye", "category": "PROVISIONS", "price": 120.0, "unit": "kg" },
+          { "id": "MKT-05", "name": "Moët & Chandon Brut", "category": "BEVERAGE", "price": 85.0, "unit": "Btl" },
+          { "id": "MKT-06", "name": "Still Water (Glass 12pk)", "category": "BEVERAGE", "price": 12.0, "unit": "Case" },
+          { "id": "MKT-07", "name": "Eco Dish Detergent", "category": "CLEANING", "price": 8.0, "unit": "Btl" },
+          { "id": "MKT-08", "name": "Turkish Coffee (Mehmet Efendi)", "category": "PROVISIONS", "price": 6.0, "unit": "250g" }
+      ],
+      "catering_menus": [
+          { "id": "CAT-POEM-01", "restaurant": "Poem Restaurant", "itemName": "Seafood Platter Royale", "description": "Lobster, Tiger Prawns, Calamari, Sea Bass. Serves 2.", "price": 180.0, "prepTime": 45 },
+          { "id": "CAT-POEM-02", "restaurant": "Poem Restaurant", "itemName": "Signature Meze Tray", "description": "8 types of daily mezes, freshly prepared.", "price": 45.0, "prepTime": 30 },
+          { "id": "CAT-FERSAH-01", "restaurant": "Fersah", "itemName": "Grilled Octopus", "description": "Aegean style with fava bean puree.", "price": 35.0, "prepTime": 25 },
+          { "id": "CAT-FERSAH-02", "restaurant": "Fersah", "itemName": "Salt Baked Sea Bass", "description": "Whole fish (1.5kg). Requires advance notice.", "price": 90.0, "prepTime": 60 }
+      ],
+      "housekeeping_services": [
+          { "type": "Interior Cleaning (Standard)", "rate": 25 }, // per hour
+          { "type": "Laundry Service (Bag)", "rate": 30 },
+          { "type": "Dry Cleaning (Suit)", "rate": 15 },
+          { "type": "Bed Making & Turn Down", "rate": 20 }
+      ]
+  },
   "traffic_control": {
       "system_type": "ATC-Style Sequencing (Tower Control)",
       "holding_area": {

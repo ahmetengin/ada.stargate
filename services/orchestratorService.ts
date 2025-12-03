@@ -41,27 +41,34 @@ export const orchestratorService = {
         let responseText = "";
         
         // --- 0. HYPERSCALE CHECK (The Hybrid Bridge) ---
+        // First, check if the Python Brain (LangGraph) is online.
         const isBackendOnline = await checkBackendHealth();
 
         if (isBackendOnline) {
             traces.push(createLog('ada.stargate', 'ROUTING', `Hyperscale Link: ACTIVE. Routing to Python Brain (LangGraph)...`, 'ORCHESTRATOR'));
             
             try {
-                // Delegate to Python Backend
+                // Delegate the entire thinking process to the Python Backend
+                // This allows for RAG (Qdrant), Math (Python), and Complex Reasoning (LangGraph)
                 const backendResponse = await sendToBackend(prompt, user, {
                     vessels_in_port: vesselsInPort,
-                    active_tenant: activeTenantConfig.id
+                    active_tenant: activeTenantConfig.id,
+                    user_context: {
+                        name: user.name,
+                        role: user.role,
+                        legal_status: user.legalStatus
+                    }
                 });
 
                 if (backendResponse) {
-                    // Map Backend Traces to Frontend UI
+                    // Map Backend Traces to Frontend UI for "Glass Box" observability
                     if (backendResponse.traces) {
                         backendResponse.traces.forEach((t: any) => {
                             traces.push(createLog(t.node || 'ada.core', t.step || 'THINKING', t.content, 'EXPERT'));
                         });
                     }
                     
-                    // Map Backend Actions (if any)
+                    // Map Backend Actions (e.g. database updates)
                     if (backendResponse.actions) {
                         actions.push(...backendResponse.actions);
                     }
@@ -74,13 +81,15 @@ export const orchestratorService = {
                 }
             } catch (err) {
                 console.error("Backend Handover Failed:", err);
-                traces.push(createLog('ada.stargate', 'ERROR', `Hyperscale Link Failed. Reverting to Local Logic.`, 'ORCHESTRATOR'));
+                traces.push(createLog('ada.stargate', 'ERROR', `Hyperscale Link Failed. Reverting to Local Edge Logic.`, 'ORCHESTRATOR'));
+                // Fallthrough to local logic...
             }
         } else {
-            traces.push(createLog('ada.stargate', 'ROUTING', `Hyperscale Link: OFFLINE. Using Local Edge Logic.`, 'ORCHESTRATOR'));
+            traces.push(createLog('ada.stargate', 'ROUTING', `Hyperscale Link: OFFLINE. Using Local Edge Logic (Browser-Based).`, 'ORCHESTRATOR'));
         }
 
         // --- LOCAL FALLBACK LOGIC (The Original Orchestrator) ---
+        // This code runs if Docker backend is down or unreachable (Offline Mode)
         
         const lower = prompt.toLowerCase();
         

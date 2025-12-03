@@ -5,7 +5,7 @@ python-dotenv>=1.0.1
 google-genai>=0.3.0
 httpx>=0.26.0
 redis>=5.0.0
-# Cognitive Stack
+# Cognitive Stack (The Brain)
 langgraph>=0.0.10
 langchain-core
 langchain-community
@@ -14,7 +14,7 @@ qdrant-client
 asyncpg
 markdown
 beautifulsoup4
-# Voice Stack (FastRTC)
+# Voice Stack (The Mouth/Ears - Critical for FastRTC)
 fastrtc>=0.1.0
 gradio>=5.0.0
 numpy

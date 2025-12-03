@@ -1,5 +1,5 @@
 
-import { AgentAction, AgentTraceLog, NodeName } from '../../types';
+import { AgentAction, AgentTraceLog, NodeName, SecurityThreat } from '../../types';
 
 // Helper to create a log
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
@@ -44,6 +44,50 @@ export const securityExpert = {
             details: detectionResult,
             detectedObjects: objects
         };
+    },
+
+    // NEW Skill: Active Shield Scan (Sonar & Anti-Drone)
+    // Connects to "ada.shield" node
+    scanPerimeterShield: async (addTrace: (t: AgentTraceLog) => void): Promise<{ threats: SecurityThreat[], status: string }> => {
+        addTrace(createLog('ada.shield', 'THINKING', `Activating Multi-Domain Perimeter Scan (Sonar + RF Spectrum)...`, 'EXPERT'));
+        
+        // Mock Threat Data (Simulating Antibes High-Security Environment)
+        // 1 in 5 chance of a detection
+        const threats: SecurityThreat[] = [];
+        
+        if (Math.random() > 0.8) {
+            threats.push({
+                id: `TRT-${Date.now()}`,
+                type: 'DRONE',
+                coordinates: { lat: 40.963, lng: 28.629 },
+                altitudeDepth: 45, // meters alt
+                speed: 12,
+                riskLevel: 'HIGH',
+                detectedBy: 'RF_SCANNER',
+                timestamp: new Date().toISOString()
+            });
+            addTrace(createLog('ada.shield', 'WARNING', `AERIAL BREACH: Drone detected at 45m. RF Signature mismatch.`, 'WORKER'));
+        }
+
+        if (Math.random() > 0.9) {
+             threats.push({
+                id: `TRT-SUB-${Date.now()}`,
+                type: 'DIVER',
+                coordinates: { lat: 40.962, lng: 28.630 },
+                altitudeDepth: -4, // meters depth
+                speed: 1,
+                riskLevel: 'CRITICAL',
+                detectedBy: 'SONAR',
+                timestamp: new Date().toISOString()
+            });
+            addTrace(createLog('ada.shield', 'WARNING', `SUBSEA CONTACT: Diver signature in Sector Bravo.`, 'WORKER'));
+        }
+
+        if (threats.length === 0) {
+            addTrace(createLog('ada.shield', 'OUTPUT', `Perimeter Secure. No aerial or subsea contacts.`, 'WORKER'));
+        }
+
+        return { threats, status: threats.length > 0 ? 'ALERT' : 'SECURE' };
     },
 
     // Skill: Dispatch Security Unit

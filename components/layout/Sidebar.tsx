@@ -6,7 +6,7 @@ import {
     Radio, Shield, Anchor, Wifi, Zap, Battery, Signal, UserCheck, 
     CreditCard, ScanLine, Activity, CheckCircle2, 
     LifeBuoy, Droplets, Wrench, Navigation, 
-    Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn, ChevronRight, Scale, Brain
+    Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn, ChevronRight, Scale, Brain, Bot
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,7 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTenantId
 }) => {
 
-  // THE BIG 4 CLUSTERS
+  // THE BIG 4 CLUSTERS + NEW MODULES
   const nodeGroups = [
     { 
         title: 'ADA.MARINA (OPS)', 
@@ -42,7 +42,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         nodes: [
             { id: 'ada.marina', label: 'HARBOUR MASTER' },
             { id: 'ada.sea', label: 'SEA / COLREGS' },
-            { id: 'ada.technic', label: 'BOATYARD / LIFT' } // Enhanced Label
+            { id: 'ada.technic', label: 'BOATYARD / LIFT' },
+            { id: 'ada.energy', label: 'GRID (MONACO PROTOCOL)' },
+            { id: 'ada.robotics', label: 'ROBOTICS (SUBSEA/SKY)' } // NEW
         ]
     },
     { 
@@ -50,8 +52,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         color: 'text-emerald-400',
         nodes: [
             { id: 'ada.finance', label: 'LEDGER & INVOICE' },
-            { id: 'ada.commercial', label: 'COMMERCIAL / RETAIL' }, // NEW
-            { id: 'ada.customer', label: 'CRM / LOYALTY' }
+            { id: 'ada.commercial', label: 'COMMERCIAL / RETAIL' }, 
+            { id: 'ada.customer', label: 'CRM / LOYALTY' },
+            { id: 'ada.yield', label: 'YIELD (MIAMI MODE)' } 
         ]
     },
     { 
@@ -60,6 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         nodes: [
             { id: 'ada.legal', label: 'RULES & RAG' },
             { id: 'ada.security', label: 'SECURITY / ISPS' },
+            { id: 'ada.shield', label: 'SHIELD (ANTIBES DOME)' }, 
             { id: 'ada.passkit', label: 'ACCESS CONTROL' }
         ]
     },
@@ -175,6 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <SectionHeader title="Services" />
                     <div className="space-y-1">
                         <MenuButton icon={LifeBuoy} label="Request Tender" />
+                        <MenuButton icon={Bot} label="Drone Delivery" />
                         <MenuButton icon={Droplets} label="Fuel & Water" />
                         <MenuButton icon={Wrench} label="Technical Support" />
                         <MenuButton icon={Navigation} label="Flight Plan" />
@@ -207,6 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <SectionHeader title="Concierge" />
                     <div className="space-y-1">
+                        <MenuButton icon={Bot} label="Drone Service" />
                         <MenuButton icon={Car} label="Valet / Taxi" />
                         <MenuButton icon={Utensils} label="Dining Reservations" />
                         <MenuButton icon={Info} label="Concierge Desk" />

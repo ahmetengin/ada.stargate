@@ -1,12 +1,15 @@
 
+import { UserProfile } from "../types";
+
 export const checkBackendHealth = async (): Promise<boolean> => {
   try {
-    const response = await fetch('/api/health'); // Proxied to port 8000
+    // Nginx proxy forwards /api to backend:8000
+    const response = await fetch('/api/health'); 
     return response.ok; 
   } catch { return false; }
 };
 
-export const sendToBackend = async (prompt: string, userProfile: any, context: any = {}): Promise<any> => {
+export const sendToBackend = async (prompt: string, userProfile: UserProfile, context: any = {}): Promise<any> => {
     try {
         const response = await fetch('/api/v1/chat', {
             method: 'POST',
@@ -17,9 +20,10 @@ export const sendToBackend = async (prompt: string, userProfile: any, context: a
                 context: context
             })
         });
+        if (!response.ok) throw new Error("Backend Error");
         return await response.json();
     } catch (e) {
-        console.error(e);
+        console.error("Backend Communication Failed:", e);
         return null;
     }
 }
@@ -34,7 +38,7 @@ export const invokeAgentSkill = async (agent: string, skill: string, params: any
         if (!response.ok) return null;
         return await response.json();
     } catch (e) {
-        console.error(e);
+        console.error(`Skill Invocation Failed (${agent}.${skill}):`, e);
         return null;
     }
 };

@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Car, CheckCircle2, Zap, Utensils, Calendar, Wind, PartyPopper, QrCode, MapPin, Scan, LogIn, Lock } from 'lucide-react';
+import { Car, CheckCircle2, Zap, Utensils, Calendar, Wind, PartyPopper, QrCode, MapPin, Scan, LogIn, Lock, Award, Plane, ChevronRight, Anchor } from 'lucide-react';
 import { UserProfile, TenantConfig } from '../../types';
 import { wimMasterData } from '../../services/wimMasterData';
 import { securityExpert } from '../../services/agents/securityAgent';
@@ -14,7 +15,7 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
   const [accessStatus, setAccessStatus] = useState<'INSIDE' | 'OUTSIDE'>('OUTSIDE');
   const [lastGate, setLastGate] = useState<string | null>(null);
 
-  const isMember = userProfile.role === 'MEMBER';
+  const isMember = userProfile.role === 'MEMBER' || userProfile.role === 'CAPTAIN';
 
   // Generate a mock QR Data string unique to the user
   const qrData = JSON.stringify({
@@ -34,6 +35,14 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
       setLastGate(gate);
   };
 
+  const getTierColor = (tier: string) => {
+      switch(tier) {
+          case 'ADMIRAL': return 'from-slate-900 to-black border-slate-700 text-white'; // Elite Plus equivalent
+          case 'COMMANDER': return 'from-amber-100 to-amber-200 border-amber-300 text-amber-900'; // Elite equivalent
+          default: return 'from-red-600 to-red-700 border-red-500 text-white'; // Classic Red
+      }
+  };
+
   return (
     <div className="space-y-6 font-sans text-zinc-800 dark:text-zinc-200 p-4 animate-in fade-in slide-in-from-right-4 duration-500">
         {/* Welcome & Status */}
@@ -45,10 +54,67 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
             <div className="text-right">
                 <div className="text-xs text-zinc-500 uppercase tracking-widest mb-1">Status</div>
                 <div className={`text-sm font-bold ${isMember ? 'text-indigo-500' : 'text-zinc-400'}`}>
-                    {isMember ? 'PLATINUM MEMBER' : 'VISITOR'}
+                    {userProfile.loyalty?.tier || 'VISITOR'}
                 </div>
             </div>
         </div>
+
+        {/* --- ADA SEA MILES CARD (NEW) --- */}
+        {isMember && userProfile.loyalty && (
+            <div className={`relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-br ${getTierColor(userProfile.loyalty.tier)} transition-all duration-500 hover:scale-[1.02]`}>
+                {/* Background Pattern */}
+                <div className="absolute inset-0 opacity-20">
+                    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                    </svg>
+                </div>
+
+                <div className="p-6 relative z-10">
+                    <div className="flex justify-between items-start mb-8">
+                        <div className="flex items-center gap-2">
+                            <Anchor size={24} />
+                            <span className="font-display font-bold text-lg tracking-widest uppercase">Ada Sea Miles</span>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-[10px] uppercase opacity-70 tracking-widest">Tier</div>
+                            <div className="font-black text-xl uppercase tracking-tighter">{userProfile.loyalty.tier}</div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-between items-end">
+                        <div>
+                            <div className="text-[10px] uppercase opacity-70 tracking-widest mb-1">Total Balance</div>
+                            <div className="text-3xl font-mono font-bold tracking-tight">{userProfile.loyalty.spendableMiles.toLocaleString()} <span className="text-sm font-normal opacity-80">MILES</span></div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-[10px] font-mono opacity-70">{userProfile.loyalty.cardNumber}</div>
+                            <div className="text-[10px] opacity-70">Member Since {userProfile.loyalty.memberSince}</div>
+                        </div>
+                    </div>
+
+                    {/* Progress to Next Tier */}
+                    {userProfile.loyalty.nextTierProgress < 100 && (
+                        <div className="mt-6">
+                            <div className="flex justify-between text-[9px] uppercase font-bold mb-1 opacity-80">
+                                <span>Status Progress</span>
+                                <span>{userProfile.loyalty.milesToNextTier.toLocaleString()} miles to Upgrade</span>
+                            </div>
+                            <div className="h-1 bg-black/20 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-white/90 shadow-[0_0_10px_white]" 
+                                    style={{ width: `${userProfile.loyalty.nextTierProgress}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
 
         {/* --- MEMBER EXCLUSIVE: DIGITAL ACCESS PASS (QR) --- */}
         {isMember ? (
@@ -111,54 +177,6 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
                 <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-indigo-500 transition-colors">
                     Become a Member
                 </button>
-            </div>
-        )}
-
-        {/* ISPARK Validation Widget (Member Only) */}
-        {isMember && (
-            <div className="bg-zinc-100 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
-                <div className="flex justify-between items-start mb-3">
-                    <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">
-                        <Car size={12} /> MY GARAGE (ISPARK INTEGRATION)
-                    </div>
-                    <div className="bg-emerald-500/10 text-emerald-600 text-[9px] font-bold px-2 py-0.5 rounded border border-emerald-500/20">
-                        ACTIVE
-                    </div>
-                </div>
-                
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between p-2 bg-white dark:bg-zinc-900 rounded border border-zinc-200 dark:border-zinc-800 cursor-pointer ring-1 ring-indigo-500">
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                            <span className="font-mono font-bold">34 XX 99</span>
-                            <span className="text-xs text-zinc-500">Porsche 911</span>
-                        </div>
-                        <CheckCircle2 size={14} className="text-indigo-500"/>
-                    </div>
-                </div>
-
-                <button className="w-full mt-3 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded-lg text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors">
-                    <Zap size={12} /> Validate Exit (Free)
-                </button>
-            </div>
-        )}
-
-        {/* Active Dining Reservation (Member Only) */}
-        {isMember && (
-            <div className="bg-zinc-900 text-white p-4 rounded-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Utensils size={64} />
-                </div>
-                <div className="relative z-10">
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <Utensils size={12} /> DINING RESERVATION
-                    </div>
-                    <div className="text-lg font-bold text-white mb-1">Poem Restaurant</div>
-                    <div className="flex justify-between text-xs text-zinc-300 mb-3">
-                        <span>Today, 20:00</span>
-                        <span>3 Guests</span>
-                    </div>
-                </div>
             </div>
         )}
 

@@ -1,5 +1,5 @@
 
-import { AgentAction, AgentTraceLog, NodeName } from '../../types';
+import { AgentAction, AgentTraceLog, NodeName, EnergyGridStatus } from '../../types';
 import { wimMasterData } from '../wimMasterData';
 import { TaskHandlerFn } from '../decomposition/types';
 
@@ -30,22 +30,30 @@ export const facilityExpert = {
         };
     },
 
-    // Skill: Manage Utility Grid (Smart Grid)
-    manageUtilityGrid: async (addTrace: (t: AgentTraceLog) => void): Promise<{ load: number, optimization: string }> => {
-        addTrace(createLog('ada.facility', 'THINKING', `Analyzing Real-time Power Consumption (Smart Grid)...`, 'EXPERT'));
+    // NEW Skill: Smart Grid Management (Monaco Protocol)
+    // Connects to "ada.energy" node
+    monitorSmartGrid: async (addTrace: (t: AgentTraceLog) => void): Promise<EnergyGridStatus> => {
+        addTrace(createLog('ada.energy', 'THINKING', `Connecting to Monaco-grade Smart Grid (PLC Network)... Analyzing Load...`, 'EXPERT'));
         
-        // Mock Data
-        const currentLoad = 85; // %
-        let optimization = "Normal Operation";
+        // Mock logic inspired by YCM (Yacht Club de Monaco)
+        const load = 88; // High load scenario
+        const active = 142; 
         
-        if (currentLoad > 90) {
-            optimization = "Load Shedding Active (Non-critical systems dimmed)";
-            addTrace(createLog('ada.facility', 'WARNING', `Peak Load Detected (${currentLoad}%). Initiating eco-mode protocol.`, 'WORKER'));
+        const status: EnergyGridStatus = {
+            loadPercentage: load,
+            gridStability: load > 90 ? 'FLUCTUATING' : 'STABLE',
+            activeConsumers: active,
+            peakShavingActive: load > 85,
+            carbonFootprint: 450 // kg
+        };
+
+        if (status.peakShavingActive) {
+            addTrace(createLog('ada.energy', 'WARNING', `Grid Load: ${load}%. Activating PEAK SHAVING protocol. Dimming non-essential lighting.`, 'WORKER'));
         } else {
-            addTrace(createLog('ada.facility', 'OUTPUT', `Grid Load: ${currentLoad}%. Systems nominal.`, 'WORKER'));
+            addTrace(createLog('ada.energy', 'OUTPUT', `Grid Nominal (${load}%). Solar offset active.`, 'WORKER'));
         }
 
-        return { load: currentLoad, optimization };
+        return status;
     },
 
     // Skill: Control Pedestal (Remote Utility Management)

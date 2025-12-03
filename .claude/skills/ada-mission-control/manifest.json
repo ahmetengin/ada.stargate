@@ -1,0 +1,53 @@
+
+{
+  "name": "ada-mission-control",
+  "version": "2.0.0",
+  "description": "Allows the AI to manipulate the Mission Control Interface (React Frontend). Use this to change views, trigger alerts, or open modals.",
+  "tools": [
+    {
+      "name": "set_alert_mode",
+      "description": "Changes the global UI theme to reflect operational status. Use 'RED' for emergencies.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string",
+            "enum": ["GREEN", "AMBER", "RED"],
+            "description": "GREEN: Normal, AMBER: Warning (Weather), RED: Critical (Mayday/Fire)."
+          }
+        },
+        "required": ["level"]
+      }
+    },
+    {
+      "name": "switch_dashboard_tab",
+      "description": "Navigates the GM Dashboard to a specific module.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tab_id": {
+            "type": "string",
+            "enum": ["ops", "fleet", "facility", "congress", "hr", "commercial", "analytics", "observer"],
+            "description": "The target module ID."
+          }
+        },
+        "required": ["tab_id"]
+      }
+    },
+    {
+      "name": "open_modal",
+      "description": "Opens a specific overlay/modal for focused tasks.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "modal_type": {
+            "type": "string",
+            "enum": ["VOICE_RADIO", "PASSPORT_SCANNER", "DAILY_REPORT", "TRACE_LOGS"],
+            "description": "The modal to display."
+          }
+        },
+        "required": ["modal_type"]
+      }
+    }
+  ]
+}

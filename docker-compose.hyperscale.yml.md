@@ -1,8 +1,10 @@
+
+```yaml
 version: '3.9'
 
 services:
   # 1. THE BRAIN (Python LangGraph + FastRTC + IoT)
-  # This container runs the heavy AI logic, RAG, and Voice processing.
+  # This container now has FFmpeg and Audio Drivers installed via the new Dockerfile
   ada-core:
     build: 
       context: ./backend
@@ -10,12 +12,13 @@ services:
     container_name: ada_core_hyperscale
     ports:
       - "8000:8000" # Main API & WebSocket
-      - "7860:7860" # FastRTC / Gradio UI (Direct Voice)
+      - "7860:7860" # FastRTC / Gradio UI (Direct Access required for WebRTC audio)
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
       - MQTT_BROKER=ada-mqtt
+      # This is crucial for Gradio to allow external connections from the browser
       - GRADIO_SERVER_NAME=0.0.0.0 
     depends_on:
       - ada-redis
@@ -23,9 +26,9 @@ services:
       - ada-mqtt
     volumes:
       - ./backend:/app
-      - ./docs:/docs # Mounting docs for RAG ingestion
+      - ./docs:/docs
 
-  # 2. MEMORY (Vector DB - Long Term Memory)
+  # 2. MEMORY (Vector DB)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
@@ -34,7 +37,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-  # 3. TRUTH (Relational DB - Entities & Ledger)
+  # 3. TRUTH (Relational DB)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -47,7 +50,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # 4. NERVOUS SYSTEM (Event Bus - Short Term Memory)
+  # 4. NERVOUS SYSTEM (Event Bus)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
@@ -56,7 +59,7 @@ services:
     volumes:
       - redis_data:/data
 
-  # 5. SENSORY SYSTEM (IoT Broker)
+  # 5. SENSORY SYSTEM (IoT)
   ada-mqtt:
     image: eclipse-mosquitto:2
     container_name: ada_mqtt_broker
@@ -67,14 +70,14 @@ services:
       - mqtt_data:/mosquitto/data
       - mqtt_log:/mosquitto/log
 
-  # 6. FRONTEND (React Interface - Mission Control)
+  # 6. FRONTEND (React)
   ada-frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ada_frontend_hyperscale
     ports:
-      - "3000:80" # Port 3000 mapped to internal Nginx 80
+      - "3000:80" # Mapped to 3000 to avoid Mac/System port 80 conflicts
     environment:
       - API_KEY=${API_KEY}
     depends_on:
@@ -86,3 +89,4 @@ volumes:
   redis_data:
   mqtt_data:
   mqtt_log:
+```

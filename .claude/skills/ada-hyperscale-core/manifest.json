@@ -1,0 +1,54 @@
+
+{
+  "name": "ada-hyperscale-core",
+  "version": "4.6.0",
+  "description": "Core interface for Ada Stargate's Cognitive Operating System. Connects to the Python Backend (FastAPI/LangGraph).",
+  "tools": [
+    {
+      "name": "query_cognitive_brain",
+      "description": "Sends a prompt to the central LangGraph Orchestrator. Handles Routing, RAG, SEAL (Learning), and MAKER (Math) capabilities automatically.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "The user's request (e.g., 'Calculate mooring fee', 'Update speed rule')."
+          },
+          "context": {
+            "type": "object",
+            "description": "Optional operational context (vessel count, weather) to inject into the brain.",
+            "additionalProperties": true
+          }
+        },
+        "required": ["prompt"]
+      }
+    },
+    {
+      "name": "trigger_memory_ingestion",
+      "description": "Forces the system to re-read the 'docs/' folder and update the Qdrant Vector Database. Use after modifying regulations.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "force_rebuild": {
+            "type": "boolean",
+            "description": "If true, deletes existing collection before ingestion.",
+            "default": false
+          }
+        }
+      }
+    },
+    {
+      "name": "get_live_telemetry",
+      "description": "Fetches real-time sensor data via the MQTT Gateway.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Specific topic to subscribe to (e.g. 'wim/weather/wind', 'vessel/phisedelia/battery'). Leave empty for full dump."
+          }
+        }
+      }
+    }
+  ]
+}
