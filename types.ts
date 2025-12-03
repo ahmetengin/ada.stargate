@@ -140,6 +140,42 @@ export interface AgentTraceLog {
 
 // --- UNIVERSAL OS CONFIG TYPES ---
 
+export interface CommercialTenant {
+  name: string;
+  type: string;
+  location: string;
+  status?: 'Active' | 'Pending';
+}
+
+export interface TechnicalFacilitySpecs {
+  travel_lift_major: string;
+  travel_lift_minor: string;
+  hardstanding_area: string;
+  hangars: string;
+  services: string[];
+}
+
+export interface CampusStats {
+  total_area: string;
+  sea_capacity: number;
+  land_capacity: number;
+}
+
+export interface MasterDataStructure {
+  identity: any;
+  assets: any;
+  commercial_tenants: {
+    count: number;
+    categories: string[];
+    key_tenants: CommercialTenant[];
+    lease_model: string;
+    common_area_charge_formula: string;
+  };
+  technical_facilities: TechnicalFacilitySpecs;
+  campus_stats: CampusStats;
+  [key: string]: any;
+}
+
 export interface TenantConfig {
   id: string;
   name: string;
@@ -154,7 +190,7 @@ export interface TenantConfig {
   contextSources: string[];
   rules: Record<string, any>;
   doctrine: string;
-  masterData: any; // Dynamic bag for specific tenant data
+  masterData: Partial<MasterDataStructure>; // Dynamic bag for specific tenant data
 }
 
 export interface FederatedBerthAvailability {

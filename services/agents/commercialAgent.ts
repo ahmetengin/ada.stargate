@@ -14,19 +14,22 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
     persona
 });
 
-// --- REAL WIM TENANT DATA (MOCK DB) ---
-const TENANT_LEASES = [
-    { id: 'T01', name: 'Poem Restaurant', type: 'F&B', area: 250, rent: 15000, status: 'PAID', next_due: '2025-12-01' },
-    { id: 'T02', name: 'West Life Sports Club', type: 'Wellness', area: 800, rent: 25000, status: 'PAID', next_due: '2025-12-01' },
-    { id: 'T03', name: 'The Yacht Brokerage', type: 'Office', area: 120, rent: 8000, status: 'OVERDUE', next_due: '2025-11-01' },
-    { id: 'T04', name: 'Migros Jet', type: 'Market', area: 400, rent: 12000, status: 'PAID', next_due: '2025-12-01' },
-    { id: 'T05', name: 'Fersah Restaurant', type: 'F&B', area: 180, rent: 9000, status: 'PAID', next_due: '2025-12-01' },
-];
+// TRANSFORM MASTER DATA INTO LEASE OBJECTS
+const TENANT_LEASES = wimMasterData.commercial_tenants.key_tenants.map((tenant, idx) => ({
+    id: `T-${idx + 100}`,
+    name: tenant.name,
+    type: tenant.type,
+    area: Math.floor(Math.random() * 300) + 100, // Simulated area
+    rent: Math.floor(Math.random() * 5000) + 3000, // Simulated rent
+    status: Math.random() > 0.1 ? 'PAID' : 'OVERDUE',
+    next_due: '2025-12-01',
+    location: tenant.location
+}));
 
 export const commercialExpert = {
     // Skill: Get all tenant lease statuses
     getTenantLeases: async (addTrace: (t: AgentTraceLog) => void): Promise<any[]> => {
-        addTrace(createLog('ada.commercial', 'TOOL_EXECUTION', `Fetching lease data for ${TENANT_LEASES.length} commercial tenants...`, 'WORKER'));
+        addTrace(createLog('ada.commercial', 'TOOL_EXECUTION', `Fetching lease data for ${TENANT_LEASES.length} commercial tenants from WIM Master Data...`, 'WORKER'));
         return TENANT_LEASES;
     },
 

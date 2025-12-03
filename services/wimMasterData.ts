@@ -1,7 +1,8 @@
 
 // services/wimMasterData.ts
+import { MasterDataStructure } from '../types';
 
-export const wimMasterData = {
+export const wimMasterData: MasterDataStructure = {
   "identity": {
     "name": "West Istanbul Marina",
     "code": "WIM",
@@ -50,14 +51,22 @@ export const wimMasterData = {
       "phone": "+90 212 850 22 00"
     }
   },
+  "campus_stats": {
+      "total_area": "155,000 m²",
+      "sea_capacity": 600,
+      "land_capacity": 300
+  },
   "commercial_tenants": {
       "count": 45,
-      "categories": ["Restaurants", "Boutiques", "Yacht Brokers", "Service Workshops"],
+      "categories": ["Restaurants", "Boutiques", "Yacht Brokers", "Service Workshops", "Wellness"],
       "lease_model": "Fixed Rent + % Turnover Share",
       "common_area_charge_formula": "Total Cost / Total Leased Area * Tenant Area",
       "key_tenants": [
           { "name": "Poem Restaurant", "type": "F&B", "location": "Social Zone" },
           { "name": "Fersah", "type": "F&B", "location": "Social Zone" },
+          { "name": "Calisto", "type": "F&B", "location": "Social Zone" },
+          { "name": "Happy Moon's", "type": "F&B", "location": "Social Zone" },
+          { "name": "Big Chefs", "type": "F&B", "location": "Social Zone" },
           { "name": "West Life Sports Club", "type": "Wellness", "location": "Block B" },
           { "name": "Migros Jet", "type": "Market", "location": "Block A" },
           { "name": "Yacht Brokerage Row", "type": "Office", "location": "Commercial Street" }
@@ -66,9 +75,9 @@ export const wimMasterData = {
   "technical_facilities": {
       "travel_lift_major": "700 Ton Travel Lift (Mega Yachts)",
       "travel_lift_minor": "75 Ton Travel Lift",
-      "hardstanding_area": "60.000 m2 (Capacity: 300 Yachts)",
+      "hardstanding_area": "60.000 m² (Capacity: 300 Yachts)",
       "hangars": "11 Climate Controlled Hangars (up to 90m)",
-      "services": ["Hull Washing", "Antifouling", "Engine Overhaul", "Teak Repair"]
+      "services": ["Hull Washing", "Antifouling", "Engine Overhaul", "Teak Repair", "Winterizing"]
   },
   "hr_management": {
       "staff_count": 120,
@@ -80,89 +89,6 @@ export const wimMasterData = {
       "historical_occupancy": { "2024_Q4": "88%", "2025_Q1": "75%", "2025_Q2": "92%" },
       "prediction_model": "Seasonal ARIMA",
       "what_if_scenarios_enabled": true
-  },
-  "strategic_partners": {
-      "travel_agency": {
-          "name": "Kites Travel & Concierge",
-          "node": "ada.travel.kites",
-          "license": "TÜRSAB Group A - 2648",
-          "contract_type": "EXCLUSIVE SERVICE PROVIDER",
-          "scope": [
-              "Flight Ticketing (IATA)",
-              "Hotel Reservations",
-              "VIP Transfers (Land/Air)",
-              "Daily Tours & Excursions",
-              "Congress Logistics",
-              "Yacht Charter Sales (Brokerage)"
-          ],
-          "legal_note": "West Istanbul Marina acts solely as a Marina Operator. All travel, tour, and ticketing services are legally executed and invoiced by Kites Travel in compliance with Law No. 1618."
-      },
-      "city_services": {
-          "parking": {
-              "provider": "ISPARK",
-              "node": "ada.external.ispark",
-              "agreement": "Strategic Partnership",
-              "benefit": "Free/Discounted Exit for Marina Clients via Validation Code"
-          }
-      },
-      "sailing_clubs": [
-          { "name": "TAYK (Turkish Offshore Racing Club)", "role": "Race Organizer" },
-          { "name": "IYK (Istanbul Sailing Club)", "role": "Partner" }
-      ],
-      "dining_partners": [
-          { 
-              "name": "Poem Restaurant", 
-              "node": "ada.restaurant.poem", 
-              "type": "Fine Dining", 
-              "specialty": "Seafood & Mediterranean",
-              "capabilities": ["Real-time Reservation", "Pre-Order Integration", "Yacht Delivery"] 
-          },
-          { 
-              "name": "Fersah", 
-              "node": "ada.restaurant.fersah", 
-              "type": "Fish Restaurant", 
-              "capabilities": ["Reservation"] 
-          }
-      ],
-      "cross_border_partners": [
-          {
-              "name": "Manos",
-              "location": "Symi",
-              "node": "ada.restaurant.manos",
-              "specialty": "Greek Taverna / Seafood",
-              "docking": "Direct quay access available"
-          },
-          {
-              "name": "Pantelis",
-              "location": "Symi",
-              "node": "ada.restaurant.pantelis",
-              "specialty": "Traditional Greek",
-              "docking": "Town quay"
-          }
-      ],
-      "contract_perks": {
-          "free_transfers": "3 per year (Airport <-> Marina)",
-          "free_haul_out": "1 per year (max 7 days hardstanding)",
-          "discount_fuel": "5% at WIM Lukoil",
-          "free_parking": "Unlimited daily exit with Validation"
-      },
-      "partner_marinas": [
-          { "name": "Alesta Yachting", "location": "Fethiye", "node": "ada.marina.alesta" },
-          { "name": "D-Marin Göcek", "location": "Göcek", "node": "ada.marina.dmarisgocek" },
-          { "name": "Setur Kaş", "location": "Kaş", "node": "ada.marina.setur_kas" },
-          { "name": "Setur Ayvalık", "location": "Ayvalık", "node": "ada.marina.setur_ayvalik" },
-          { "name": "Setur Kalamış", "location": "Istanbul", "node": "ada.marina.seturkalamis" },
-          { "name": "Setur Mytilene", "location": "Lesvos, Greece", "node": "ada.marina.seturmidilli" },
-          { "name": "Yacht Club de Monaco", "location": "Monaco", "node": "ada.marina.monacoyachtclub" }
-      ],
-      "federation_rules": {
-          "cross_berthing_discount": 0.15, // 15% discount for network members
-          "loyalty_recognition": true
-      },
-      "culinary_experience": {
-          "partner": "Migros Jet Yacht Service",
-          "capabilities": ["Provisioning List", "Delivery to Pontoon"]
-      }
   },
   "facility_management": {
       "infrastructure": {
@@ -247,7 +173,7 @@ export const wimMasterData = {
       { "id": "T-01", "name": "ada.sea.wimAlfa", "status": "Idle", "type": "Pilot/Tender" },
       { "id": "T-02", "name": "ada.sea.wimBravo", "status": "Idle", "type": "Pilot/Tender" },
       { "id": "T-03", "name": "ada.sea.wimCharlie", "status": "Maintenance", "type": "Technical/Rescue" }
-    ] as any[],
+    ],
     "charter_fleet": [
         { "id": "CH-01", "name": "M/Y WIM Prestige", "type": "Motor Yacht", "length": "24m", "capacity": 10, "status": "Available", "operator": "WIM", "sales_agent": "Kites" },
         { "id": "CH-02", "name": "S/Y Wind Chaser", "type": "Sailing Yacht", "length": "16m", "capacity": 6, "status": "Booked", "operator": "WIM", "sales_agent": "Kites" },
@@ -336,43 +262,6 @@ export const wimMasterData = {
           }
       }
   },
-  "congress_management": {
-      "node": "ada.congress.kites",
-      "role": "Event Architect & Planner",
-      "logistics_partner": "ada.travel.kites", // Outsourced to Agency
-      "venues": [
-          { "id": "V-01", "name": "WIM Grand Ballroom", "capacity": 500 },
-          { "id": "V-02", "name": "Yacht Club Terrace", "capacity": 150 },
-          { "id": "V-03", "name": "Mask Beach Arena", "capacity": 1000 }
-      ],
-      "partner_hotels": [
-          { "name": "Kaya Ramada Plaza", "stars": 5, "dist": "2km" },
-          { "name": "Hilton Garden Inn", "stars": 4, "dist": "4km" }
-      ],
-      "capabilities": ["Delegate Registration", "Badge Printing (PassKit)", "B2B Matchmaking"]
-  },
-  "maritime_authorities": {
-      "KEGM": {
-          "name": "Directorate General of Coastal Safety (TR)",
-          "role": "VTS, Pilotage, Salvage, Towage",
-          "comms": "VHF Ch 11/12/13 (VTS), Ch 16 (Emergency)"
-      },
-      "SG": {
-          "name": "Turkish Coast Guard",
-          "role": "Security, Border Control, SAR, Pollution Control",
-          "comms": "VHF Ch 08 / 16"
-      },
-      "HCG": {
-          "name": "Hellenic Coast Guard (GR)",
-          "role": "Border Control, SAR in Greek Waters",
-          "comms": "VHF Ch 12 (Olympia Radio) / 16"
-      },
-      "Liman_Baskanligi": {
-          "name": "Ambarlı Harbour Master",
-          "role": "Port State Control, Permissions, Anchor Areas",
-          "comms": "VHF Ch 16 / Phone"
-      }
-  },
   "services": {
     "technical": {
       "travel_lift_major": "700 Ton Travel Lift (Mega Yachts)",
@@ -388,12 +277,8 @@ export const wimMasterData = {
     ],
     "amenities": {
       "restaurants": [
-        "Poem Restaurant", "Port Of Point", "The Roof Kingdom Kitchen & Bar", "FERSAH RESTAURANT",
-        "LAMORE BALIK - ET MANGALBAŞI", "ISKARMOZ RESTAURANT", "CALİSTO BALIK", "Can Samimiyet",
-        "Seferi Ocakbaşı Meyhane", "Sade coffee & drink", "Mask Beach Music & Food", "ELLA ITALIAN",
-        "Happy Moon's", "Deniz Kızı Şefin Yeri", "Zeytinlik Balık", "Pargalı Rum meyhanesi",
-        "West Maya Marin", "Quki Meyhane", "Big Chefs", "İkitek Ocakbaşı", "Sefam Olsun Meyhane",
-        "Spoint Meyhane", "Mavi Mey-hane", "Cümbüş Yeni Nesil Marina", "West Kanat", "Fısıltı Lounge"
+        "Poem Restaurant", "Fersah", "Big Chefs", "Happy Moon's", "Calisto",
+        "West Life", "The Roof", "Kumsal Beach"
       ],
       "lifestyle": [
         "Kumsal Istanbul Street", "Kumsal Beach", "Yacht Club", 

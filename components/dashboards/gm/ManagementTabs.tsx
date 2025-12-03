@@ -40,7 +40,7 @@ export const CommercialTab: React.FC<{ commercialData: any[] }> = ({ commercialD
     <div className="bg-white dark:bg-zinc-900/30 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in duration-300">
       <div className="flex justify-between items-center mb-6">
           <h3 className="text-xs font-black text-slate-700 dark:text-zinc-200 uppercase tracking-widest flex items-center gap-2">
-            <Store size={14} className="text-purple-500" /> Commercial Estate (45 Units)
+            <Store size={14} className="text-purple-500" /> Commercial Estate
           </h3>
           <div className="text-[9px] font-bold bg-purple-500/10 text-purple-500 px-2 py-1 rounded border border-purple-500/20">
               OCCUPANCY: 98%
@@ -57,7 +57,7 @@ export const CommercialTab: React.FC<{ commercialData: any[] }> = ({ commercialD
                     </div>
                     <div>
                         <div className="font-bold text-sm text-slate-800 dark:text-zinc-200">{tenant.name}</div>
-                        <div className="text-[9px] text-slate-500 dark:text-zinc-500 uppercase">{tenant.type} • Block A</div>
+                        <div className="text-[9px] text-slate-500 dark:text-zinc-500 uppercase">{tenant.type} • {tenant.location}</div>
                     </div>
                 </div>
                 <div className={`w-2 h-2 rounded-full ${tenant.status === 'PAID' ? 'bg-emerald-500' : 'bg-red-500 animate-pulse'}`}></div>

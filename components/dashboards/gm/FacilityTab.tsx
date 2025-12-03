@@ -9,6 +9,9 @@ interface FacilityTabProps {
 }
 
 export const FacilityTab: React.FC<FacilityTabProps> = ({ blueFlagStatus, zeroWasteStats }) => {
+  const stats = wimMasterData.campus_stats;
+  const tenants = wimMasterData.commercial_tenants;
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -22,7 +25,7 @@ export const FacilityTab: React.FC<FacilityTabProps> = ({ blueFlagStatus, zeroWa
                           <Map size={14} /> Campus Master Plan
                       </h3>
                       <div className="flex items-baseline gap-2">
-                        <div className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">155,000 <span className="text-lg text-slate-400 font-normal">m²</span></div>
+                        <div className="text-4xl font-black text-slate-800 dark:text-white tracking-tight">{stats.total_area}</div>
                         <span className="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">100% OPERATIONAL</span>
                       </div>
                   </div>
@@ -42,7 +45,7 @@ export const FacilityTab: React.FC<FacilityTabProps> = ({ blueFlagStatus, zeroWa
                           <Waves size={14} className="text-blue-500"/>
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Wet Berths</span>
                       </div>
-                      <div className="text-xl font-black text-slate-800 dark:text-white">600</div>
+                      <div className="text-xl font-black text-slate-800 dark:text-white">{stats.sea_capacity}</div>
                       <div className="text-[9px] text-slate-400">Pontoon A-G + VIP</div>
                   </div>
                   <div className="bg-amber-50 dark:bg-amber-900/10 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30">
@@ -50,7 +53,7 @@ export const FacilityTab: React.FC<FacilityTabProps> = ({ blueFlagStatus, zeroWa
                           <Layout size={14} className="text-amber-500"/>
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Hardstanding</span>
                       </div>
-                      <div className="text-xl font-black text-slate-800 dark:text-white">300</div>
+                      <div className="text-xl font-black text-slate-800 dark:text-white">{stats.land_capacity}</div>
                       <div className="text-[9px] text-slate-400">60.000 m² Land Park</div>
                   </div>
                   <div className="bg-purple-50 dark:bg-purple-900/10 p-3 rounded-lg border border-purple-100 dark:border-purple-900/30">
@@ -58,7 +61,7 @@ export const FacilityTab: React.FC<FacilityTabProps> = ({ blueFlagStatus, zeroWa
                           <Building2 size={14} className="text-purple-500"/>
                           <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 uppercase">Commercial</span>
                       </div>
-                      <div className="text-xl font-black text-slate-800 dark:text-white">45</div>
+                      <div className="text-xl font-black text-slate-800 dark:text-white">{tenants.count}</div>
                       <div className="text-[9px] text-slate-400">Stores & Restaurants</div>
                   </div>
                   <div className="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded-lg border border-emerald-100 dark:border-emerald-900/30">

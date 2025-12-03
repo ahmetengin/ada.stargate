@@ -2,6 +2,7 @@
 import { AgentAction, AgentTraceLog, MaintenanceJob, NodeName, UserProfile, MaintenanceLogEntry } from '../../types';
 import { TaskHandlerFn } from '../decomposition/types';
 import { persistenceService, STORAGE_KEYS } from '../persistence'; // Enterprise Persistence
+import { wimMasterData } from '../wimMasterData';
 
 // Helper to create a log
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
@@ -111,7 +112,8 @@ export const technicExpert = {
 
     // Skill: Check Boatyard Capacity
     checkBoatyardCapacity: async (addTrace: (t: AgentTraceLog) => void): Promise<string> => {
-        addTrace(createLog('ada.technic', 'THINKING', `Analyzing Hardstanding Capacity (60.000m2)...`, 'EXPERT'));
+        const specs = wimMasterData.technical_facilities;
+        addTrace(createLog('ada.technic', 'THINKING', `Analyzing Hardstanding Capacity (${specs.hardstanding_area})...`, 'EXPERT'));
         
         // Mock Logic
         const capacity = 300;
@@ -120,8 +122,8 @@ export const technicExpert = {
         
         return `**BOATYARD STATUS**\n` + 
                `- Occupancy: ${occupancy}% (${current}/${capacity} Vessels)\n` +
-               `- 700T Lift: Operational\n` +
-               `- 75T Lift: Operational`;
+               `- ${specs.travel_lift_major}: Operational\n` +
+               `- ${specs.travel_lift_minor}: Operational`;
     },
 
     // Skill: Check Blue Card Status (Environmental Compliance)
