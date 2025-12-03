@@ -19,5 +19,8 @@ fastrtc>=0.1.0
 gradio>=5.0.0
 numpy
 scipy
+soundfile
 loguru
-tabpfn
+# Berth Allocation Math
+shapely
+scikit-learn
