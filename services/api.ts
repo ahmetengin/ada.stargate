@@ -9,6 +9,14 @@ export const checkBackendHealth = async (): Promise<boolean> => {
   } catch { return false; }
 };
 
+export const getSystemDiagnostics = async (): Promise<any> => {
+    try {
+        const response = await fetch('/api/health');
+        if (!response.ok) return null;
+        return await response.json();
+    } catch { return null; }
+};
+
 export const sendToBackend = async (prompt: string, userProfile: UserProfile, context: any = {}): Promise<any> => {
     try {
         const response = await fetch('/api/v1/chat', {

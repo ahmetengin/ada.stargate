@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, VhfLog, AisTarget, ThemeMode, TenantConfig } from './types';
+import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, VhfLog, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog } from './types';
 import { Sidebar } from './components/layout/Sidebar';
 import { Canvas } from './components/dashboards/Canvas';
 import { ChatInterface } from './components/chat/ChatInterface';
@@ -10,16 +10,19 @@ import { PassportScanner } from './components/modals/PassportScanner';
 import { AgentTraceModal } from './components/modals/AgentTraceModal';
 import { DailyReportModal } from './components/modals/DailyReportModal';
 import { AuthOverlay } from './components/layout/AuthOverlay';
+import { PresentationOverlay } from './components/PresentationOverlay'; 
 import { orchestratorService } from './services/orchestratorService';
 import { marinaExpert } from './services/agents/marinaAgent';
+import { presenterExpert } from './services/agents/presenterAgent';
+import { executiveExpert } from './services/agents/executiveAgent'; 
 import { wimMasterData } from './services/wimMasterData';
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
 import { streamChatResponse } from './services/geminiService';
-import { MessageSquare, LayoutDashboard, Menu as MenuIcon, X, Radio } from 'lucide-react';
+import { MessageSquare, LayoutDashboard, Menu as MenuIcon, X, Radio, PlayCircle } from 'lucide-react';
 import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
 
 // --- SIMULATED USER DATABASE ---
-const MOCK_USER_DATABASE: Record<string, UserProfile> = {
+export const MOCK_USER_DATABASE: Record<string, UserProfile> = {
   'VISITOR': { 
       id: 'usr_visitor', 
       name: 'Anonymous Visitor', 
@@ -77,11 +80,10 @@ const App: React.FC = () => {
   const [targetRole, setTargetRole] = useState<string>('');
 
   // --- STATE: UI & THEME ---
-  // Mobile View State: Now handles 3 distinct views
   const [mobileView, setMobileView] = useState<'sidebar' | 'chat' | 'ops'>('chat');
   const [theme, setTheme] = useState<ThemeMode>('dark');
-  const [dragWidth, setDragWidth] = useState(320); // Sidebar width
-  const [dragChatWidth, setDragChatWidth] = useState(500); // Chat width
+  const [dragWidth, setDragWidth] = useState(320); 
+  const [dragChatWidth, setDragChatWidth] = useState(500); 
 
   // --- STATE: AI & CHAT ---
   const [messages, setMessages] = useState<Message[]>([]);
@@ -107,21 +109,29 @@ const App: React.FC = () => {
   const [aisTargets, setAisTargets] = useState<AisTarget[]>([]);
   const [vesselsInPort, setVesselsInPort] = useState(542);
 
-  // --- MODALS ---
+  // --- MODALS & PRESENTATION ---
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isTraceModalOpen, setIsTraceModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  
+  // New Presentation State
+  const [presentationState, setPresentationState] = useState<PresentationState>({
+      isActive: false,
+      currentSlide: 0,
+      transcript: "",
+      isListening: false
+  });
 
-  // --- DERIVED STATE ---
+  // EXECUTIVE MODE (Meeting Scribe)
+  const [meetingTranscript, setMeetingTranscript] = useState<string>("");
+
   const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    // 1. Boot Sequence
     setTimeout(() => setShowBootSequence(false), 3500);
 
-    // 2. Load Persistence
     const savedProfile = persistenceService.load(STORAGE_KEYS.USER_PROFILE, MOCK_USER_DATABASE['GENERAL_MANAGER']);
     setUserProfile(savedProfile);
     
@@ -129,20 +139,15 @@ const App: React.FC = () => {
     setTheme(savedTheme as ThemeMode);
     document.documentElement.classList.toggle('dark', savedTheme === 'dark');
 
-    // 3. Load Mock Data
     const loadData = async () => {
         setTenders(persistenceService.load(STORAGE_KEYS.TENDERS, wimMasterData.assets.tenders));
-        
-        // Initial Radar Scan
         const lat = activeTenantConfig.masterData?.identity?.location?.coordinates?.lat || 40.9634;
         const lng = activeTenantConfig.masterData?.identity?.location?.coordinates?.lng || 28.6289;
-
         const targets = await marinaExpert.scanSector(lat, lng, 20, () => {});
         setAisTargets(targets);
     };
     loadData();
 
-    // 4. Initial System Greeting (Only if empty)
     if (messages.length === 0) {
         setMessages([{
             id: 'init',
@@ -150,7 +155,6 @@ const App: React.FC = () => {
             text: 'System Online',
             timestamp: Date.now()
         }]);
-        
         setTimeout(() => {
             const welcomeMsg: Message = {
                 id: `wel_${Date.now()}`,
@@ -161,10 +165,84 @@ const App: React.FC = () => {
             setMessages(prev => [...prev, welcomeMsg]);
         }, 4000);
     }
-
   }, [activeTenantId]); 
 
   // --- HANDLERS ---
+
+  // Presentation Logic: Next Slide
+  const handleNextSlide = async () => {
+      const nextSlide = presentationState.currentSlide + 1;
+      
+      // Update state immediately
+      setPresentationState(prev => ({ ...prev, currentSlide: nextSlide }));
+
+      // Execute Agent Logic for this slide (UI Changes, Voice, etc.)
+      const traceAdder = (t: AgentTraceLog) => setAgentTraces(prev => [...prev, t]);
+      
+      let actions: any[] = [];
+      if (nextSlide === 1) actions = await presenterExpert.playIntro(traceAdder);
+      if (nextSlide === 2) actions = await presenterExpert.playSenses(traceAdder);
+      if (nextSlide === 3) actions = await presenterExpert.playBrain(traceAdder);
+      if (nextSlide === 4) actions = await presenterExpert.playHandover(traceAdder);
+      
+      console.log("Presentation Action:", actions);
+  };
+
+  // Start Meeting Mode (Scribe)
+  const handleStartQnA = () => {
+      // Switch to Slide 5: Scribe Mode
+      // Clear transcript for new session
+      setPresentationState(prev => ({ ...prev, currentSlide: 5, transcript: "" }));
+      setMeetingTranscript(""); 
+      // Open Voice Modal
+      setIsVoiceModalOpen(true);
+  };
+
+  // Trigger Presentation from UI Button
+  const handleStartPresentation = () => {
+      setPresentationState(prev => ({ ...prev, isActive: true, currentSlide: 1 }));
+      handleNextSlide();
+  };
+
+  // End Meeting & Generate Output
+  const handleEndMeeting = async () => {
+      setIsVoiceModalOpen(false);
+      setPresentationState(prev => ({ ...prev, isActive: false, currentSlide: 0 }));
+      
+      setIsLoading(true);
+      const traceAdder = (t: AgentTraceLog) => setAgentTraces(prev => [...prev, t]);
+
+      // Use the accumulated transcript from the voice session
+      // For this demo, if transcript is empty, we simulate a conversation
+      const finalTranscript = meetingTranscript.length > 50 ? meetingTranscript : "Simulated conversation about pricing discount and contract renewal for Phisedelia.";
+      
+      const documents = await executiveExpert.analyzeMeeting(finalTranscript, "Barbaros Kaptan", traceAdder);
+
+      // Add resulting messages to Chat
+      setMessages(prev => [
+          ...prev,
+          {
+              id: `min_${Date.now()}`,
+              role: MessageRole.Model,
+              text: documents.minutes,
+              timestamp: Date.now()
+          },
+          {
+              id: `prop_${Date.now()}`,
+              role: MessageRole.Model,
+              text: documents.proposal,
+              timestamp: Date.now() + 100
+          },
+          {
+              id: `sys_action_${Date.now()}`,
+              role: MessageRole.System,
+              text: "System Action: Proposal Draft saved to Drafts. Ready to send.",
+              timestamp: Date.now() + 200
+          }
+      ]);
+      
+      setIsLoading(false);
+  };
 
   const handleTenantSwitch = (tenantId: string) => {
       setActiveTenantId(tenantId);
@@ -175,7 +253,6 @@ const App: React.FC = () => {
           timestamp: Date.now()
       };
       setMessages(prev => [...prev, switchMsg]);
-      
       if (tenantId === 'phisedelia') setVesselsInPort(1);
       else setVesselsInPort(542);
   };
@@ -192,7 +269,6 @@ const App: React.FC = () => {
       setUserProfile(newProfile);
       persistenceService.save(STORAGE_KEYS.USER_PROFILE, newProfile);
       setShowAuthOverlay(false);
-      
       const sysMsg: Message = {
           id: `auth_${Date.now()}`,
           role: MessageRole.System,
@@ -203,6 +279,12 @@ const App: React.FC = () => {
   };
 
   const handleSendMessage = async (text: string, attachments: File[]) => {
+    // Secret Trigger for Presentation Mode via TEXT
+    if (text.toLowerCase().includes('sunum') || text.toLowerCase().includes('presentation') || text.toLowerCase().includes('keynote')) {
+        handleStartPresentation();
+        return;
+    }
+
     const userMsg: Message = {
         id: `usr_${Date.now()}`,
         role: MessageRole.User,
@@ -253,8 +335,8 @@ const App: React.FC = () => {
              await streamChatResponse(
                  [...messages, userMsg],
                  selectedModel,
-                 true, // useSearch
-                 false, // useThinking
+                 true, 
+                 false, 
                  registry,
                  tenders,
                  userProfile,
@@ -302,11 +384,19 @@ const App: React.FC = () => {
     <>
       {showBootSequence && <BootSequence />}
       {showAuthOverlay && <AuthOverlay targetRole={targetRole} onComplete={completeRoleChange} />}
+      
+      {/* PRESENTATION OVERLAY */}
+      <PresentationOverlay 
+          state={presentationState} 
+          onClose={() => setPresentationState(prev => ({ ...prev, isActive: false, currentSlide: 0 }))}
+          onNextSlide={handleNextSlide}
+          onStartQnA={handleStartQnA}
+          onEndMeeting={handleEndMeeting}
+      />
 
       <div className="flex h-screen w-screen overflow-hidden bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans transition-colors duration-300">
         
-        {/* LEFT: SIDEBAR (Navigation & Status) */}
-        {/* Desktop: Always Visible. Mobile: Visible based on mobileView state */}
+        {/* SIDEBAR */}
         <div 
             className={`
                 lg:block lg:relative h-full transition-all duration-300 ease-in-out border-r border-[var(--border-color)] bg-[var(--bg-primary)] z-30
@@ -324,11 +414,11 @@ const App: React.FC = () => {
                     onScannerClick={() => setIsScannerOpen(true)}
                     onPulseClick={() => setIsTraceModalOpen(true)}
                     onTenantSwitch={handleTenantSwitch}
+                    onStartPresentation={handleStartPresentation} // Connect new handler
                     activeTenantId={activeTenantId}
                 />
             </div>
             
-            {/* Desktop Drag Handle */}
             <div 
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-50 hidden lg:block"
                 onMouseDown={(e) => {
@@ -342,7 +432,7 @@ const App: React.FC = () => {
             />
         </div>
 
-        {/* CENTER: CHAT INTERFACE */}
+        {/* CHAT INTERFACE */}
         <div 
             className={`
                 flex flex-col h-full relative transition-all duration-300 
@@ -350,7 +440,6 @@ const App: React.FC = () => {
             `}
             style={{ width: window.innerWidth > 1024 ? dragChatWidth : '100%' }}
         >
-            {/* Mobile Top Header (Minimal - Logo Only, Menu removed) */}
             <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-center bg-[var(--glass-bg)] backdrop-blur-md z-20">
                 <span className="font-display font-bold text-[var(--text-primary)]">ADA.<span className="text-[var(--accent-color)]">MOBILE</span></span>
             </div>
@@ -372,7 +461,6 @@ const App: React.FC = () => {
                 onToggleTheme={handleThemeToggle}
             />
 
-            {/* Desktop Drag Handle (Right) */}
             <div 
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--accent-color)] opacity-0 hover:opacity-100 transition-opacity z-50 hidden lg:block"
                 onMouseDown={(e) => {
@@ -386,12 +474,11 @@ const App: React.FC = () => {
             />
         </div>
 
-        {/* RIGHT: OPERATIONS CANVAS (Visuals) */}
+        {/* OPERATIONS CANVAS */}
         <div className={`
             lg:block flex-1 h-full bg-[var(--bg-secondary)] border-l border-[var(--border-color)] relative 
             ${mobileView === 'ops' ? 'block absolute inset-0 z-20 w-full' : 'hidden'}
         `}>
-            {/* Mobile Header for Canvas */}
             <div className="lg:hidden h-14 border-b border-[var(--border-color)] flex items-center px-4 justify-center bg-[var(--glass-bg)] backdrop-blur-md sticky top-0 z-20">
                  <span className="font-display font-bold text-[var(--text-primary)]">OPS CENTER</span>
             </div>
@@ -410,10 +497,8 @@ const App: React.FC = () => {
             />
         </div>
 
-        {/* MOBILE BOTTOM NAVIGATION BAR (3 Tabs) */}
+        {/* MOBILE NAV */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-[var(--bg-primary)] border-t border-[var(--border-color)] flex items-center justify-around z-50 pb-safe shadow-[0_-5px_20px_rgba(0,0,0,0.1)]">
-            
-            {/* Tab 1: Sidebar / Menu */}
             <button 
                 onClick={() => setMobileView('sidebar')}
                 className={`flex flex-col items-center justify-center w-full h-full gap-1 ${mobileView === 'sidebar' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
@@ -422,7 +507,6 @@ const App: React.FC = () => {
                 <span className="text-[9px] font-bold uppercase tracking-wider">Menu</span>
             </button>
 
-            {/* Tab 2: Chat / Comms */}
             <button 
                 onClick={() => setMobileView('chat')}
                 className={`flex flex-col items-center justify-center w-full h-full gap-1 ${mobileView === 'chat' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
@@ -431,7 +515,6 @@ const App: React.FC = () => {
                 <span className="text-[9px] font-bold uppercase tracking-wider">Comms</span>
             </button>
 
-            {/* Tab 3: Ops / Canvas */}
             <button 
                 onClick={() => setMobileView('ops')}
                 className={`flex flex-col items-center justify-center w-full h-full gap-1 ${mobileView === 'ops' ? 'text-[var(--accent-color)]' : 'text-[var(--text-secondary)]'}`}
@@ -449,13 +532,24 @@ const App: React.FC = () => {
         onClose={() => setIsVoiceModalOpen(false)} 
         userProfile={userProfile}
         onTranscriptReceived={(userText, modelText) => {
-            setMessages(prev => [
-                ...prev, 
-                { id: `v_usr_${Date.now()}`, role: MessageRole.User, text: `[VOICE] ${userText}`, timestamp: Date.now() },
-                { id: `v_mdl_${Date.now()}`, role: MessageRole.Model, text: `[VOICE] ${modelText}`, timestamp: Date.now() }
-            ]);
+            // LIVE TRANSCRIPTION: Update presentation state for real-time display
+            if (presentationState.currentSlide === 5) {
+                const newSnippet = `[${userProfile.name}]: ${userText}\n`;
+                setMeetingTranscript(prev => prev + newSnippet);
+                setPresentationState(prev => ({ 
+                    ...prev, 
+                    transcript: prev.transcript + newSnippet 
+                }));
+            } else {
+                // Normal Chat flow
+                setMessages(prev => [
+                    ...prev, 
+                    { id: `v_usr_${Date.now()}`, role: MessageRole.User, text: `[VOICE] ${userText}`, timestamp: Date.now() },
+                    { id: `v_mdl_${Date.now()}`, role: MessageRole.Model, text: `[VOICE] ${modelText}`, timestamp: Date.now() }
+                ]);
+            }
         }}
-        channel="72"
+        channel={presentationState.isActive ? (presentationState.currentSlide === 5 ? "SCRIBE" : "Q&A") : "72"}
       />
 
       <PassportScanner 

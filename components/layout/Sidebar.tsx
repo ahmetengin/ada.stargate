@@ -6,7 +6,7 @@ import {
     Radio, Shield, Anchor, Wifi, Zap, Battery, Signal, UserCheck, 
     CreditCard, ScanLine, Activity, CheckCircle2, 
     LifeBuoy, Droplets, Wrench, Navigation, 
-    Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn, ChevronRight, Scale, Brain, Bot
+    Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn, ChevronRight, Scale, Brain, Bot, Projector
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -19,6 +19,7 @@ interface SidebarProps {
   onScannerClick?: () => void;
   onPulseClick?: () => void;
   onTenantSwitch: (tenantId: string) => void;
+  onStartPresentation?: () => void; // NEW PROP
   activeTenantId: string;
 }
 
@@ -31,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onScannerClick,
   onPulseClick,
   onTenantSwitch,
+  onStartPresentation,
   activeTenantId
 }) => {
 
@@ -82,7 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const isMember = userProfile.role === 'MEMBER';
   const isVisitor = userProfile.role === 'VISITOR';
 
-  const activeTenant = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId);
+  const activeTenant = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || FEDERATION_REGISTRY.peers[0];
   const tenantNetworkName = activeTenant ? activeTenant.network : 'Unknown Network';
 
   return (
@@ -93,21 +95,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Header */}
       <div className="p-6 flex-shrink-0 border-b border-[var(--border-color)] relative z-10 transition-colors">
-        <div className="flex items-center gap-4 cursor-pointer group" onClick={onPulseClick}>
-            <div className="relative">
-                <div className="w-12 h-12 bg-white/50 dark:bg-cyan-950/30 rounded-xl flex items-center justify-center border border-[var(--border-color)] group-hover:border-[var(--accent-color)] transition-all duration-500 shadow-sm">
-                    <Anchor size={24} className="text-[var(--accent-color)] drop-shadow-sm" />
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 cursor-pointer group" onClick={onPulseClick}>
+                <div className="relative">
+                    <div className="w-12 h-12 bg-white/50 dark:bg-cyan-950/30 rounded-xl flex items-center justify-center border border-[var(--border-color)] group-hover:border-[var(--accent-color)] transition-all duration-500 shadow-sm">
+                        <Anchor size={24} className="text-[var(--accent-color)] drop-shadow-sm" />
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[var(--bg-primary)] rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>
+                    </div>
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-[var(--bg-primary)] rounded-full flex items-center justify-center">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_#34d399]"></div>
+                <div>
+                    <h2 className="text-xl font-display font-bold tracking-widest text-[var(--text-primary)] leading-none neon-text">ADA<span className="text-[var(--accent-color)]">STARGATE</span></h2>
+                    <div className="text-[10px] text-[var(--text-secondary)] font-mono tracking-wider mt-1 uppercase">
+                        {tenantNetworkName}
+                    </div>
                 </div>
             </div>
-            <div>
-                <h2 className="text-xl font-display font-bold tracking-widest text-[var(--text-primary)] leading-none neon-text">ADA<span className="text-[var(--accent-color)]">STARGATE</span></h2>
-                <div className="text-[10px] text-[var(--text-secondary)] font-mono tracking-wider mt-1 uppercase">
-                    {tenantNetworkName}
-                </div>
-            </div>
+
+            {/* Presentation Mode Trigger (Only for GM) */}
+            {isGM && onStartPresentation && (
+                <button 
+                    onClick={onStartPresentation}
+                    className="p-2 rounded-full bg-indigo-500/10 hover:bg-indigo-500 text-indigo-500 hover:text-white transition-all border border-indigo-500/30 hover:border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)] group"
+                    title="Initiate Presentation Mode"
+                >
+                    <Projector size={18} className="group-hover:animate-pulse" />
+                </button>
+            )}
         </div>
       </div>
 

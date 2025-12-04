@@ -1,0 +1,34 @@
+
+{
+  "name": "ada-executive",
+  "version": "1.0.0",
+  "description": "Capabilities for managing executive meetings, recording transcripts, and generating commercial proposals.",
+  "tools": [
+    {
+      "name": "start_scribe_mode",
+      "description": "Switches the UI to 'Live Ledger' mode. Starts recording audio and displaying real-time transcription on the screen.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    },
+    {
+      "name": "analyze_meeting_and_draft",
+      "description": "Analyzes a full meeting transcript to generate formal minutes and a commercial proposal.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "transcript": {
+            "type": "string",
+            "description": "The full text of the conversation."
+          },
+          "client_name": {
+            "type": "string",
+            "description": "Name of the counterparty (e.g. Captain Barbaros)."
+          }
+        },
+        "required": ["transcript", "client_name"]
+      }
+    }
+  ]
+}

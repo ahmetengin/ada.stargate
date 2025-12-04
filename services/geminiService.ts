@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 import { Message, ModelType, GroundingSource, RegistryEntry, Tender, UserProfile, TenantConfig } from "../types";
 import { generateBaseSystemInstruction, generateContextBlock } from "./prompts";

@@ -39,9 +39,10 @@ export const passkitExpert = {
         addTrace(createLog('ada.passkit', 'CODE_OUTPUT', `Pass Token Generated: ${JSON.stringify(passData)}`, 'WORKER'));
 
         // 3. "Sign" the pass (Simulation)
-        const passUrl = `https://wallet.wim.network/p/${passId}`;
+        // In a real scenario, this URL would point to your backend which holds the Apple Certs
+        const passUrl = `https://wallet.ada.network/wim/p/${passId}`;
         
-        addTrace(createLog('ada.passkit', 'OUTPUT', `Digital Key generated. Push notification sent to owner device.`, 'EXPERT'));
+        addTrace(createLog('ada.passkit', 'OUTPUT', `Digital Key generated via Ada Secure Enclave. Push notification sent.`, 'EXPERT'));
 
         return {
             success: true,
@@ -59,9 +60,9 @@ export const passkitExpert = {
         
         // Simulate PKPass generation structure
         const pkPass = {
-            organizationName: "Kites Travel & Concierge",
+            organizationName: "Ada Digital Identity", // UPDATED: More prestigious, tech-oriented name
             description: details.summary,
-            logoText: "Ada.Travel",
+            logoText: "WIM | Kites", // THE CLIENT BRAND
             foregroundColor: "rgb(255, 255, 255)",
             backgroundColor: "rgb(79, 70, 229)", // Indigo
             serialNumber: passId,
@@ -72,7 +73,7 @@ export const passkitExpert = {
             }
         };
 
-        addTrace(createLog('ada.passkit', 'TOOL_EXECUTION', `Signing PKPass bundle (${pkPass.serialNumber})...`, 'WORKER'));
+        addTrace(createLog('ada.passkit', 'TOOL_EXECUTION', `Signing PKPass bundle (${pkPass.serialNumber}) with Ada Root Certificate...`, 'WORKER'));
         
         const passUrl = `https://wallet.kites.travel/pass/${passId}`;
         

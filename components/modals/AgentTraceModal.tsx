@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Brain, AlertCircle, Layers, Activity, CheckCircle2, Scale, Clock } from 'lucide-react';
+import { X, Brain, AlertCircle, Layers, Activity, CheckCircle2, Scale, Clock, Zap, Server, Shield } from 'lucide-react';
 import { AgentTraceLog } from '../../types';
 
 interface AgentTraceModalProps {
@@ -12,6 +12,27 @@ interface AgentTraceModalProps {
 // --- CAPABILITY MATRIX DEFINITION ---
 // This maps the current codebase capabilities to specific scenarios.
 const CAPABILITY_MATRIX = [
+    {
+        domain: 'COGNITIVE INTELLIGENCE (HYPERSCALE)',
+        color: 'text-purple-500',
+        scenarios: [
+            { name: 'Self-Learning Rules (SEAL)', status: 'ACTIVE' },
+            { name: 'Predictive Analytics (TabPFN)', status: 'ACTIVE' },
+            { name: 'Code Generation (MAKER)', status: 'BETA' },
+            { name: 'Voice Uplink (FastRTC)', status: 'ACTIVE' },
+            { name: 'Offline Mode (Ollama)', status: 'PLANNED' },
+        ]
+    },
+    {
+        domain: 'SYSTEM OPS & IT',
+        color: 'text-slate-500',
+        scenarios: [
+            { name: 'Cyber Security Scan', status: 'ACTIVE' },
+            { name: 'Full Stack Diagnostics', status: 'ACTIVE' },
+            { name: 'Container Health (Docker)', status: 'ACTIVE' },
+            { name: 'Network Latency Check', status: 'ACTIVE' },
+        ]
+    },
     {
         domain: 'MARINA OPS',
         color: 'text-emerald-500',
@@ -54,12 +75,11 @@ const CAPABILITY_MATRIX = [
             { name: 'COLREGs Advisory', status: 'ACTIVE' },
             { name: 'Cross-Border (Greece/TR)', status: 'ACTIVE' },
             { name: 'KVKK/GDPR Compliance', status: 'ACTIVE' },
-            { name: 'Self-Adapting Rules (SEAL)', status: 'PLANNED' },
         ]
     },
     {
         domain: 'TECHNICAL',
-        color: 'text-purple-500',
+        color: 'text-cyan-500',
         scenarios: [
             { name: 'Service Scheduling', status: 'ACTIVE' },
             { name: 'Job Status Tracking', status: 'ACTIVE' },
@@ -85,7 +105,7 @@ export const AgentTraceModal: React.FC<AgentTraceModalProps> = ({ isOpen, onClos
   if (!isOpen) return null;
 
   const getTraceStyle = (trace: AgentTraceLog) => {
-    if (trace.isError || trace.step === 'ERROR') return 'bg-red-900/40 border-l-2 border-red-500';
+    if (trace.isError || trace.step === 'ERROR' || trace.step === 'CRITICAL') return 'bg-red-900/40 border-l-2 border-red-500';
     switch (trace.step) {
       case 'TOOL_CALL':
       case 'TOOL_EXECUTION':
@@ -106,7 +126,7 @@ export const AgentTraceModal: React.FC<AgentTraceModalProps> = ({ isOpen, onClos
   };
 
   const getStepIcon = (trace: AgentTraceLog) => {
-    if (trace.isError || trace.step === 'ERROR') {
+    if (trace.isError || trace.step === 'ERROR' || trace.step === 'CRITICAL') {
       return <AlertCircle size={12} className="text-red-400 animate-pulse" />;
     }
     if (trace.step === 'VOTING') {

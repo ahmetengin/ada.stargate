@@ -13,6 +13,7 @@ import { commercialExpert } from './agents/commercialAgent';
 import { customerExpert } from './agents/customerAgent';
 import { analyticsExpert } from './agents/analyticsAgent';
 import { legalExpert } from './agents/legalAgent';
+import { itExpert } from './agents/itAgent'; // NEW: IT Agent
 
 // Helper
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
@@ -76,6 +77,8 @@ export const orchestratorService = {
             } catch (err) {
                 console.error("Backend Handover Failed:", err);
                 traces.push(createLog('ada.stargate', 'ERROR', `Hybrid Link Failed. Falling back to Local Logic.`, 'ORCHESTRATOR'));
+                // Log the IT failure explicitly here
+                traces.push(createLog('ada.it', 'CRITICAL', `Core System Unreachable. Diagnostic code: 503 Service Unavailable.`, 'WORKER'));
             }
         } else {
             traces.push(createLog('ada.stargate', 'WARNING', `Hybrid Core: OFFLINE. Engaging Local Emergency Protocols.`, 'ORCHESTRATOR'));
@@ -88,6 +91,19 @@ export const orchestratorService = {
         const addTrace = (t: AgentTraceLog) => traces.push(t);
 
         try {
+            // 0. IT / SYSTEM / CYBER (NEW PRIORITY)
+            if (lowerPrompt.includes('internet') || lowerPrompt.includes('connect') || lowerPrompt.includes('offline') || lowerPrompt.includes('online') || lowerPrompt.includes('status') || lowerPrompt.includes('cyber') || lowerPrompt.includes('hack') || lowerPrompt.includes('system')) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: IT_OPS -> Delegating to ada.it`, 'ORCHESTRATOR'));
+                
+                if (lowerPrompt.includes('cyber') || lowerPrompt.includes('hack') || lowerPrompt.includes('attack')) {
+                    const result = await itExpert.runCyberScan(addTrace);
+                    return { text: result.message, actions, traces };
+                } else {
+                    const result = await itExpert.checkConnectivity(addTrace);
+                    return { text: result.message, actions, traces };
+                }
+            }
+
             // 1. HR / STAFF STATUS
             if (lowerPrompt.includes('staff') || lowerPrompt.includes('patrol') || lowerPrompt.includes('security status') || lowerPrompt.includes('shift')) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: HR/SECURITY_OPS -> Delegating to ada.hr`, 'ORCHESTRATOR'));

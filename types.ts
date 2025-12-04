@@ -114,75 +114,13 @@ export interface UserProfile {
   loyalty?: LoyaltyStatus; // Linked Loyalty Program
 }
 
-// --- NEW: SCORING TYPES ---
-export interface TrustScoreBreakdown {
-    financial: number;   // 0-100 (Payment habits)
-    operational: number; // 0-100 (Safety compliance)
-    commercial: number;  // 0-100 (Spending power)
-    social: number;      // 0-100 (Behavior/Complaints)
-}
-
-export interface CustomerRiskProfile {
-    totalScore: number; // 0-1000 (Base 500)
-    segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
-    breakdown: TrustScoreBreakdown;
-    lastAssessmentDate: string;
-    flags: string[]; // e.g. ["Late Payer", "Speeding Violation"]
-}
-
-// --- NEW: ROBOTICS & HULL SCAN TYPES ---
-export interface HullScanReport {
-    date: string;
-    status: 'CLEAN' | 'FOULING_MILD' | 'FOULING_SEVERE' | 'DAMAGE_DETECTED';
-    anodesStatus: number; // 0-100%
-    propellerStatus: 'CLEAR' | 'ENTANGLEMENT';
-    summary: string;
-    imageUrl?: string; // URL to scan image
-}
-
-export interface RoboticAsset {
-    id: string;
-    name: string;
-    type: 'UAV_DRONE' | 'ROV_SUBSEA' | 'UGV_CART';
-    status: 'IDLE' | 'ON_MISSION' | 'CHARGING' | 'MAINTENANCE';
-    batteryLevel: number;
-    currentMission?: string;
-}
-
-export interface VesselIntelligenceProfile {
-  name: string;
-  imo: string;
-  type: string;
-  flag: string;
-  ownerName?: string;
-  ownerId?: string;
-  ownerEmail?: string;
-  ownerPhone?: string;
-  dwt: number;
-  loa: number;
-  beam: number;
-  status: string;
-  location: string;
-  coordinates?: { lat: number; lng: number };
-  voyage?: { lastPort: string; nextPort: string; eta: string };
-  paymentHistoryStatus?: 'REGULAR' | 'RECENTLY_LATE';
-  adaSeaOneStatus?: 'ACTIVE' | 'INACTIVE';
-  utilities?: { electricityKwh: number; waterM3: number; lastReading: string; status: 'ACTIVE' | 'DISCONNECTED' };
-  outstandingDebt?: number;
-  loyaltyScore?: number;
-  // Linked Risk Profile
-  riskProfile?: CustomerRiskProfile;
-  // New: Hull Scan
-  lastHullScan?: HullScanReport;
-}
-
 export type NodeName = string | 'ada.stargate'; 
 
 export interface AgentTraceLog {
   id: string;
   timestamp: string;
   node: NodeName;
-  step: 'THINKING' | 'TOOL_EXECUTION' | 'TOOL_CALL' | 'CODE_OUTPUT' | 'PLANNING' | 'ROUTING' | 'FINAL_ANSWER' | 'OUTPUT' | 'VOTING' | 'ERROR' | 'WARNING';
+  step: 'THINKING' | 'TOOL_EXECUTION' | 'TOOL_CALL' | 'CODE_OUTPUT' | 'PLANNING' | 'ROUTING' | 'FINAL_ANSWER' | 'OUTPUT' | 'VOTING' | 'ERROR' | 'WARNING' | 'CRITICAL';
   content: any;
   persona?: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER';
   type?: string; 
@@ -191,80 +129,11 @@ export interface AgentTraceLog {
   isError?: boolean;
 }
 
-// --- CONCIERGE TYPES ---
-export interface MarketItem {
-    id: string;
-    name: string;
-    category: 'PROVISIONS' | 'BEVERAGE' | 'CLEANING' | 'BAKERY';
-    price: number;
-    unit: string;
-    imageIcon?: string;
-}
-
-export interface CateringMenu {
-    id: string;
-    restaurant: string;
-    itemName: string;
-    description: string;
-    price: number;
-    prepTime: number; // mins
-}
-
-export interface ServiceRequest {
-    id: string;
-    type: 'HOUSEKEEPING' | 'LAUNDRY' | 'FLORIST';
-    details: string;
-    status: 'PENDING' | 'DISPATCHED' | 'COMPLETED';
-    requestedTime: string;
-}
-
 // --- UNIVERSAL OS CONFIG TYPES ---
-
-export interface CommercialTenant {
-  name: string;
-  type: string;
-  location: string;
-  status?: 'Active' | 'Pending';
-}
-
-export interface TechnicalFacilitySpecs {
-  travel_lift_major: string;
-  travel_lift_minor: string;
-  hardstanding_area: string;
-  hangars: string;
-  services: string[];
-}
-
-export interface CampusStats {
-  total_area: string;
-  sea_capacity: number;
-  land_capacity: number;
-}
 
 export interface MasterDataStructure {
   identity: any;
   assets: any;
-  commercial_tenants: {
-    count: number;
-    categories: string[];
-    key_tenants: CommercialTenant[];
-    lease_model: string;
-    common_area_charge_formula: string;
-  };
-  technical_facilities: TechnicalFacilitySpecs;
-  campus_stats: CampusStats;
-  loyalty_program?: { // Added logic for loyalty program rules
-      program_name?: string;
-      earning_rates: Record<string, number>;
-      redemption_catalog: Array<{ item: string, cost: number }>;
-      tiers: Record<string, number>;
-  };
-  robotics_fleet?: RoboticAsset[]; // New Robotics Fleet
-  concierge_services?: { // NEW
-      market_inventory: MarketItem[];
-      catering_menus: CateringMenu[];
-      housekeeping_services: { type: string, rate: number }[];
-  };
   [key: string]: any;
 }
 
@@ -285,15 +154,6 @@ export interface TenantConfig {
   masterData: Partial<MasterDataStructure>; // Dynamic bag for specific tenant data
 }
 
-export interface FederatedBerthAvailability {
-  marinaId: string;
-  date: string;
-  totalBerths: number;
-  availableBerths: number;
-  occupancyRate: number;
-  message: string;
-}
-
 export interface AgentAction {
   id: string;
   kind: 'internal' | 'external';
@@ -307,96 +167,37 @@ export interface OrchestratorResponse {
   traces: AgentTraceLog[];
 }
 
-export interface GuestProfile {
-  id: string;
-  fullName: string;
-  nationality: string;
-  dob: string;
-  vesselName: string;
+// --- NEW: PRESENTATION MODE ---
+export interface PresentationState {
+    isActive: boolean;
+    currentSlide: number; // 0: Idle, 1: Intro, 2: Sensors, 3: Brain, 4: Vision, 5: Scribe Mode
+    transcript: string;
+    isListening: boolean;
 }
 
-export interface VesselSystemsStatus {
-  battery: {
-    serviceBank: number;
-    engineBank: number;
-    status: string;
-  };
-  tanks: {
-    fuel: number;
-    freshWater: number;
-    blackWater: number;
-  };
-  bilge: {
-    forward: string;
-    aft: string;
-    pumpStatus: string;
-  };
-  shorePower: {
-    connected: boolean;
-    voltage: number;
-    amperage: number;
-  };
-  comfort: {
-    climate: {
-      zone: string;
-      setPoint: number;
-      currentTemp: number;
-      mode: string;
-      fanSpeed: string;
-    };
-    lighting: {
-      salon: boolean;
-      deck: boolean;
-      underwater: boolean;
-    };
-    security: {
-      mode: string;
-      camerasActive: boolean;
-    };
-  };
-}
+// --- MISSING TYPES ADDED ---
 
-export interface WeatherForecast {
-  day: string;
-  temp: number;
-  condition: string;
-  windSpeed: number;
-  windDir: string;
-}
-
-export interface CongressEvent {
-  id: string;
+export interface VesselIntelligenceProfile {
   name: string;
-  dates: { start: string; end: string };
-  venues: string[];
-  status: string;
-  delegateCount: number;
-}
-
-export interface Delegate {
-  id: string;
-  name: string;
-  company: string;
-  status: 'CHECKED_IN' | 'IN_TRANSIT' | 'REGISTERED';
-  location: string;
-}
-
-export interface MaintenanceLogEntry {
-  timestamp: string;
-  stage: string;
-  details: string;
-}
-
-export interface MaintenanceJob {
-  id: string;
-  vesselName: string;
-  jobType: 'HAUL_OUT' | 'ENGINE_SERVICE' | 'GENERAL_REPAIR';
-  status: 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED';
-  scheduledDate: string;
-  contractor: string;
-  partsStatus: 'N/A' | 'ORDERED' | 'ARRIVED';
-  notes: string;
-  logs: MaintenanceLogEntry[];
+  imo: string;
+  type: string;
+  flag: string;
+  ownerName?: string;
+  ownerId?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  dwt: number;
+  loa: number;
+  beam: number;
+  status?: string;
+  location?: string;
+  coordinates?: { lat: number; lng: number };
+  voyage?: { lastPort: string; nextPort: string; eta: string };
+  paymentHistoryStatus?: 'REGULAR' | 'RECENTLY_LATE' | 'LATE';
+  adaSeaOneStatus?: 'ACTIVE' | 'INACTIVE';
+  utilities?: { electricityKwh: number; waterM3: number; lastReading: string; status: 'ACTIVE' | 'DISCONNECTED' };
+  outstandingDebt?: number;
+  loyaltyScore?: number;
 }
 
 export interface TravelItinerary {
@@ -410,22 +211,101 @@ export interface TravelItinerary {
   transfers: any[];
 }
 
-// --- NEW: ENERGY & SECURITY TYPES ---
-export interface EnergyGridStatus {
-    loadPercentage: number; // 0-100
-    gridStability: 'STABLE' | 'FLUCTUATING' | 'CRITICAL';
-    activeConsumers: number;
-    peakShavingActive: boolean;
-    carbonFootprint: number; // kg CO2
+export interface VesselSystemsStatus {
+  battery: { serviceBank: number; engineBank: number; status: string };
+  tanks: { fuel: number; freshWater: number; blackWater: number };
+  bilge: { forward: string; aft: string; pumpStatus: string };
+  shorePower: { connected: boolean; voltage: number; amperage: number };
+  comfort?: {
+    climate: { zone: string; setPoint: number; currentTemp: number; mode: string; fanSpeed: string };
+    lighting: { salon: boolean; deck: boolean; underwater: boolean };
+    security: { mode: string; camerasActive: boolean };
+  };
+}
+
+export interface CustomerRiskProfile {
+  totalScore: number;
+  segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
+  breakdown: { financial: number; operational: number; commercial: number; social: number };
+  flags: string[];
+  lastAssessmentDate: string;
+}
+
+export interface MaintenanceLogEntry {
+  timestamp: string;
+  stage: 'SCHEDULED' | 'PARTS_ORDERED' | 'PARTS_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED';
+  details: string;
+}
+
+export interface MaintenanceJob {
+  id: string;
+  vesselName: string;
+  jobType: 'HAUL_OUT' | 'ENGINE_SERVICE' | 'GENERAL_REPAIR';
+  status: 'SCHEDULED' | 'WAITING_PARTS' | 'IN_PROGRESS' | 'COMPLETED';
+  scheduledDate: string;
+  contractor: string;
+  partsStatus: 'N/A' | 'ORDERED' | 'ARRIVED';
+  notes: string;
+  logs: MaintenanceLogEntry[];
+}
+
+export interface WeatherForecast {
+  temp: number;
+  condition: string;
+  windSpeed: number;
+  windDir: string;
+  day?: string;
 }
 
 export interface SecurityThreat {
-    id: string;
-    type: 'DRONE' | 'DIVER' | 'UNAUTHORIZED_VESSEL';
-    coordinates: { lat: number; lng: number };
-    altitudeDepth: number; // meters (negative for diver)
-    speed: number;
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    detectedBy: 'RADAR' | 'SONAR' | 'RF_SCANNER';
-    timestamp: string;
+  id: string;
+  type: 'DRONE' | 'DIVER' | 'VESSEL';
+  coordinates: { lat: number; lng: number };
+  altitudeDepth: number;
+  speed: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  detectedBy: 'RF_SCANNER' | 'SONAR' | 'RADAR';
+  timestamp: string;
+}
+
+export interface EnergyGridStatus {
+  loadPercentage: number;
+  gridStability: 'STABLE' | 'FLUCTUATING' | 'UNSTABLE';
+  activeConsumers: number;
+  peakShavingActive: boolean;
+  carbonFootprint: number;
+}
+
+export interface CongressEvent {
+  id: string;
+  name: string;
+  dates: { start: string; end: string };
+  venues: string[];
+  status: 'LIVE' | 'UPCOMING' | 'COMPLETED';
+  delegateCount: number;
+}
+
+export interface Delegate {
+  id: string;
+  name: string;
+  company: string;
+  status: 'CHECKED_IN' | 'IN_TRANSIT' | 'REGISTERED';
+  location: string;
+}
+
+export interface GuestProfile {
+  id: string;
+  fullName: string;
+  nationality: string;
+  dob: string;
+  vesselName: string;
+}
+
+export interface FederatedBerthAvailability {
+  marinaId: string;
+  date: string;
+  totalBerths: number;
+  availableBerths: number;
+  occupancyRate: number;
+  message: string;
 }
