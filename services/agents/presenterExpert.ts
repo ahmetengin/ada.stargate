@@ -1,7 +1,7 @@
-// services/agents/presenterAgent.ts
-// DEPRECATED: Narrative is now handled directly by PresentationOverlay.tsx,
-// which dynamically loads its content from markdown files in the `docs/sunum/` directory.
-// This file is kept for architectural reference and to prevent build errors if old imports persist.
+
+// services/agents/presenterExpert.ts
+// DEPRECATED: Narrative is now handled directly by PresentationOverlay.tsx
+// Keeping a dummy export to prevent build errors if imports persist.
 
 import { AgentAction, AgentTraceLog, NodeName } from '../../types';
 

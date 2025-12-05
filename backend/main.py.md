@@ -1,7 +1,7 @@
 
 ```python
 import uvicorn
-import gradio as gr
+# Removed gradio import
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
@@ -9,11 +9,11 @@ from langchain_core.messages import HumanMessage
 # Relative imports for compatibility
 try:
     from backend.architecture_graph import build_graph
-    from backend.vhf_radio import stream as radio_stream
+    # Removed from backend.vhf_radio import stream as radio_stream
     from backend.schemas import ChatRequest
 except ImportError:
     from architecture_graph import build_graph
-    from vhf_radio import stream as radio_stream
+    # Removed from vhf_radio import stream as radio_stream
     from schemas import ChatRequest
 
 app = FastAPI(title="Ada Stargate Hyperscale API", version="4.6")
@@ -31,7 +31,7 @@ brain_graph = build_graph()
 
 @app.get("/health")
 def health():
-    return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "FastRTC", "MAKER"]}
+    return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "SEAL"]}
 
 @app.post("/api/v1/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -65,9 +65,8 @@ async def chat_endpoint(request: ChatRequest):
         print(f"Graph Error: {e}")
         return {"text": f"System Error: {str(e)}"}
 
-# Mount FastRTC
-# This is crucial: Mounts the radio UI at /radio
-app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
+# Removed FastRTC mount
+# app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
 
 if __name__ == "__main__":
     print("🚀 Ada Stargate Backend Launching...")

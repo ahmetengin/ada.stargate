@@ -1,7 +1,8 @@
 
+
 import React from 'react';
-import { Target, Ship, Radio, Cpu } from 'lucide-react';
-import { RegistryEntry, Tender, VhfLog, AisTarget } from '../../../types';
+import { Target, Ship, Cpu } from 'lucide-react';
+import { RegistryEntry, Tender, AisTarget } from '../../../types';
 import { LiveMap } from './LiveMap';
 import { BreachRadar } from './BreachRadar';
 
@@ -10,11 +11,11 @@ interface OpsTabProps {
   registry: RegistryEntry[];
   criticalLogs: any[];
   tenders: Tender[];
-  vhfLogs: VhfLog[];
+  // Removed vhfLogs prop
   aisTargets?: AisTarget[];
 }
 
-export const OpsTab: React.FC<OpsTabProps> = ({ vesselsInPort, registry, criticalLogs, tenders, vhfLogs, aisTargets = [] }) => {
+export const OpsTab: React.FC<OpsTabProps> = ({ vesselsInPort, registry, criticalLogs, tenders, aisTargets = [] }) => {
   
   return (
     <div className="h-full w-full relative overflow-hidden bg-[#020617]">
@@ -79,33 +80,17 @@ export const OpsTab: React.FC<OpsTabProps> = ({ vesselsInPort, registry, critica
                     </div>
                 </div>
 
-                {/* COMMS LOG */}
+                {/* System Metrics Panel */}
                 <div className="col-span-12 lg:col-span-4">
                     <div className="glass-panel rounded-xl p-4 flex flex-col h-48">
                         <div className="flex items-center justify-between text-cyan-400 mb-2 pb-2 border-b border-white/5">
                             <h3 className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
-                                <Radio size={12} /> Comms / Ch.72
+                                <Cpu size={12} className="opacity-50" /> System Metrics
                             </h3>
-                            <Cpu size={12} className="opacity-50" />
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 font-mono text-[10px]">
-                            {vhfLogs.length === 0 ? (
-                                <div className="text-slate-600 italic mt-4 text-center">Spectrum Clear.</div>
-                            ) : (
-                                vhfLogs.slice().reverse().map((log, idx) => (
-                                    <div key={idx} className="group">
-                                        <div className="flex gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                                            <span className="text-slate-500">{log.timestamp.split(' ')[0]}</span>
-                                            <span className={`font-bold ${log.speaker === 'VESSEL' ? 'text-indigo-400' : 'text-emerald-400'}`}>
-                                                {log.speaker === 'VESSEL' ? 'UNK' : 'HQ'}
-                                            </span>
-                                        </div>
-                                        <div className="text-slate-300 pl-10 border-l border-white/5 ml-3 my-1">
-                                            {log.message}
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                            <div className="text-slate-600 italic mt-4 text-center">No comms data (FastRTC removed).</div>
+                            {/* Placeholder for other system metrics if needed */}
                         </div>
                     </div>
                 </div>

@@ -2,7 +2,7 @@
   "name": "Copy of Ada stargate",
   "description": "Ada is an AI-powered multi-agent ecosystem for the maritime and hospitality industry. Built on 15+ years of real-world experience.",
   "requestFramePermissions": [
-    "microphone",
-    "camera"
+    "camera",
+    "microphone"
   ]
 }

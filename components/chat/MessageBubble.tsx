@@ -3,7 +3,7 @@ import React, { useState, useEffect, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Message, MessageRole, VesselIntelligenceProfile } from '../../types';
 import { marinaExpert } from '../../services/agents/marinaAgent';
-import { VesselCard } from './VesselCard';
+import { VesselCard } from '../VesselCard';
 import { Anchor, Terminal } from 'lucide-react';
 
 interface MessageBubbleProps {

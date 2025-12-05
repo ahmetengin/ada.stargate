@@ -21,14 +21,14 @@ interface CanvasProps {
 
 export const Canvas: React.FC<CanvasProps> = ({ 
   vesselsInPort, 
-  registry, 
-  tenders, 
-  vhfLogs = [], 
-  aisTargets = [], 
-  userProfile, 
-  onOpenReport, 
-  onOpenTrace, 
-  agentTraces = [], 
+  registry,
+  tenders,
+  vhfLogs = [],
+  aisTargets = [],
+  userProfile,
+  onOpenReport,
+  onOpenTrace,
+  agentTraces = [],
   activeTenantConfig
 }) => {
   // Live Data Simulation for "Static" fix
@@ -84,7 +84,6 @@ export const Canvas: React.FC<CanvasProps> = ({
             tenders={tenders}
             vesselsInPort={vesselsInPort}
             agentTraces={agentTraces}
-            vhfLogs={vhfLogs} // PASS THE COMMS
             aisTargets={aisTargets}
             onOpenReport={onOpenReport || (() => {})}
             onOpenTrace={onOpenTrace || (() => {})}

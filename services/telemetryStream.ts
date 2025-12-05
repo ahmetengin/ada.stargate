@@ -1,3 +1,4 @@
+
 export type TelemetryCallback = (data: any) => void;
 
 class TelemetryStreamService {
@@ -23,9 +24,10 @@ class TelemetryStreamService {
         // Construct URL
         const wsUrl = `${protocol}//${host}/ws/telemetry`;
 
-        if (this.retryCount === 0 || this.retryCount % 5 === 0) {
-            console.debug(`[Telemetry] Connecting to ${wsUrl} (Attempt ${this.retryCount + 1})...`);
-        }
+        // Removed debug console.log for telemetry connection attempts
+        // if (this.retryCount === 0 || this.retryCount % 5 === 0) {
+        //     console.debug(`[Telemetry] Connecting to ${wsUrl} (Attempt ${this.retryCount + 1})...`);
+        // }
 
         try {
             this.socket = new WebSocket(wsUrl);

@@ -1,11 +1,10 @@
 
-import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, Chat, GenerateContentResponse, Modality } from "@google/genai";
 import { Message, ModelType, GroundingSource, RegistryEntry, Tender, UserProfile, TenantConfig } from "../types";
 import { generateBaseSystemInstruction, generateContextBlock } from "./prompts";
 import { handleGeminiError, formatHistory } from "./geminiUtils";
+import { FEDERATION_REGISTRY, TENANT_CONFIG } from "./config";
 
-// Re-export LiveSession
-export { LiveSession } from "./liveService";
 
 const createClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
@@ -150,4 +149,27 @@ export const generateImage = async (prompt: string): Promise<string> => {
       handleGeminiError(error);
       return "";
    }
+};
+
+export const generateSpeech = async (text: string): Promise<string | null> => {
+    try {
+        const ai = createClient();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' }, // Female voice
+                    },
+                },
+            },
+        });
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        return base64Audio || null;
+    } catch (error: any) {
+        handleGeminiError(error);
+        return null;
+    }
 };

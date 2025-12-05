@@ -1,3 +1,5 @@
+
+
 import React, { useRef, useCallback, useEffect } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { Message, ModelType, TenantConfig, ThemeMode, UserRole } from '../../types';
@@ -6,6 +8,7 @@ import { InputArea } from './InputArea';
 
 interface ChatInterfaceProps {
     messages: Message[];
+    // Removed activeChannel prop
     isLoading: boolean;
     selectedModel: ModelType;
     userRole: UserRole;
@@ -15,13 +18,14 @@ interface ChatInterfaceProps {
     onSend: (text: string, attachments: File[]) => void;
     onQuickAction: (text: string) => void;
     onScanClick: () => void;
+    // Removed onRadioClick prop
     onTraceClick: () => void;
-    onThemeChange: (t: ThemeMode) => void;
-    onRadioClick: () => void; // ADDED THIS PROP
+    onToggleTheme: () => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     messages,
+    // Removed activeChannel
     isLoading,
     selectedModel,
     userRole,
@@ -31,9 +35,9 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     onSend,
     onQuickAction,
     onScanClick,
+    // Removed onRadioClick,
     onTraceClick,
-    onThemeChange,
-    onRadioClick // ADDED THIS PROP
+    onToggleTheme
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -69,18 +73,24 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                         <div className="absolute inset-0 bg-teal-400 rounded-full animate-ping opacity-75"></div>
                     </div>
                     <div>
-                        <span className="text-xs font-mono font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-color)] transition-colors">
-                            ● {activeTenantConfig.node_address}
+                        <span className="text-[10px] font-display font-bold text-[var(--text-secondary)] tracking-[0.2em] uppercase hover:text-[var(--accent-color)] transition-colors block leading-none">
+                            {activeTenantConfig.id}.MARINA
                         </span>
+                        <span className="text-[8px] font-mono text-[var(--accent-color)] tracking-widest opacity-80">SECURE LINK</span>
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] bg-black/5 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-zinc-800 p-0.5">
-                        <button onClick={() => onThemeChange('light')} className={`px-3 py-1 rounded-full transition-colors ${theme === 'light' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Day</button>
-                        <button onClick={() => onThemeChange('dark')} className={`px-3 py-1 rounded-full transition-colors ${theme === 'dark' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Night</button>
-                        <button onClick={() => onThemeChange('auto')} className={`px-3 py-1 rounded-full transition-colors ${theme === 'auto' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Auto</button>
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/50 dark:bg-white/5 rounded-full border border-[var(--border-color)] hover:border-[var(--accent-color)] transition-colors">
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-[9px] font-mono font-bold text-[var(--text-secondary)]">VHF {/*activeChannel*/}</span>
                     </div>
+                    <button 
+                        onClick={onToggleTheme}
+                        className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--accent-color)] transition-colors"
+                    >
+                        {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Monitor size={14} />}
+                    </button>
                 </div>
             </div>
 
@@ -97,7 +107,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
 
             {/* Input Area */}
-            <div className="flex-shrink-0 bg-[var(--glass-bg)] backdrop-blur-xl border-t border-[var(--border-color)] p-4 z-20 relative transition-colors">
+            <div className="flex-shrink-0 bg-[var(--glass-bg)] backdrop-blur-xl border-t border-[var(--border-color)] p-4 sm:p-6 pb-6 sm:pb-8 z-20 relative transition-colors">
                 <InputArea 
                     onSend={onSend}
                     isLoading={isLoading}
@@ -106,7 +116,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     userRole={userRole}
                     onQuickAction={onQuickAction}
                     onScanClick={onScanClick}
-                    onRadioClick={onRadioClick}
+                    // Removed onRadioClick
                 />
             </div>
         </div>

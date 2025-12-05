@@ -3,7 +3,7 @@
 version: '3.9'
 
 services:
-  # 1. THE BRAIN (Python LangGraph + FastRTC + IoT)
+  # 1. THE BRAIN (Python LangGraph + IoT)
   ada-core:
     build: 
       context: ./backend
@@ -11,14 +11,13 @@ services:
     container_name: ada_core_hyperscale
     ports:
       - "8000:8000"
-      - "7860:7860"
+      # Removed FastRTC port 7860:7860
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
       - MQTT_BROKER=ada-mqtt
       - OLLAMA_URL=http://ada-local-llm:11434
-      - GRADIO_SERVER_NAME=0.0.0.0 
     depends_on:
       - ada-redis
       - ada-qdrant

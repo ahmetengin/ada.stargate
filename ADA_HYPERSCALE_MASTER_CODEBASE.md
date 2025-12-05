@@ -1,3 +1,4 @@
+
 # ⚓️ ADA STARGATE: HYPERSCALE MASTER CODEBASE (v4.1)
 
 **Architect:** Ada Core Team
@@ -17,7 +18,7 @@ This orchestrates the Brain (Python), the Interface (React), the Memory (Qdrant/
 version: '3.9'
 
 services:
-  # 1. THE BRAIN (Python LangGraph + FastRTC)
+  # 1. THE BRAIN (Python LangGraph)
   ada-core:
     build: 
       context: ./backend
@@ -25,7 +26,7 @@ services:
     container_name: ada_core_hyperscale
     ports:
       - "8000:8000" # API & Websocket
-      - "7860:7860" # FastRTC / Gradio UI (Direct Access)
+      # Removed FastRTC port 7860:7860
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
@@ -93,23 +94,35 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for audio (FastRTC)
+# Removed audio-related system dependencies
+# RUN apt-get update && apt-get install -y \
+#     libasound2-dev \
+#     portaudio19-dev \
+#     libportaudio2 \
+#     libsndfile1 \
+#     ffmpeg \
+#     && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && apt-get install -y \
-    libasound2-dev \
-    portaudio19-dev \
-    libportaudio2 \
-    libsndfile1 \
-    ffmpeg \
+    build-essential \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps
+# 2. Copy Requirements
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy Code
+# 3. Install Python Dependencies
+# Upgrade pip first to avoid binary incompatibility
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 4. Copy Application Code
 COPY . .
 
-# Run API
+# 5. Expose Ports
+EXPOSE 8000
+
+# 6. Run the Application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
@@ -131,38 +144,47 @@ langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
+langchain-text-splitters
 qdrant-client
 asyncpg
 markdown
 beautifulsoup4
-# Voice Stack
-fastrtc>=0.1.0
-gradio>=5.0.0
-numpy
-scipy
-loguru
+pandas
+scikit-learn
+# Removed Voice Stack (FastRTC) dependencies
+# fastrtc>=0.1.0
+# gradio>=5.0.0
+# numpy
+# scipy
+# loguru
+# soundfile
 ```
 
 ### `backend/main.py`
-The API Gateway. Exposes the Brain and the Radio.
+The API Gateway. Removed FastRTC and Gradio.
 
 ```python
 import os
 import uvicorn
-from fastapi import FastAPI, HTTPException
+# Removed threading, asyncio, json, random imports if only used for FastRTC/telemetry sim, keeping telemetry for now
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, Dict, Any
-import gradio as gr
+from typing import Optional, Dict, Any, List
+# Removed gradio import
 from langchain_core.messages import HumanMessage
 
-# Import Internal Modules
+# Import Internal Modules (with Fallback)
 try:
     from backend.architecture_graph import build_graph
-    from backend.vhf_radio import stream as radio_stream
+    # Removed from backend.vhf_radio import stream as radio_stream
+    from backend.iot_gateway import start_mqtt_listener # Keeping IoT for now
+    from backend.proactive_daemon import start_daemon # Keeping daemon for now
 except ImportError:
     from architecture_graph import build_graph
-    from vhf_radio import stream as radio_stream
+    # Removed from vhf_radio import stream as radio_stream
+    from iot_gateway import start_mqtt_listener
+    from proactive_daemon import start_daemon
 
 app = FastAPI(title="Ada Stargate Hyperscale API", version="4.1")
 
@@ -177,20 +199,80 @@ app.add_middleware(
 # Initialize the Cognitive Brain
 brain_graph = build_graph()
 
+# --- WEBSOCKET MANAGER (Keeping for TelemetryStream) ---
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception:
+                pass
+
+manager = ConnectionManager()
+
+# --- TELEMETRY SIMULATOR (Keeping for now) ---
+async def simulate_telemetry_stream():
+    import asyncio, json, random # Re-import here since global ones might be removed
+    """Simulates live NMEA2000/SignalK data stream."""
+    while True:
+        data = {
+            "type": "VESSEL_TELEMETRY",
+            "timestamp": "LIVE",
+            "payload": {
+                "battery": { "serviceBank": round(24.0 + random.uniform(0, 1.5), 1), "engineBank": 26.1, "status": "DISCHARGING" },
+                "tanks": { "fuel": 45, "freshWater": 80, "blackWater": int(15 + random.uniform(0, 1)) },
+                "bilge": { "forward": "DRY", "aft": "DRY", "pumpStatus": "AUTO" },
+                "shorePower": { "connected": True, "voltage": int(220 + random.uniform(-5, 5)), "amperage": 12.5 },
+                "comfort": { "climate": { "zone": "Salon", "currentTemp": 23.5, "mode": "COOL" } },
+                "environment": { "windSpeed": round(12 + random.uniform(-2, 5), 1), "windDir": "NW" }
+            }
+        }
+        await manager.broadcast(json.dumps(data))
+        await asyncio.sleep(2)
+
 class ChatRequest(BaseModel):
     prompt: str
     user_role: Optional[str] = "GUEST"
     context: Optional[Dict[str, Any]] = {}
 
+@app.on_event("startup")
+async def startup_event():
+    import threading, asyncio # Re-import here
+    print("🚀 Igniting Ada Stargate v4.1 Systems...")
+    # 1. Daemon
+    daemon_thread = threading.Thread(target=start_daemon, daemon=True)
+    daemon_thread.start()
+    # 2. Telemetry Simulation
+    asyncio.create_task(simulate_telemetry_stream())
+    # 3. MQTT Listener (if needed, otherwise remove)
+    # mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
+    # mqtt_thread.start()
+
+@app.websocket("/ws/telemetry")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
 @app.get("/health")
 def health():
-    return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "FastRTC", "MAKER", "SEAL"]}
+    return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "SEAL", "Telemetry"]} # Removed FastRTC
 
 @app.post("/api/v1/chat")
 async def chat_endpoint(request: ChatRequest):
-    """
-    Main Thinking Endpoint.
-    """
     try:
         inputs = {
             "messages": [HumanMessage(content=request.prompt)],
@@ -202,27 +284,21 @@ async def chat_endpoint(request: ChatRequest):
             "memories": [],
             "final_response": ""
         }
-        
-        # Execute the Graph
         final_state = await brain_graph.ainvoke(inputs)
-        
         return {
             "text": final_state.get("final_response", "System processing error."),
             "traces": [
-                {"step": "ROUTING", "node": "router", "content": f"Intent: {final_state.get('intent')}"},
-                {"step": "OUTPUT", "node": "generator", "content": "Response generated."}
+                {"step": "ROUTING", "node": "router", "content": f"Intent: {final_state.get('intent')}"}
             ]
         }
-        
     except Exception as e:
         print(f"Graph Error: {e}")
         return {"text": f"System Error: {str(e)}"}
 
-# Mount FastRTC Radio at /radio
-app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
+# Removed mounting FastRTC Radio at /radio
+# app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
 
 if __name__ == "__main__":
-    print("🚀 Ada Stargate Backend Launching...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
@@ -232,8 +308,7 @@ Contains:
 1.  **Router:** Decides intent.
 2.  **MAKER (The Engineer):** Writes Python code to solve math/logic problems.
 3.  **Executor:** Runs the code safely.
-4.  **SEAL (The Learner):** Ingests new rules.
-5.  **RAG (The Lawyer):** Checks docs.
+4.  **RAG (The Lawyer):** Checks docs.
 
 ```python
 import os
@@ -389,84 +464,6 @@ def build_graph():
     return workflow.compile()
 ```
 
-### `backend/vhf_radio.py`
-**FastRTC Radio Node.**
-
-```python
-import sys
-from fastrtc import ReplyOnPause, Stream, get_stt_model, get_tts_model
-from loguru import logger
-from backend.nano import NanoAgent
-
-# Local Models (Speed)
-stt_model = get_stt_model() # Moonshine
-tts_model = get_tts_model() # Kokoro
-
-# Cloud Brain (Intelligence)
-vhf_brain = NanoAgent(
-    name="Ada.VHF",
-    system_instruction="Sen Telsiz Operatörüsün. Kısa, net, Türkçe konuş. 'Tamam' ile bitir."
-)
-
-logger.remove(0)
-logger.add(sys.stderr, level="DEBUG")
-
-def echo(audio):
-    transcript = stt_model.stt(audio)
-    if not transcript or len(transcript) < 2: return
-    
-    logger.debug(f"🎤 {transcript}")
-    response_text = vhf_brain.chat(transcript)
-    logger.debug(f"🤖 {response_text}")
-    
-    for chunk in tts_model.stream_tts_sync(response_text):
-        yield chunk
-
-stream = Stream(
-    ReplyOnPause(echo),
-    modality="audio",
-    mode="send-receive",
-    ui_args={"title": "Ada VHF Radio (Channel 72)"}
-)
-```
-
-### `backend/nano.py`
-**Minimalist Gemini Wrapper.**
-
-```python
-import os
-import logging
-from google import genai
-from google.genai import types
-from dotenv import load_dotenv
-
-load_dotenv()
-logger = logging.getLogger("nano_agent")
-
-class NanoAgent:
-    def __init__(self, name: str, system_instruction: str):
-        self.name = name
-        self.client = genai.Client(api_key=os.getenv("API_KEY"))
-        self.model_name = "gemini-2.5-flash"
-        self.system_instruction = system_instruction
-
-    def chat(self, user_input: str) -> str:
-        try:
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=user_input,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction,
-                    temperature=0.3,
-                    response_mime_type="text/plain"
-                )
-            )
-            return response.text if response.text else "Anlaşılamadı."
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            return "Hata."
-```
-
 ### `backend/ingest.py`
 **Memory Ingestor.** Reads docs and populates Qdrant.
 
@@ -550,16 +547,12 @@ export const sendToBackend = async (prompt: string, userProfile: any, context: a
 
 ## 📘 4. DEPLOYMENT INSTRUCTIONS
 
-1.  **Files:** Create the file structure defined above.
-2.  **Env:** Create `.env` with `API_KEY=...`.
-3.  **Launch:**
-    ```bash
-    docker-compose -f docker-compose.hyperscale.yml up --build
-    ```
-4.  **Learn:**
+1.  **Files:** Copy code to `backend/main.py`, `services/api.ts`, `vite.config.ts`, `nginx/nginx.conf`.
+2.  **Launch:** `docker-compose -f docker-compose.hyperscale.yml up --build`
+3.  **Learn:**
     ```bash
     docker exec -it ada_core_hyperscale python ingest.py
     ```
-5.  **Access:**
+4.  **Access:**
     *   **Frontend:** `http://localhost:80`
-    *   **Radio:** `http://localhost:8000/radio`
+    *   **Radio:** (Removed - no direct radio access now)

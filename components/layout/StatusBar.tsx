@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { GitBranch, RefreshCw, AlertCircle, User } from 'lucide-react';
 import { UserProfile } from '../../types';
@@ -6,9 +7,7 @@ import { UserProfile } from '../../types';
 interface StatusBarProps {
   userProfile: UserProfile;
   onToggleAuth: () => void;
-  nodeHealth: string;
-  latency: number;
-  activeChannel: string; 
+  // Removed nodeHealth, latency, activeChannel props
 }
 
 interface ItemProps {
@@ -25,8 +24,8 @@ const Item: React.FC<ItemProps> = ({ children, border = true, hover = true }) =>
 
 export const StatusBar: React.FC<StatusBarProps> = ({ 
   userProfile, 
-  onToggleAuth, 
-  nodeHealth
+  onToggleAuth
+  // Removed nodeHealth, latency
 }) => {
   const isGM = userProfile.role === 'GENERAL_MANAGER';
   const isLegalRed = userProfile.legalStatus === 'RED';
@@ -43,7 +42,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         </Item>
         
         <Item border={true}>
-           <RefreshCw size={12} className={nodeHealth === 'working' ? 'animate-spin' : ''} />
+           <RefreshCw size={12} className={'text-emerald-400'} /> {/* Simplified to static color */}
            <span>v4.1.0</span>
         </Item>
       </div>

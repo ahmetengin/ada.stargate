@@ -1,4 +1,5 @@
 
+
 # ⚓️ ADA STARGATE: PROJECT STATUS SNAPSHOT (SAVE POINT)
 
 **Date:** November 2025
@@ -10,7 +11,7 @@
 
 ## 1. THE VISION: "A LIVING MARINA OS"
 We have moved beyond a simple chatbot. Ada is now a **Cognitive Operating System** for West Istanbul Marina (WIM).
-*   **She Hears:** via `FastRTC` (WebRTC low-latency voice).
+*   **She Hears:** (Planned: External Microphone -> Manual Input in Scribe mode)
 *   **She Thinks:** via `LangGraph` (Stateful reasoning loops).
 *   **She Remembers:** via `Qdrant` (Vector storage of laws & docs).
 *   **She Adapts:** via `SEAL` (Self-editing system prompts based on new rules).
@@ -28,8 +29,8 @@ We have moved beyond a simple chatbot. Ada is now a **Cognitive Operating System
 *   **Execution:** Docker Container (`ada-core`)
 
 ### B. The Body (Frontend - React)
-*   **Interface:** "Mission Control" Dashboard (Canvas, Observer Tab, VHF Radio).
-*   **Voice Bridge:** `components/VoiceModal.tsx` connects to FastRTC.
+*   **Interface:** "Mission Control" Dashboard (Canvas, Observer Tab, Scribe Mode).
+*   **Voice Bridge:** (Removed: Manual input for Scribe mode).
 *   **Observability:** `components/dashboards/gm/ObserverTab.tsx` visualizes the Brain's thoughts.
 
 ### C. The Memory (Data)
@@ -44,11 +45,11 @@ We have moved beyond a simple chatbot. Ada is now a **Cognitive Operating System
 If re-generating code, reference these specific implementations:
 
 1.  **The Graph (`backend/architecture_graph.py`):**
-    *   Contains the routing logic: `Router` -> `SEAL` | `TabPFN` | `RAG` | `Calculator`.
+    *   Contains the routing logic: `Router` -> `MAKER` | `RAG` | `Generator`. (SEAL and TabPFN are mock implementations in this architecture for now, focused on core MAKER/RAG).
     *   This is the "consciousness" code.
 
 2.  **The Manifesto (`docs/GEMINI_CLI_MANIFESTO.md`):**
-    *   The 5 Commandments: Zero Hallucination, Silence is Luxury, Live Nervous System, Adapt or Die, Federation.
+    *   The 5 Commandments: Zero Hallucination, Silence is Luxury, Live Nervous System (now Telemetry/Events), Adapt or Die, Federation.
 
 3.  **The Ingestor (`backend/ingest.py`):**
     *   The script that reads `docs/` and feeds Qdrant. Without this, Ada is amnesic.
@@ -62,7 +63,7 @@ If re-generating code, reference these specific implementations:
 
 1.  **Deployment:** Run `docker-compose -f docker-compose.hyperscale.yml up --build`.
 2.  **Memory Injection:** Trigger `POST /api/v1/learn` to digest the `docs/` folder.
-3.  **MAKER Implementation:** We are currently exploring the "Tool Maker" (LATM) pattern to let Ada write her own Python tools on the fly.
+3.  **Complete MAKER:** Fully implement TabPFN and SEAL integration into the backend.
 
 ---
 

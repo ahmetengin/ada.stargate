@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { PresentationState, UserProfile } from '../types';
-import { generateSpeech } from '../services/geminiService';
-import { LiveSession } from '../services/liveService';
-import { introNarrative } from '../services/presenterContent';
+import { PresentationState, UserProfile } from './types';
+import { generateSpeech } from './services/geminiService';
+import { LiveSession } from './services/liveService';
+import { introNarrative } from './services/presenterContent';
 
 interface PresentationOverlayProps {
     state: PresentationState;
@@ -13,6 +13,7 @@ interface PresentationOverlayProps {
     onStartMeeting: () => void;
     onEndMeeting: () => void;
     onScribeInput: (text: string) => void;
+    // FIX: Update prop type to accept the setState function directly, enabling functional updates.
     onStateChange: React.Dispatch<React.SetStateAction<PresentationState>>;
 }
 
@@ -27,6 +28,7 @@ function decode(base64: string) {
   return bytes;
 }
 
+// FIX: Use more robust version of decodeAudioData that accepts sampleRate and numChannels.
 async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,
@@ -64,6 +66,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     
     const [narrativeStep, setNarrativeStep] = useState(0);
 
+    // Initialize & Clean up Audio Context and Live Session
     useEffect(() => {
         if (state.isActive) {
             if (!audioContextRef.current) {
@@ -80,9 +83,9 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             setStatus("OFFLINE");
             sessionRef.current?.disconnect();
             sessionRef.current = null;
-            if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-                audioContextRef.current.close().catch(e => console.error("Failed to close audio context", e));
-            }
+            // FIX: Applied workaround to `close()` call to address a misleading TypeScript error.
+            // This is typically not required as `AudioContext.close()` takes no arguments.
+            audioContextRef.current?.close(undefined).catch(e => console.error("Failed to close audio context", e));
             audioContextRef.current = null;
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         }
@@ -92,11 +95,13 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         };
     }, [state.isActive]);
     
+    // Phase 2: Scribe Mode Activation
     useEffect(() => {
         if (state.slide === 'scribe' && !sessionRef.current) {
             const newSession = new LiveSession();
             newSession.onStatusChange = (s) => setStatus(s);
             newSession.onTurnComplete = (userText, modelText) => {
+                 // FIX: Use functional update form of setState to prevent stale state issues.
                  onStateChange(prev => ({...prev, transcript: prev.transcript + `\n[USER]: ${userText}\n[ADA]: ${modelText}`}));
             };
             newSession.connect(userProfile).catch(console.error);
@@ -120,7 +125,9 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         draw();
     };
 
+    // Phase 1: Monologue Player
     useEffect(() => {
+        // FIX: Replaced non-existent `isListening` with correct `state.slide` check.
         if (state.slide !== 'intro' || isSpeaking || narrativeStep >= introNarrative.length || status !== 'CONNECTED') return;
 
         const speakNext = async () => {
@@ -133,6 +140,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 const base64Audio = await generateSpeech(textToSpeak);
                 if (base64Audio && audioContextRef.current && gainNodeRef.current) {
                     try {
+                        // FIX: Updated call to decodeAudioData with correct parameters.
                         const audioBuffer = await decodeAudioData(decode(base64Audio), audioContextRef.current, 24000, 1);
                         const source = audioContextRef.current.createBufferSource();
                         source.buffer = audioBuffer;
@@ -147,11 +155,11 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                         setIsSpeaking(false);
                         setNarrativeStep(prev => prev + 1);
                     }
-                } else { 
+                } else { // Fallback if TTS fails
                     setTimeout(() => {
                          setIsSpeaking(false);
                          setNarrativeStep(prev => prev + 1);
-                    }, textToSpeak.length * 80); 
+                    }, textToSpeak.length * 80); // Simulate speech duration
                 }
             }
         };
@@ -180,6 +188,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         }
     };
 
+    // FIX: Replaced non-existent `isListening` with correct `state.slide` check.
     const currentVisualSlide = state.slide === 'scribe' ? introNarrative.length + 1 : narrativeStep;
 
     const renderHeader = () => (

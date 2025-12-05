@@ -1,0 +1,40 @@
+
+/* index.css */
+
+/* Custom Scrollbar Styles for cross-browser compatibility */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.5); /* Slate 400 with opacity */
+    border-radius: 2px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, 0.3); /* Cyan 400 with opacity */
+}
+
+/* Hide scrollbar for specific elements if needed, but still allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+/* Basic body and root styles if not already defined in index.html <style> */
+html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Ensure overall layout is controlled by app components */
+}

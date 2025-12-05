@@ -1,264 +1,177 @@
+import { GoogleGenAI, LiveSession as GeminiLiveSession, LiveServerMessage, Modality, Blob } from "@google/genai";
+import { UserProfile } from '../types';
 
-import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
-import { UserProfile } from "../types";
-
-export type LiveSessionMode = 'RADIO' | 'PRESENTER';
-
-/**
- * Pure Client-Side Live Session
- * Connects directly to Google Gemini Multimodal Live API via WebSockets.
- * No Python Backend required.
- */
 export class LiveSession {
-  private client: GoogleGenAI;
-  private session: any = null;
-  private audioContext: AudioContext | null = null;
-  private inputSource: MediaStreamAudioSourceNode | null = null;
-  private processor: ScriptProcessorNode | null = null;
-  public onStatusChange: ((status: string) => void) | null = null;
-  public onAudioLevel: ((level: number) => void) | null = null;
-  public onTurnComplete: ((userText: string, modelText: string) => void) | null = null;
-  
-  // Audio Queue Management
-  private nextStartTime = 0;
-  private isConnected = false;
-  
-  // Buffers for seamless playback
-  private audioQueue: AudioBuffer[] = [];
-  private isPlaying = false;
+    private ai?: GoogleGenAI;
+    private sessionPromise?: Promise<GeminiLiveSession>;
+    private inputAudioContext?: AudioContext;
+    private outputAudioContext?: AudioContext;
+    private scriptProcessor?: ScriptProcessorNode;
+    private microphoneStream?: MediaStream;
 
-  private currentInputTranscription = '';
-  private currentOutputTranscription = '';
+    private nextStartTime = 0;
+    private sources = new Set<AudioBufferSourceNode>();
 
-  constructor() {
-    this.client = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
+    private currentInputTranscription = '';
+    private currentOutputTranscription = '';
 
-  /**
-   * Initializes AudioContext ensuring it is active (not suspended).
-   */
-  private async ensureAudioContext() {
-      if (!this.audioContext) {
-          // Use standard AudioContext
-          this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      
-      if (this.audioContext.state === 'suspended') {
-          await this.audioContext.resume();
-      }
-  }
+    public onStatusChange: ((state: string) => void) | null = null;
+    public onAudioLevel: ((level: number) => void) | null = null;
+    public onTurnComplete: ((userText: string, modelText: string) => void) | null = null;
 
-  async connect(userProfile: UserProfile, mode: LiveSessionMode = 'RADIO') {
-    try {
-      await this.ensureAudioContext();
-      
-      this.onStatusChange?.('connecting');
-      this.isConnected = false;
-      this.nextStartTime = this.audioContext!.currentTime + 0.1;
-      this.audioQueue = [];
-
-      // --- SYSTEM INSTRUCTION ---
-      let instruction = "SYSTEM: You are ADA, the AI Operator of West Istanbul Marina (WIM). ";
-      instruction += "LANGUAGE: Speak ONLY Turkish (Istanbul accent). ";
-      instruction += "TONE: Professional, calm, concise. Like a maritime radio operator. ";
-      instruction += "RULES: Keep responses short. End transmissions with 'Tamam' (Over). ";
-      
-      if (mode === 'RADIO') {
-          instruction += "CONTEXT: You are on VHF Channel 72. You manage traffic, docking, and fuel requests. ";
-          instruction += `USER: Captain of ${userProfile.name || 'Unknown Vessel'}. `;
-      }
-
-      const sessionPromise = this.client.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
-        config: {
-           responseModalities: [Modality.AUDIO], // Audio-to-Audio
-           systemInstruction: { parts: [{ text: instruction }] },
-           speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: "Kore" } } // 'Kore' has a good neutral tone
-           },
-        },
-        callbacks: {
-            onopen: async () => {
-                this.isConnected = true;
-                this.onStatusChange?.('connected');
-                // Start capturing microphone
-                this.startMicrophone(sessionPromise);
-            },
-            onmessage: async (msg: LiveServerMessage) => {
-                await this.handleMessage(msg);
-            },
-            onerror: (e: any) => {
-                console.error("Live API Error:", e);
-                this.onStatusChange?.('error');
-                this.disconnect();
-            },
-            onclose: () => {
-                this.onStatusChange?.('disconnected');
-                this.disconnect();
-            }
+    constructor() {
+        if (process.env.API_KEY) {
+            this.ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         }
-      });
-
-      this.session = await sessionPromise;
-
-    } catch (e) {
-      console.error("Connection failed:", e);
-      this.onStatusChange?.('error');
     }
-  }
 
-  private async handleMessage(msg: LiveServerMessage) {
-      // 1. Audio Output (The Voice)
-      const audioData = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-      if (audioData) {
-        if (this.audioContext?.state === 'suspended') await this.audioContext.resume();
-        const buffer = await this.base64ToAudioBuffer(audioData);
-        this.scheduleBuffer(buffer);
-      }
-      
-      // 2. Transcription (Optional, for UI logs)
-      if (msg.serverContent?.inputTranscription) {
-          this.currentInputTranscription += msg.serverContent.inputTranscription.text;
-      }
-      if (msg.serverContent?.outputTranscription) {
-          this.currentOutputTranscription += msg.serverContent.outputTranscription.text;
-      }
-
-      if (msg.serverContent?.turnComplete) {
-        if (this.onTurnComplete) {
-            this.onTurnComplete(this.currentInputTranscription.trim(), this.currentOutputTranscription.trim());
+    private setStatus(state: string) {
+        if (this.onStatusChange) this.onStatusChange(state);
+    }
+    
+    public async connect(userProfile: UserProfile) {
+        if (!this.ai) {
+            console.error("Gemini API key not configured.");
+            this.setStatus('error');
+            return;
         }
-        this.currentInputTranscription = '';
-        this.currentOutputTranscription = '';
-      }
-  }
+        if (this.sessionPromise) return;
+        this.setStatus('connecting');
 
-  private scheduleBuffer(buffer: AudioBuffer) {
-      if (!this.audioContext) return;
+        try {
+            this.inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+            this.microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-      // Calculate visualization level
-      const rawData = buffer.getChannelData(0);
-      let sum = 0;
-      for(let i=0; i<rawData.length; i+=50) sum += Math.abs(rawData[i]);
-      const avg = sum / (rawData.length/50);
-      this.onAudioLevel?.(avg * 10); // Amplify for UI
+            this.sessionPromise = this.ai.live.connect({
+                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
+                    systemInstruction: `You are Ada, Harbour Master. Your current operator is ${userProfile.name} (${userProfile.role}). Respond concisely in nautical terms. Use VHF Channel protocols. End with "Over" or "Out".`,
+                    inputAudioTranscription: {},
+                    outputAudioTranscription: {}
+                },
+                callbacks: {
+                    onopen: () => this.handleSessionOpen(),
+                    onmessage: (message: LiveServerMessage) => this.handleSessionMessage(message),
+                    onerror: (e: ErrorEvent) => this.handleSessionError(e),
+                    onclose: (e: CloseEvent) => this.handleSessionClose(e),
+                }
+            });
+        } catch (error) {
+            console.error("Failed to connect live session or get user media:", error);
+            this.setStatus('error');
+            this.disconnect();
+        }
+    }
 
-      const source = this.audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(this.audioContext.destination);
+    public disconnect() {
+        this.sessionPromise?.then(session => session.close()).catch((e) => { console.error("Error closing session:", e); });
+        this.sessionPromise = undefined;
+        this.scriptProcessor?.disconnect();
+        this.scriptProcessor = undefined;
+        this.microphoneStream?.getTracks().forEach(track => track.stop());
+        this.microphoneStream = undefined;
 
-      // Playback scheduling to prevent gaps
-      const currentTime = this.audioContext.currentTime;
-      if (this.nextStartTime < currentTime) {
-          this.nextStartTime = currentTime + 0.05; 
-      }
-      source.start(this.nextStartTime);
-      this.nextStartTime += buffer.duration;
-  }
+        if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
+            this.inputAudioContext.close().catch((e) => { console.error("Error closing input audio context:", e); });
+        }
+        this.inputAudioContext = undefined;
 
-  private async base64ToAudioBuffer(base64Str: string): Promise<AudioBuffer> {
-     // Gemini sends 24kHz PCM 16-bit Little Endian
-     const binaryString = atob(base64Str);
-     const len = binaryString.length;
-     const bytes = new Uint8Array(len);
-     for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-     }
-     
-     const view = new DataView(bytes.buffer);
-     const float32 = new Float32Array(len / 2);
-     
-     for (let i = 0; i < len; i += 2) {
-         const sample = view.getInt16(i, true);
-         float32[i / 2] = sample / 32768.0;
-     }
-
-     const buffer = this.audioContext!.createBuffer(1, float32.length, 24000); 
-     buffer.getChannelData(0).set(float32);
-     return buffer;
-  }
-
-  private async startMicrophone(sessionPromise: Promise<any>) {
-     if (!this.audioContext) return;
-
-     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: {
-            sampleRate: 16000,
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true
-        }});
+        if (this.outputAudioContext && this.outputAudioContext.state !== 'closed') {
+            this.outputAudioContext.close().catch((e) => { console.error("Error closing output audio context:", e); });
+        }
+        this.outputAudioContext = undefined;
         
-        this.inputSource = this.audioContext.createMediaStreamSource(stream);
-        this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
-        
-        this.processor.onaudioprocess = (e) => {
-            if (!this.isConnected) return;
+        this.sources.forEach(s => s.stop());
+        this.sources.clear();
+        this.setStatus('disconnected');
+    }
 
-            const inputData = e.inputBuffer.getChannelData(0);
-            
-            // Send mic level to UI
-            let sum = 0;
-            for(let i=0; i<inputData.length; i+=100) sum += Math.abs(inputData[i]);
-            const avg = sum / (inputData.length/100);
-            this.onAudioLevel?.(avg * 5);
+    private handleSessionOpen() {
+        this.setStatus('connected');
+        const source = this.inputAudioContext!.createMediaStreamSource(this.microphoneStream!);
+        this.scriptProcessor = this.inputAudioContext!.createScriptProcessor(4096, 1, 1);
 
-            // Convert Float32 to Int16 PCM Base64
-            const b64Data = this.float32To16BitPCM(inputData);
-            
-            sessionPromise.then(session => {
-                session.sendRealtimeInput({ 
-                    media: { mimeType: 'audio/pcm;rate=16000', data: b64Data }
-                });
+        this.scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+            const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+            let sum = 0.0;
+            for (let i = 0; i < inputData.length; ++i) sum += inputData[i] * inputData[i];
+            const rms = Math.sqrt(sum / inputData.length);
+            if (this.onAudioLevel) this.onAudioLevel(rms);
+            const pcmBlob = this.createBlob(inputData);
+            this.sessionPromise?.then((session) => {
+                session.sendRealtimeInput({ media: pcmBlob });
             });
         };
 
-        this.inputSource.connect(this.processor);
-        this.processor.connect(this.audioContext.destination); // Required for script processor to run
+        source.connect(this.scriptProcessor);
+        this.scriptProcessor.connect(this.inputAudioContext!.destination);
+    }
+    
+    private async handleSessionMessage(message: LiveServerMessage) {
+        if (message.serverContent?.outputTranscription) {
+            this.currentOutputTranscription += message.serverContent.outputTranscription.text;
+        } else if (message.serverContent?.inputTranscription) {
+            this.currentInputTranscription += message.serverContent.inputTranscription.text;
+        }
 
-     } catch (err) {
-        console.error("Microphone denied:", err);
-        this.onStatusChange?.('error');
-     }
-  }
-  
-  private float32To16BitPCM(data: Float32Array): string {
-      const int16 = new Int16Array(data.length);
-      for (let i = 0; i < data.length; i++) {
-        let val = Math.max(-1, Math.min(1, data[i]));
-        int16[i] = val < 0 ? val * 32768 : val * 32767;
-      }
-      const bytes = new Uint8Array(int16.buffer);
-      let binary = '';
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      return btoa(binary);
-  }
+        if (message.serverContent?.turnComplete) {
+            if (this.onTurnComplete && (this.currentInputTranscription || this.currentOutputTranscription)) {
+                this.onTurnComplete(this.currentInputTranscription, this.currentOutputTranscription);
+            }
+            this.currentInputTranscription = '';
+            this.currentOutputTranscription = '';
+        }
 
-  disconnect() {
-    this.isConnected = false;
-    
-    if (this.session) {
-        // Just close it, don't await potentially hung promises
-        try { this.session.close(); } catch {}
+        const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+        if (base64Audio) {
+            this.nextStartTime = Math.max(this.nextStartTime, this.outputAudioContext!.currentTime);
+            const audioBuffer = await this.decodeAudioData(this.decode(base64Audio));
+            const source = this.outputAudioContext!.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(this.outputAudioContext!.destination);
+            source.addEventListener('ended', () => this.sources.delete(source));
+            source.start(this.nextStartTime);
+            this.nextStartTime += audioBuffer.duration;
+            this.sources.add(source);
+        }
+
+        if (message.serverContent?.interrupted) {
+            for (const source of this.sources.values()) source.stop();
+            this.sources.clear();
+            this.nextStartTime = 0;
+        }
     }
-    
-    if (this.inputSource) {
-        this.inputSource.disconnect();
-        this.inputSource = null;
+
+    private handleSessionError(e: ErrorEvent) {
+        console.error("Live session error:", e);
+        this.setStatus('error');
+        this.disconnect();
     }
-    
-    if (this.processor) {
-        this.processor.disconnect();
-        this.processor = null;
+
+    private handleSessionClose(e: CloseEvent) {
+        this.setStatus('disconnected');
+        this.disconnect();
     }
-    
-    // Suspend context to stop processing but keep it ready for next time
-    this.audioContext?.suspend();
-    
-    this.onStatusChange?.('disconnected');
-    this.session = null;
-  }
+
+    private createBlob(data: Float32Array): Blob {
+        const l = data.length;
+        const int16 = new Int16Array(l);
+        for (let i = 0; i < l; i++) int16[i] = data[i] * 32768;
+        return { data: this.encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
+    }
+
+    private encode = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
+    private decode = (base64: string): Uint8Array => Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+
+    private async decodeAudioData(data: Uint8Array): Promise<AudioBuffer> {
+        const dataInt16 = new Int16Array(data.buffer);
+        const frameCount = dataInt16.length;
+        const buffer = this.outputAudioContext!.createBuffer(1, frameCount, 24000);
+        const channelData = buffer.getChannelData(0);
+        for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i] / 32768.0;
+        return buffer;
+    }
 }

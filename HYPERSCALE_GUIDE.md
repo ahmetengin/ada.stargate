@@ -61,11 +61,7 @@ Open your browser or use curl:
 `http://localhost:8000/health`
 > Response: `{"status": "COGNITIVE_SYSTEM_ONLINE", ...}`
 
-### B. Check Radio Interface (FastRTC)
-`http://localhost:8000/radio`
-> You should see the Gradio interface for the VHF Radio.
-
-### C. Check Main Interface
+### B. Check Main Interface
 `http://localhost` (or `http://localhost:80`)
 > The React Dashboard should load.
 

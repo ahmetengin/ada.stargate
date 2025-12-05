@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { X, Mic, Radio, Cloud, Power, AlertTriangle } from 'lucide-react';
 import { LiveSession } from '../../services/liveService';
-import { LiveConnectionState, UserProfile } from '../../types';
+import { UserProfile } from '../../types';
 import { wimMasterData } from '../../services/wimMasterData';
 import { formatCoordinate } from '../../services/utils';
 
@@ -20,11 +19,9 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
   const sessionRef = useRef<LiveSession | null>(null);
   const [showProtocol, setShowProtocol] = useState(false);
 
-  // Get coordinates
   const { lat, lng } = wimMasterData.identity.location.coordinates;
   const displayCoordinates = `${formatCoordinate(lat, 'lat')} / ${formatCoordinate(lng, 'lng')}`;
 
-  // --- AUTO CONNECT ---
   useEffect(() => {
     if (isOpen) {
         connectCloud();
@@ -41,7 +38,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
           setStatus('connecting');
           const session = new LiveSession();
           session.onStatusChange = (s) => setStatus(s);
-          session.onAudioLevel = (level) => setAudioLevel(level); // Update state for the pulsing orb
+          session.onAudioLevel = (level) => setAudioLevel(level);
           session.onTurnComplete = onTranscriptReceived;
           
           sessionRef.current = session;
@@ -77,13 +74,10 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-      {/* DEVICE CHASSIS */}
       <div className="w-full max-w-lg bg-zinc-900 border-2 border-zinc-700 rounded-3xl shadow-2xl relative overflow-hidden flex flex-col max-h-[80vh] animate-in zoom-in duration-300">
         
-        {/* LCD Overlay Effect (Scanlines) */}
         <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0 pointer-events-none bg-[length:100%_4px,6px_100%] opacity-50"></div>
 
-        {/* Header */}
         <div className="bg-zinc-800 p-4 flex justify-between items-center border-b border-zinc-700 relative z-10 shrink-0">
           <div className="flex items-center gap-3">
             <Radio className="text-indigo-500" />
@@ -106,11 +100,9 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
           </div>
         </div>
 
-        {/* MAIN DISPLAY AREA */}
         <div className="flex-1 relative z-10 bg-black/20 flex flex-col min-h-[300px]">
             <div className="p-8 flex flex-col items-center justify-center h-full">
                 
-                {/* Channel Info */}
                 <div className="mb-8 text-center">
                     <div className="text-6xl font-mono font-bold text-indigo-500 tracking-tighter flex items-center justify-center gap-2 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
                         {channel === 'SCAN' ? 'SCAN' : channel} 
@@ -119,7 +111,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                     <div className="text-xs font-mono text-zinc-500 mt-2 tracking-wide">{displayCoordinates}</div>
                 </div>
 
-                {/* THE INDIGO ORB VISUALIZER */}
                 <div className="relative w-32 h-32 flex items-center justify-center">
                     {status === 'error' ? (
                         <div className="text-red-500 animate-pulse flex flex-col items-center">
@@ -128,7 +119,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                         </div>
                     ) : (
                         <>
-                            {/* Expanding Pulse Ring */}
                             <div 
                                 className="absolute inset-0 rounded-full border-2 border-indigo-500/50 transition-all duration-100 ease-out" 
                                 style={{ 
@@ -137,7 +127,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                                 }}
                             ></div>
                             
-                            {/* The Core Orb */}
                             <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-900 flex items-center justify-center shadow-[0_0_40px_rgba(79,70,229,0.4)] transition-all duration-300 ${status === 'connected' ? 'animate-pulse' : 'grayscale opacity-50'}`}>
                                 <Mic className="text-white w-8 h-8" />
                             </div>
@@ -157,7 +146,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
             </div>
         </div>
 
-        {/* Footer Controls */}
         <div className="bg-zinc-800 p-4 border-t border-zinc-700 relative z-10 flex justify-between items-center">
             <button
                 onClick={() => setShowProtocol(!showProtocol)}
@@ -174,7 +162,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
             </button>
         </div>
 
-        {/* Protocol Help Overlay */}
         {showProtocol && (
             <div className="absolute bottom-16 left-4 right-4 bg-zinc-900/95 border border-zinc-700 p-4 rounded-xl text-xs font-mono text-zinc-400 z-20 shadow-xl backdrop-blur-md">
                 <h4 className="text-indigo-400 font-bold mb-2">RADIO ETIQUETTE</h4>

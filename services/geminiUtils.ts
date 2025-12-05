@@ -1,3 +1,4 @@
+
 import { Message, MessageRole, Attachment } from "../types";
 
 export const isImage = (mimeType: string) => mimeType.startsWith('image/');

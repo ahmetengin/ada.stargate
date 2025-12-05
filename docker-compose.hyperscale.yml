@@ -1,22 +1,21 @@
+
 version: '3.9'
 
 services:
-  # 1. THE BRAIN (Hybrid Python Backend)
+  # 1. THE BRAIN (Python LangGraph + IoT)
   ada-core:
     build: 
       context: ./backend
       dockerfile: Dockerfile
     container_name: ada_core_hyperscale
     ports:
-      - "8000:8000" # Main API
-      - "7860:7860" # FastRTC / Voice
+      - "8000:8000" # API & Websocket
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
       - MQTT_BROKER=ada-mqtt
       - OLLAMA_URL=http://ada-local-llm:11434
-      - GRADIO_SERVER_NAME=0.0.0.0 
     depends_on:
       - ada-redis
       - ada-qdrant
@@ -26,7 +25,7 @@ services:
       - ./backend:/app
       - ./docs:/docs
 
-  # 2. MEMORY (Vector DB - Long Term)
+  # 2. MEMORY (Vector DB)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
@@ -36,7 +35,7 @@ services:
       - qdrant_data:/qdrant/storage
 
   # 3. LOCAL BRAIN (Ollama - Offline Intelligence)
-  # Runs Google Gemma 2B/9B locally without internet
+  # Runs Google Gemma locally without internet
   ada-local-llm:
     image: ollama/ollama:latest
     container_name: ada_local_llm
@@ -68,7 +67,7 @@ services:
     volumes:
       - redis_data:/data
 
-  # 6. SENSORY SYSTEM (IoT Broker)
+  # 6. SENSORY SYSTEM (IoT)
   ada-mqtt:
     image: eclipse-mosquitto:2
     container_name: ada_mqtt_broker
@@ -79,7 +78,7 @@ services:
       - mqtt_data:/mosquitto/data
       - mqtt_log:/mosquitto/log
 
-  # 7. FRONTEND (Mission Control Interface)
+  # 7. FRONTEND (React)
   ada-frontend:
     build:
       context: .

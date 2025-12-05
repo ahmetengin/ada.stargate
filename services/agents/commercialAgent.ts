@@ -14,33 +14,42 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
     persona
 });
 
-// TRANSFORM MASTER DATA INTO LEASE OBJECTS
-const TENANT_LEASES = wimMasterData.commercial_tenants.key_tenants.map((tenant, idx) => ({
-    id: `T-${idx + 100}`,
-    name: tenant.name,
-    type: tenant.type,
-    area: Math.floor(Math.random() * 300) + 100, // Simulated area
-    rent: Math.floor(Math.random() * 5000) + 3000, // Simulated rent
-    status: Math.random() > 0.1 ? 'PAID' : 'OVERDUE',
-    next_due: '2025-12-01',
-    location: tenant.location
-}));
+// DEFERRED INITIALIZATION: Wrap the data transformation in a function
+const getTenantLeasesData = () => {
+    // Use optional chaining for safety. If anything is missing, return [].
+    const keyTenants = wimMasterData?.commercial_tenants?.key_tenants || [];
+    
+    return keyTenants.map((tenant: any, idx: number) => ({
+        id: `T-${idx + 100}`,
+        name: tenant.name,
+        type: tenant.type,
+        area: Math.floor(Math.random() * 300) + 100,
+        rent: Math.floor(Math.random() * 5000) + 3000,
+        status: Math.random() > 0.1 ? 'PAID' : 'OVERDUE',
+        next_due: '2025-12-01',
+        location: tenant.location
+    }));
+};
 
 export const commercialExpert = {
     // Skill: Get all tenant lease statuses
     getTenantLeases: async (addTrace: (t: AgentTraceLog) => void): Promise<any[]> => {
-        addTrace(createLog('ada.commercial', 'TOOL_EXECUTION', `Fetching lease data for ${TENANT_LEASES.length} commercial tenants from WIM Master Data...`, 'WORKER'));
-        return TENANT_LEASES;
+        const leases = getTenantLeasesData(); // Call the function to get data just-in-time
+        addTrace(createLog('ada.commercial', 'TOOL_EXECUTION', `Fetching lease data for ${leases.length} commercial tenants from WIM Master Data...`, 'WORKER'));
+        return leases;
     },
 
     // Skill: Calculate and explain Common Area Maintenance (CAM) charges
     calculateCommonCharges: async (tenantId: string, addTrace: (t: AgentTraceLog) => void): Promise<{ message: string }> => {
-        addTrace(createLog('ada.commercial', 'THINKING', `Calculating CAM charges based on formula: ${wimMasterData.commercial_tenants.common_area_charge_formula}...`, 'EXPERT'));
+        const formula = wimMasterData?.commercial_tenants?.common_area_charge_formula || 'N/A';
+        addTrace(createLog('ada.commercial', 'THINKING', `Calculating CAM charges based on formula: ${formula}...`, 'EXPERT'));
         
-        // Mock calculation
-        const totalCost = 50000; // Total electricity, cleaning, security for common areas
+        const leases = getTenantLeasesData();
+        const totalCost = 50000;
         const totalLeasedArea = 5000;
-        const tenant = TENANT_LEASES.find(t => t.id === tenantId) || TENANT_LEASES[0];
+        const tenant = leases.find(t => t.id === tenantId) || leases[0];
+        if (!tenant) return { message: "Tenant not found." };
+        
         const charge = (totalCost / totalLeasedArea) * tenant.area;
 
         addTrace(createLog('ada.commercial', 'OUTPUT', `CAM for ${tenant.name} is €${charge.toFixed(2)}.`, 'WORKER'));
@@ -55,7 +64,8 @@ export const commercialExpert = {
 
     // Skill: Analyze Retail Mix
     analyzeRetailMix: async (addTrace: (t: AgentTraceLog) => void): Promise<string> => {
-        const categories = TENANT_LEASES.reduce((acc, t) => {
+        const leases = getTenantLeasesData();
+        const categories = leases.reduce((acc, t) => {
             acc[t.type] = (acc[t.type] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);

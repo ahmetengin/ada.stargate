@@ -1,9 +1,9 @@
-
 import React from 'react';
-import { UserProfile, TenantConfig } from '../../types';
+// FIX: Add VhfLog to import
+import { UserProfile, TenantConfig, VhfLog } from '../../types';
 import { FEDERATION_REGISTRY } from '../../services/config';
 import { 
-    Radio, Shield, Anchor, Wifi, Zap, Battery, Signal, UserCheck, 
+    Shield, Anchor, Wifi, Zap, Battery, Signal, UserCheck, 
     CreditCard, ScanLine, Activity, CheckCircle2, 
     LifeBuoy, Droplets, Wrench, Navigation, 
     Utensils, Calendar, MapPin, Car, Info, ShoppingBag, Globe, LogIn, ChevronRight, Scale, Brain, Bot, Projector
@@ -11,23 +11,48 @@ import {
 
 interface SidebarProps {
   nodeStates: Record<string, 'connected' | 'working' | 'disconnected'>;
-  activeChannel: string;
   isMonitoring: boolean;
   userProfile: UserProfile;
+  // @FIX: Add missing vhfLogs prop to match usage in App.tsx
+  vhfLogs: VhfLog[];
   onRoleChange: (role: string) => void;
-  onVhfClick?: (channel: string) => void;
   onScannerClick?: () => void;
   onPulseClick?: () => void;
   onTenantSwitch: (tenantId: string) => void;
-  onStartPresentation?: () => void; // NEW PROP
+  onStartPresentation?: () => void;
   activeTenantId: string;
 }
+// FIX: Defined missing sub-components used within the Sidebar.
+const ActivityIcon = ({ color }: { color: string }) => (
+    <div className="flex gap-0.5">
+        <div className={`w-0.5 h-2 ${color} animate-pulse`}></div>
+        <div className={`w-0.5 h-3 ${color} animate-pulse delay-75`}></div>
+        <div className={`w-0.5 h-1.5 ${color} animate-pulse delay-150`}></div>
+    </div>
+);
+
+const SectionHeader = ({ title }: { title: string }) => (
+    <h3 className="text-[10px] font-bold text-[var(--accent-color)] uppercase tracking-widest mb-2 pl-2 border-l-2 border-[var(--accent-color)]">
+        {title}
+    </h3>
+);
+
+const MenuButton = ({ icon: Icon, label }: { icon: any, label: string }) => (
+    <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[var(--text-primary)] transition-all group border border-transparent hover:border-[var(--border-color)]">
+        <div className="flex items-center gap-3">
+            <Icon size={14} className="text-[var(--text-secondary)] group-hover:text-[var(--accent-color)] transition-colors" />
+            {label}
+        </div>
+        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-[var(--accent-color)]" />
+    </button>
+);
+
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   nodeStates, 
-  activeChannel,
   isMonitoring,
   userProfile,
+  vhfLogs,
   onRoleChange,
   onScannerClick,
   onPulseClick,
@@ -182,7 +207,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                 <span className="text-amber-500 font-bold">24.4V</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-[var(--text-secondary)]">Account</span>
+                                <span className="text-[var(--text-primary)] font-bold">Account</span>
                                 <span className="text-[var(--text-primary)] font-bold">CLEAR</span>
                             </div>
                         </div>
@@ -263,22 +288,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       </div>
 
-      {/* VHF MONITOR (GM ONLY) */}
-      {isGM && (
-        <div className="px-6 py-4 border-t border-[var(--border-color)] relative z-10 bg-[var(--bg-primary)] backdrop-blur-md">
-            <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2 text-[var(--accent-color)] font-bold text-[10px] uppercase tracking-wider font-mono">
-                    <Radio size={12} /> Live Spectrum
-                </div>
-                <div className="w-1.5 h-1.5 bg-[var(--accent-color)] rounded-full animate-pulse"></div>
-            </div>
-            <div className="h-8 flex items-end gap-0.5 opacity-80">
-                {[...Array(20)].map((_, i) => (
-                    <div key={i} className="flex-1 bg-[var(--accent-color)] opacity-40 animate-pulse" style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.05}s` }}></div>
-                ))}
-            </div>
-        </div>
-      )}
+      {/* Removed VHF MONITOR (GM ONLY) */}
 
       {/* FOOTER: SYSTEM CONTROLS */}
       <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg-primary)] relative z-10">
@@ -320,22 +330,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 // --- SUB-COMPONENTS ---
 
-const SectionHeader = ({ title }: { title: string }) => (
-    <h3 className="text-[10px] font-bold text-[var(--accent-color)] uppercase tracking-widest mb-2 pl-2 border-l-2 border-[var(--accent-color)]">
-        {title}
-    </h3>
-);
-
-const MenuButton = ({ icon: Icon, label }: { icon: any, label: string }) => (
-    <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[var(--text-primary)] transition-all group border border-transparent hover:border-[var(--border-color)]">
-        <div className="flex items-center gap-3">
-            <Icon size={14} className="text-[var(--text-secondary)] group-hover:text-[var(--accent-color)] transition-colors" />
-            {label}
-        </div>
-        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-[var(--accent-color)]" />
-    </button>
-);
-
 const RoleMiniButton = ({ role, current, onClick, label }: any) => (
     <button
         onClick={onClick}
@@ -361,12 +355,4 @@ const TenantButton = ({ tenantId, currentTenantId, onClick, label }: any) => (
         <span className="truncate">{label}</span>
         {currentTenantId === tenantId && <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-color)] shadow-sm"></div>}
     </button>
-);
-
-const ActivityIcon = ({ color }: { color: string }) => (
-    <div className="flex gap-0.5">
-        <div className={`w-0.5 h-2 ${color} animate-pulse`}></div>
-        <div className={`w-0.5 h-3 ${color} animate-pulse delay-75`}></div>
-        <div className={`w-0.5 h-1.5 ${color} animate-pulse delay-150`}></div>
-    </div>
 );

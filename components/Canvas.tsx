@@ -1,5 +1,8 @@
+
+
 import React, { useEffect, useState } from 'react';
-import { RegistryEntry, Tender, VhfLog, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../types';
+// FIX: Removed unused VhfLog import
+import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { GuestDashboard } from './dashboards/GuestDashboard';
 import { CaptainDashboard } from './dashboards/CaptainDashboard';
 import { GMDashboard } from './dashboards/GMDashboard';
@@ -9,7 +12,6 @@ interface CanvasProps {
   vesselsInPort: number;
   registry: RegistryEntry[];
   tenders: Tender[];
-  vhfLogs?: VhfLog[];
   aisTargets?: AisTarget[];
   userProfile: UserProfile;
   onOpenReport?: () => void;
@@ -22,7 +24,6 @@ export const Canvas: React.FC<CanvasProps> = ({
   vesselsInPort, 
   registry,
   tenders,
-  vhfLogs = [],
   aisTargets = [],
   userProfile,
   onOpenReport,
@@ -83,7 +84,6 @@ export const Canvas: React.FC<CanvasProps> = ({
             tenders={tenders}
             vesselsInPort={vesselsInPort}
             agentTraces={agentTraces}
-            vhfLogs={vhfLogs} // PASS THE COMMS
             aisTargets={aisTargets}
             onOpenReport={onOpenReport || (() => {})}
             onOpenTrace={onOpenTrace || (() => {})}

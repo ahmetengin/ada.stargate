@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { RegistryEntry, Tender, UserProfile, CongressEvent, Delegate, AgentTraceLog, VhfLog, AisTarget, TenantConfig } from '../../types';
-import { facilityExpert } from '../../services/agents/facilityAgent';
-import { congressExpert } from '../../services/agents/congressAgent';
-import { hrExpert } from '../../services/agents/hrAgent';
-import { commercialExpert } from '../../services/agents/commercialAgent';
-import { analyticsExpert } from '../../services/agents/analyticsAgent';
-import { berthExpert } from '../../services/agents/berthAgent';
-import { reservationsExpert } from '../../services/agents/reservationsAgent';
-import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Scan, Radar, Target, Menu, Zap, Users, BarChart3 } from 'lucide-react';
+import { RegistryEntry, Tender, UserProfile, CongressEvent, Delegate, AgentTraceLog, AisTarget, TenantConfig } from '../../../types';
+import { facilityExpert } from '../../../services/agents/facilityAgent';
+import { congressExpert } from '../../../services/agents/congressAgent';
+import { hrExpert } from '../../../services/agents/hrAgent';
+import { commercialExpert } from '../../../services/agents/commercialAgent';
+import { analyticsExpert } from '../../../services/agents/analyticsAgent';
+import { berthExpert } from '../../../services/agents/berthAgent';
+import { reservationsExpert } from '../../../services/agents/reservationsAgent';
+import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Scan, Radar, Target, Menu, Zap, Users, BarChart3, Briefcase, Wrench, Brain } from 'lucide-react'; // Changed Tools to Wrench
 
 import { OpsTab } from './gm/OpsTab';
 import { FleetTab } from './gm/FleetTab';
@@ -24,21 +24,61 @@ interface GMDashboardProps {
   logs: any[];
   registry: RegistryEntry[];
   tenders: Tender[];
-  vesselsInPort: number;
-  agentTraces: AgentTraceLog[];
-  vhfLogs?: VhfLog[];
+  // Removed vhfLogs prop
   aisTargets?: AisTarget[];
   onOpenReport: () => void;
   onOpenTrace: () => void;
+  agentTraces?: AgentTraceLog[];
+  vesselsInPort: number;
   activeTenantConfig: TenantConfig;
 }
 
+// Define the DEPARTMENTS constant for dashboard navigation
 const DEPARTMENTS = [
-    { id: 'OPS', label: 'OPERATIONS', icon: Navigation, color: 'text-indigo-500', modules: [{ id: 'ops', label: 'LIVE MAP' }, { id: 'fleet', label: 'FLEET CMD' }, { id: 'berths', label: 'HARBOR' }] },
-    { id: 'ENG', label: 'TECHNICAL', icon: Zap, color: 'text-amber-500', modules: [{ id: 'facility', label: 'INFRA & ECO' }] },
-    { id: 'COM', label: 'COMMERCIAL', icon: DollarSign, color: 'text-emerald-500', modules: [{ id: 'bookings', label: 'BOOKINGS' }, { id: 'commercial', label: 'RETAIL & LEASE' }, { id: 'customer', label: 'CUSTOMER RISK' }, { id: 'congress', label: 'EVENTS' }] },
-    { id: 'ADM', label: 'ADMIN', icon: Users, color: 'text-blue-500', modules: [{ id: 'hr', label: 'HR / STAFF' }, { id: 'guest_entry', label: 'SECURITY' }] },
-    { id: 'INT', label: 'INTEL', icon: BarChart3, color: 'text-purple-500', modules: [{ id: 'analytics', label: 'PREDICTIVE' }, { id: 'observer', label: 'SYSTEM' }] }
+  {
+    id: 'ops_group',
+    label: 'Operations',
+    icon: Navigation,
+    color: 'text-emerald-500',
+    modules: [
+      { id: 'ops', label: 'Monitor' },
+      { id: 'fleet', label: 'Fleet' },
+      { id: 'guest_entry', label: 'Check-In' },
+    ],
+  },
+  {
+    id: 'management_group', // Changed from 'finance_group' to 'management_group' for broader scope
+    label: 'Management',
+    icon: Briefcase,
+    color: 'text-amber-500',
+    modules: [
+      { id: 'commercial', label: 'Retail' },
+      { id: 'customer', label: 'CRM' },
+      { id: 'hr', label: 'HR' },
+      { id: 'analytics', label: 'Analytics' },
+      { id: 'bookings', label: 'Bookings' },
+    ],
+  },
+  {
+    id: 'infra_group', // Changed from 'tech_legal_group' to 'infra_group' for clarity
+    label: 'Infrastructure',
+    icon: Wrench, // Changed from Tools to Wrench
+    color: 'text-blue-500',
+    modules: [
+      { id: 'berths', label: 'Berths' },
+      { id: 'facility', label: 'Facility' },
+      { id: 'congress', label: 'Congress' },
+    ],
+  },
+  {
+    id: 'ada_core_group',
+    label: 'Ada Core',
+    icon: Brain,
+    color: 'text-purple-500',
+    modules: [
+      { id: 'observer', label: 'Observer' },
+    ],
+  },
 ];
 
 export const GMDashboard: React.FC<GMDashboardProps> = ({
@@ -46,12 +86,13 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   logs,
   registry,
   tenders,
-  vesselsInPort,
-  agentTraces,
-  vhfLogs = [],
+  // Removed vhfLogs,
   aisTargets = [],
   onOpenReport,
   onOpenTrace,
+  // FIX: Destructure vesselsInPort and agentTraces from props
+  vesselsInPort,
+  agentTraces = [], // Default to empty array if not provided
   activeTenantConfig
 }) => {
   const criticalLogs = logs.filter(log => log.type === 'critical' || log.type === 'alert');
@@ -137,6 +178,7 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                         <Anchor size={8} /> Occ
                     </div>
                     <div className="text-lg sm:text-2xl font-display font-bold text-slate-700 dark:text-white leading-none">
+                        {/* FIX: Use vesselsInPort prop */}
                         {vesselsInPort}<span className="text-xs sm:text-sm text-slate-400 dark:text-slate-600">/600</span>
                     </div>
                 </div>
@@ -159,6 +201,7 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                         <DollarSign size={8} /> Yield (Est)
                     </div>
                     <div className="text-lg sm:text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 leading-none">
+                        {/* FIX: Use vesselsInPort prop */}
                         €{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k
                     </div>
                 </div>
@@ -185,6 +228,7 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
       {/* DEPARTMENTAL NAVIGATION BAR */}
       <div className="flex-shrink-0 px-4 sm:px-8 py-3 overflow-x-auto custom-scrollbar border-b border-[var(--border-color)] no-scrollbar bg-[var(--bg-primary)] sticky top-0 z-10">
           <div className="flex items-center gap-6 sm:gap-8 min-w-max">
+              {/* FIX: Use the defined DEPARTMENTS constant */}
               {DEPARTMENTS.map((dept) => (
                   <div key={dept.id} className="flex flex-col gap-2 group">
                       {/* Dept Header */}
@@ -241,7 +285,7 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                 registry={registry} 
                 criticalLogs={criticalLogs} 
                 tenders={tenders}
-                vhfLogs={vhfLogs}
+                // Removed vhfLogs
                 aisTargets={aisTargets}
             />
         )}

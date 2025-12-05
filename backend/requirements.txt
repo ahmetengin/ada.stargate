@@ -1,26 +1,30 @@
+
 fastapi>=0.109.0
 uvicorn>=0.27.0
 pydantic>=2.6.0
 python-dotenv>=1.0.1
-google-genai>=0.3.0
+google-genai>=0.14.0
 httpx>=0.26.0
 redis>=5.0.0
-# Cognitive Stack (The Brain)
+# Cognitive Stack
 langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
+langchain-text-splitters
 qdrant-client
 asyncpg
 markdown
 beautifulsoup4
-# Hybrid / Offline Stack
-langchain-ollama
-sentence-transformers
-# Voice Stack (The Mouth/Ears)
-fastrtc>=0.1.0
-gradio>=5.0.0
-numpy
-scipy
+pandas
+scikit-learn
+# Local LLM Support
+ollama
+langchain-huggingface
+# FastRTC/Gradio Voice Interface
+gradio>=4.0
+sounddevice
+pyaudio
 soundfile
-loguru
+# IoT Integration
+paho-mqtt
