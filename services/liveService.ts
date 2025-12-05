@@ -1,9 +1,10 @@
-import { GoogleGenAI, LiveSession as GeminiLiveSession, LiveServerMessage, Modality, Blob } from "@google/genai";
+
+import { GoogleGenAI, LiveServerMessage, Modality, Blob } from "@google/genai";
 import { UserProfile } from '../types';
 
 export class LiveSession {
     private ai?: GoogleGenAI;
-    private sessionPromise?: Promise<GeminiLiveSession>;
+    private sessionPromise?: Promise<any>;
     private inputAudioContext?: AudioContext;
     private outputAudioContext?: AudioContext;
     private scriptProcessor?: ScriptProcessorNode;
@@ -47,8 +48,17 @@ export class LiveSession {
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                 config: {
                     responseModalities: [Modality.AUDIO],
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } } },
-                    systemInstruction: `You are Ada, Harbour Master. Your current operator is ${userProfile.name} (${userProfile.role}). Respond concisely in nautical terms. Use VHF Channel protocols. End with "Over" or "Out".`,
+                    // @UPDATE: Changed voice to 'Kore' for a natural female tone
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+                    systemInstruction: `You are Ada, the intelligent maritime operating system for West Istanbul Marina. Your operator is ${userProfile.name} (${userProfile.role}). 
+                    
+                    Tone & Style:
+                    - Voice: Professional, warm, calm, and highly capable (Natural Female).
+                    - Context: You are managing a high-end superyacht marina. Use nautical terminology where appropriate (port, starboard, knots, berth).
+                    - Brevity: Keep responses concise and actionable, suitable for radio (VHF) communication.
+                    - Protocol: End transmissions with "Over" if waiting for a reply, or "Out" if finishing a task.
+                    
+                    Current Status: All systems nominal. Waiting for command.`,
                     inputAudioTranscription: {},
                     outputAudioTranscription: {}
                 },

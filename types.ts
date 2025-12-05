@@ -1,3 +1,4 @@
+
 // types.ts
 
 export enum MessageRole {
@@ -287,7 +288,7 @@ export interface TravelItinerary {
 
 export interface PresentationState {
   isActive: boolean;
-  slide: 'intro' | 'scribe' | 'analysis';
+  slide: 'intro' | 'scribe' | 'analysis' | 'observer';
   transcript: string;
   language?: 'en' | 'tr';
   analysisResults: {

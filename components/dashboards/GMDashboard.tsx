@@ -1,30 +1,20 @@
-
-import React, { useState, useEffect } from 'react';
-import { RegistryEntry, Tender, UserProfile, CongressEvent, Delegate, AgentTraceLog, AisTarget, TenantConfig } from '../../../types';
-import { facilityExpert } from '../../../services/agents/facilityAgent';
-import { congressExpert } from '../../../services/agents/congressAgent';
-import { hrExpert } from '../../../services/agents/hrAgent';
-import { commercialExpert } from '../../../services/agents/commercialAgent';
-import { analyticsExpert } from '../../../services/agents/analyticsAgent';
-import { berthExpert } from '../../../services/agents/berthAgent';
-import { reservationsExpert } from '../../../services/agents/reservationsAgent';
-import { FileText, Activity, Bell, Anchor, Navigation, DollarSign, Hexagon, Scan, Radar, Target, Menu, Zap, Users, BarChart3, Briefcase, Wrench, Brain } from 'lucide-react'; // Changed Tools to Wrench
-
+import React, { useState } from 'react';
+import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { OpsTab } from './gm/OpsTab';
 import { FleetTab } from './gm/FleetTab';
 import { FacilityTab } from './gm/FacilityTab';
 import { CongressTab } from './gm/CongressTab';
 import { BerthsTab } from './gm/BerthsTab';
 import { HRTab, CommercialTab, AnalyticsTab, BookingsTab, CustomerTab } from './gm/ManagementTabs';
-import { ObserverTab } from './gm/ObserverTab';
 import { GuestCheckInTab } from './gm/GuestCheckInTab';
+import { Navigation, Anchor, Wrench, Globe, Users, FileText } from 'lucide-react';
+import { wimMasterData } from '../../services/wimMasterData';
 
 interface GMDashboardProps {
   userProfile: UserProfile;
   logs: any[];
   registry: RegistryEntry[];
   tenders: Tender[];
-  // Removed vhfLogs prop
   aisTargets?: AisTarget[];
   onOpenReport: () => void;
   onOpenTrace: () => void;
@@ -33,274 +23,145 @@ interface GMDashboardProps {
   activeTenantConfig: TenantConfig;
 }
 
-// Define the DEPARTMENTS constant for dashboard navigation
-const DEPARTMENTS = [
-  {
-    id: 'ops_group',
-    label: 'Operations',
-    icon: Navigation,
-    color: 'text-emerald-500',
-    modules: [
-      { id: 'ops', label: 'Monitor' },
-      { id: 'fleet', label: 'Fleet' },
-      { id: 'guest_entry', label: 'Check-In' },
-    ],
-  },
-  {
-    id: 'management_group', // Changed from 'finance_group' to 'management_group' for broader scope
-    label: 'Management',
-    icon: Briefcase,
-    color: 'text-amber-500',
-    modules: [
-      { id: 'commercial', label: 'Retail' },
-      { id: 'customer', label: 'CRM' },
-      { id: 'hr', label: 'HR' },
-      { id: 'analytics', label: 'Analytics' },
-      { id: 'bookings', label: 'Bookings' },
-    ],
-  },
-  {
-    id: 'infra_group', // Changed from 'tech_legal_group' to 'infra_group' for clarity
-    label: 'Infrastructure',
-    icon: Wrench, // Changed from Tools to Wrench
-    color: 'text-blue-500',
-    modules: [
-      { id: 'berths', label: 'Berths' },
-      { id: 'facility', label: 'Facility' },
-      { id: 'congress', label: 'Congress' },
-    ],
-  },
-  {
-    id: 'ada_core_group',
-    label: 'Ada Core',
-    icon: Brain,
-    color: 'text-purple-500',
-    modules: [
-      { id: 'observer', label: 'Observer' },
-    ],
-  },
-];
-
 export const GMDashboard: React.FC<GMDashboardProps> = ({
   userProfile,
   logs,
   registry,
   tenders,
-  // Removed vhfLogs,
-  aisTargets = [],
+  aisTargets,
   onOpenReport,
   onOpenTrace,
-  // FIX: Destructure vesselsInPort and agentTraces from props
+  agentTraces,
   vesselsInPort,
-  agentTraces = [], // Default to empty array if not provided
   activeTenantConfig
 }) => {
-  const criticalLogs = logs.filter(log => log.type === 'critical' || log.type === 'alert');
-  const [activeModuleId, setActiveModuleId] = useState<string>('ops');
+  const [activeTab, setActiveTab] = useState('ops');
+
+  // Prepare Data for Tabs
   
-  // Data States
-  const [zeroWasteStats, setZeroWasteStats] = useState<any>(null);
-  const [blueFlagStatus, setBlueFlagStatus] = useState<any>(null);
-  const [eventDetails, setEventDetails] = useState<CongressEvent | null>(null);
-  const [delegates, setDelegates] = useState<Delegate[]>([]);
-  const [hrData, setHrData] = useState<any>(null);
-  const [commercialData, setCommercialData] = useState<any[]>([]);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [berthAllocation, setBerthAllocation] = useState<any>(null);
-  const [bookings, setBookings] = useState<any[]>([]);
+  // HR Data (Mocked based on wimMasterData or static if needed)
+  const hrData = {
+      department: 'Security',
+      schedule: wimMasterData.hr_management?.shift_pattern ? [
+          { name: 'Ahmet Yılmaz', shift: '08:00-16:00', status: 'ON_DUTY' },
+          { name: 'Murat Kaya', shift: '08:00-16:00', status: 'ON_DUTY' },
+          { name: 'Zeynep Aydın', shift: '16:00-24:00', status: 'OFF_DUTY' }
+      ] : []
+  };
 
-  // Simulation for live counters (Digital Ticker effect)
-  const [ticker, setTicker] = useState(0);
-  useEffect(() => {
-      const interval = setInterval(() => setTicker(t => t + 1), 1000);
-      return () => clearInterval(interval);
-  }, []);
+  // Commercial Data
+  const commercialData = wimMasterData.commercial_tenants?.key_tenants?.map((t: any, i: number) => ({
+      id: `T-${i}`,
+      name: t.name,
+      type: t.type,
+      location: t.location,
+      area: 120,
+      rent: 4500,
+      status: Math.random() > 0.1 ? 'PAID' : 'OVERDUE'
+  })) || [];
 
-  // Effect to load data based on active module
-  useEffect(() => {
-    if (activeModuleId === 'facility') {
-      facilityExpert.generateZeroWasteReport(() => { }).then(res => setZeroWasteStats(res));
-      facilityExpert.checkSeaWaterQuality(() => { }).then(res => setBlueFlagStatus(res));
-    }
-    if (activeModuleId === 'congress') {
-      congressExpert.getEventDetails().then(setEventDetails);
-      congressExpert.getDelegates().then(setDelegates);
-    }
-    if (activeModuleId === 'hr') {
-      hrExpert.getShiftSchedule('Security', () => { }).then(setHrData);
-    }
-    if (activeModuleId === 'commercial') {
-      commercialExpert.getTenantLeases(() => { }).then(setCommercialData);
-    }
-    if (activeModuleId === 'analytics') {
-      analyticsExpert.predictOccupancy('3M', () => { }).then(setAnalyticsData);
-    }
-    if (activeModuleId === 'berths') {
-      berthExpert.findOptimalBerth({ loa: 20.4, beam: 5.6, draft: 4.7, type: 'VO65 Racing Yacht' }, () => { }).then(setBerthAllocation);
-    }
-    if (activeModuleId === 'bookings') {
-      reservationsExpert.processBooking({ name: "S/Y Wind Chaser", type: "Sailing Yacht", loa: 16, beam: 4.5 }, { start: "2025-06-10", end: "2025-06-15" }, () => { }).then(res => setBookings([res.proposal]));
-    }
-  }, [activeModuleId]);
+  // Analytics Data (Mock)
+  const analyticsData = {
+      period: '3M',
+      prediction: 92,
+      confidence: 89
+  };
+
+  // Bookings (Mock)
+  const bookings = [
+      { berth: 'C-10', totalCost: 1250, reasoning: 'Optimal size match' }
+  ];
+
+  // Berth Allocation (Mock for display)
+  const berthAllocation = {
+      berth: 'C-12',
+      reasoning: 'Standard allocation based on LOA.',
+      priceQuote: 150.00
+  };
+
+  // Facility Data
+  const blueFlagStatus = { status: 'BLUE', data: { e_coli: 12 } };
+  const zeroWasteStats = { recyclingRate: 45, nextAudit: '2025-12-15' };
+
+  // Congress Data (Mock)
+  const eventDetails = {
+      id: 'EVT-1',
+      name: 'Global Superyacht Summit',
+      status: 'LIVE' as const,
+      delegateCount: 450,
+      dates: { start: '2025-11-25', end: '2025-11-27' },
+      venues: ['WIM Grand Ballroom']
+  };
+  const delegates = [
+      { id: 'D-1', name: 'Jean-Luc Picard', company: 'Starfleet', status: 'CHECKED_IN' as const, location: 'Ballroom' },
+      { id: 'D-2', name: 'Will Riker', company: 'Titan Salvage', status: 'IN_TRANSIT' as const, location: 'Transfer' }
+  ];
+
+  const renderContent = () => {
+      switch(activeTab) {
+          case 'ops': return <OpsTab vesselsInPort={vesselsInPort} registry={registry} criticalLogs={logs} tenders={tenders} aisTargets={aisTargets} />;
+          case 'fleet': return <FleetTab tenders={tenders} />;
+          case 'facility': return <FacilityTab blueFlagStatus={blueFlagStatus} zeroWasteStats={zeroWasteStats} />;
+          case 'congress': return <CongressTab eventDetails={eventDetails} delegates={delegates} />;
+          case 'berths': return <BerthsTab berthAllocation={berthAllocation} />;
+          case 'hr': return <HRTab hrData={hrData} />;
+          case 'commercial': return <CommercialTab commercialData={commercialData} />;
+          case 'analytics': return <AnalyticsTab analyticsData={analyticsData} />;
+          case 'bookings': return <BookingsTab bookings={bookings} />;
+          case 'customer': return <CustomerTab />;
+          case 'guest_checkin': return <GuestCheckInTab />;
+          default: return <div className="p-10 text-center text-zinc-500">Module under maintenance.</div>;
+      }
+  };
 
   return (
-    <div className="text-slate-600 dark:text-slate-300 font-mono h-full flex flex-col bg-transparent relative overflow-hidden pb-16 lg:pb-0">
-      
-      {/* HEADER: Strategic Command HUD */}
-      <div className="flex-shrink-0 pt-6 pb-2 px-4 sm:px-8 flex flex-col sm:flex-row items-start sm:items-end justify-between border-b border-[var(--border-color)] relative z-20 glass-panel mt-2 mx-4 rounded-xl transition-all">
-        
-        {/* Left: Identity */}
-        <div className="pb-2 w-full sm:w-auto flex justify-between items-center">
-            <div className="flex items-center gap-4">
-                <div className="p-2 border border-cyan-500/30 rounded-lg bg-cyan-50 dark:bg-cyan-950/20">
-                    <Hexagon size={24} className="text-cyan-600 dark:text-cyan-400 stroke-1" />
-                </div>
-                <div>
-                    <h2 className="text-lg sm:text-2xl font-display font-bold text-slate-800 dark:text-white tracking-widest leading-none neon-text">
-                        {activeTenantConfig.name.toUpperCase()}
-                    </h2>
-                    <div className="text-[10px] font-mono font-bold text-cyan-600 mt-1 uppercase tracking-[0.3em] flex items-center gap-2">
-                        <Scan size={10} className="animate-spin-slow" />
-                        Strategic Command
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        {/* Right: Global Metrics & Tools */}
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 sm:gap-8 pb-2 w-full sm:w-auto justify-between sm:justify-end mt-4 sm:mt-0">
-            
-            {/* Quick Metrics HUD - Responsive Layout */}
-            <div className="flex items-center gap-4 sm:gap-8 border-r border-[var(--border-color)] pr-4 sm:pr-8 flex-1 sm:flex-auto justify-end">
-                {/* Occupancy Gauge */}
-                <div className="text-right">
-                    <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest flex items-center justify-end gap-1">
-                        <Anchor size={8} /> Occ
-                    </div>
-                    <div className="text-lg sm:text-2xl font-display font-bold text-slate-700 dark:text-white leading-none">
-                        {/* FIX: Use vesselsInPort prop */}
-                        {vesselsInPort}<span className="text-xs sm:text-sm text-slate-400 dark:text-slate-600">/600</span>
-                    </div>
-                </div>
-                
-                {/* Live Radar Targets (Dynamic) */}
-                <div className="text-right">
-                    <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest flex items-center justify-end gap-1">
-                        <Target size={8} className="text-red-500 animate-pulse" /> TGT
-                    </div>
-                    <div className="text-lg sm:text-2xl font-display font-bold text-cyan-600 dark:text-cyan-400 leading-none tabular-nums">
-                        {/* Dynamic number simulation */}
-                        {aisTargets.length > 0 ? aisTargets.length : 3 + (ticker % 2)} 
-                        <span className="text-[10px] text-cyan-700 dark:text-cyan-900 ml-1">ACT</span>
-                    </div>
-                </div>
+      <div className="h-full flex flex-col bg-zinc-50 dark:bg-black/20">
+          {/* Top Navigation Bar */}
+          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shrink-0 overflow-x-auto">
+              <div className="flex gap-2">
+                  <button onClick={() => setActiveTab('ops')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'ops' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+                      <Navigation size={14} /> OPS
+                  </button>
+                  <button onClick={() => setActiveTab('fleet')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'fleet' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+                      <Anchor size={14} /> FLEET
+                  </button>
+                  <button onClick={() => setActiveTab('facility')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'facility' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+                      <Wrench size={14} /> FACILITY
+                  </button>
+                  <button onClick={() => setActiveTab('congress')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'congress' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+                      <Globe size={14} /> CONGRESS
+                  </button>
+                  <div className="w-px bg-zinc-200 dark:bg-zinc-700 mx-2"></div>
+                  <button onClick={() => setActiveTab('guest_checkin')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'guest_checkin' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
+                      <Users size={14} /> ENTRY
+                  </button>
+              </div>
+              
+              <div className="flex gap-2">
+                  <select 
+                      className="bg-zinc-100 dark:bg-zinc-800 border-none text-xs font-bold text-zinc-600 dark:text-zinc-400 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      value={activeTab}
+                      onChange={(e) => setActiveTab(e.target.value)}
+                  >
+                      <option value="ops">Management Views...</option>
+                      <option value="hr">HR & Staffing</option>
+                      <option value="commercial">Commercial</option>
+                      <option value="analytics">Analytics</option>
+                      <option value="bookings">Reservations</option>
+                      <option value="customer">Customer Risk</option>
+                      <option value="berths">Yield (Berths)</option>
+                  </select>
+                  
+                  <button onClick={onOpenReport} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 transition-colors" title="Reports">
+                      <FileText size={16} />
+                  </button>
+              </div>
+          </div>
 
-                {/* Daily Yield (Hidden on mobile) */}
-                <div className="hidden lg:block text-right">
-                    <div className="text-[9px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-widest flex items-center justify-end gap-1">
-                        <DollarSign size={8} /> Yield (Est)
-                    </div>
-                    <div className="text-lg sm:text-2xl font-display font-bold text-emerald-600 dark:text-emerald-400 leading-none">
-                        {/* FIX: Use vesselsInPort prop */}
-                        €{(vesselsInPort * 1.5 * 100 / 1000).toFixed(1)}k
-                    </div>
-                </div>
-            </div>
-
-            {/* Utility Icons */}
-            <div className="flex items-center gap-2">
-                <button onClick={onOpenReport} className="p-2 rounded-lg border border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all" title="Generate Report">
-                    <FileText size={18} />
-                </button>
-                <button onClick={onOpenTrace} className="p-2 rounded-lg border border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all" title="Neural Trace">
-                    <Activity size={18} />
-                </button>
-                <button className="p-2 rounded-lg border border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all relative" title="Alerts">
-                    <Bell size={18} />
-                    {criticalLogs.length > 0 && (
-                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_red]"></span>
-                    )}
-                </button>
-            </div>
-        </div>
-      </div>
-
-      {/* DEPARTMENTAL NAVIGATION BAR */}
-      <div className="flex-shrink-0 px-4 sm:px-8 py-3 overflow-x-auto custom-scrollbar border-b border-[var(--border-color)] no-scrollbar bg-[var(--bg-primary)] sticky top-0 z-10">
-          <div className="flex items-center gap-6 sm:gap-8 min-w-max">
-              {/* FIX: Use the defined DEPARTMENTS constant */}
-              {DEPARTMENTS.map((dept) => (
-                  <div key={dept.id} className="flex flex-col gap-2 group">
-                      {/* Dept Header */}
-                      <div className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest ${dept.color} opacity-60 group-hover:opacity-100 transition-all`}>
-                          <dept.icon size={12} />
-                          {dept.label}
-                      </div>
-                      
-                      {/* Dept Modules */}
-                      <div className="flex items-center gap-1">
-                          {dept.modules.map(mod => {
-                              const isActive = activeModuleId === mod.id;
-                              // Dynamic Color handling for Tailwind logic
-                              const activeBorderColor = dept.color.includes('indigo') ? 'border-indigo-500/50' : 
-                                                        dept.color.includes('amber') ? 'border-amber-500/50' : 
-                                                        dept.color.includes('emerald') ? 'border-emerald-500/50' :
-                                                        dept.color.includes('blue') ? 'border-blue-500/50' : 'border-purple-500/50';
-                              
-                              const activeBgColor = dept.color.includes('indigo') ? 'bg-indigo-500/10' : 
-                                                    dept.color.includes('amber') ? 'bg-amber-500/10' : 
-                                                    dept.color.includes('emerald') ? 'bg-emerald-500/10' :
-                                                    dept.color.includes('blue') ? 'bg-blue-500/10' : 'bg-purple-500/10';
-
-                              return (
-                                  <button
-                                      key={mod.id}
-                                      onClick={() => setActiveModuleId(mod.id)}
-                                      className={`
-                                          px-3 py-2 rounded-md text-[10px] font-bold uppercase transition-all relative overflow-hidden border whitespace-nowrap
-                                          ${isActive 
-                                              ? `text-slate-800 dark:text-white ${activeBorderColor} ${activeBgColor} shadow-sm` 
-                                              : `text-slate-500 border-transparent hover:border-[var(--border-color)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-700 dark:hover:text-slate-300`
-                                          }
-                                      `}
-                                  >
-                                      {mod.label}
-                                      {isActive && (
-                                          <div className={`absolute bottom-0 left-0 w-full h-[1px] bg-current opacity-50`}></div>
-                                      )}
-                                  </button>
-                              )
-                          })}
-                      </div>
-                  </div>
-              ))}
+          {/* Main Content Area */}
+          <div className="flex-1 overflow-hidden relative">
+              {renderContent()}
           </div>
       </div>
-
-      {/* CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto p-0 relative custom-scrollbar">
-        {activeModuleId === 'ops' && (
-            <OpsTab 
-                vesselsInPort={vesselsInPort} 
-                registry={registry} 
-                criticalLogs={criticalLogs} 
-                tenders={tenders}
-                // Removed vhfLogs
-                aisTargets={aisTargets}
-            />
-        )}
-        {activeModuleId === 'fleet' && <FleetTab tenders={tenders} />}
-        {activeModuleId === 'facility' && <FacilityTab blueFlagStatus={blueFlagStatus} zeroWasteStats={zeroWasteStats} />}
-        {activeModuleId === 'congress' && <CongressTab eventDetails={eventDetails} delegates={delegates} />}
-        {activeModuleId === 'hr' && <HRTab hrData={hrData} />}
-        {activeModuleId === 'commercial' && <CommercialTab commercialData={commercialData} />}
-        {activeModuleId === 'customer' && <CustomerTab />}
-        {activeModuleId === 'analytics' && <AnalyticsTab analyticsData={analyticsData} />}
-        {activeModuleId === 'berths' && <BerthsTab berthAllocation={berthAllocation} />}
-        {activeModuleId === 'bookings' && <BookingsTab bookings={bookings} />}
-        {activeModuleId === 'guest_entry' && <GuestCheckInTab />}
-        {activeModuleId === 'observer' && <ObserverTab traces={agentTraces} />}
-      </div>
-    </div>
   );
 };

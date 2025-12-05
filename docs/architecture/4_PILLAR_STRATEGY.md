@@ -45,7 +45,7 @@
 
 ## 4. 🌐 Ada.Stargate ( The Brain )
 **Responsibility:** The Orchestrator. It connects the user to the experts and the experts to the world.
-**Merged Agents:** `orchestrator`, `federation`, `system`, `voice`.
+**Merged Agents:** `orchestrator`, `federation`, `system`, `it`, `travel`, `analytics`.
 
 ### MCP Tools (The Hands)
 1.  `tool_federation_link`: Talk to other marinas (Alesta, D-Marin).
@@ -58,3 +58,4 @@
 1.  **Lower Latency:** Fewer hops between agents.
 2.  **Better Context:** Each "Big 4" agent has a deeper understanding of its specific domain.
 3.  **Easier Maintenance:** Debugging `Ada.Finance` is easier than debugging 5 scattered scripts.
+4.  **Scalability:** This structure maps directly to the "Big 3" Python backend, where each "Big 4" expert can become an independent microservice.

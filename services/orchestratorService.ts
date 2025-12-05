@@ -3,7 +3,7 @@ import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName
 import { getCurrentMaritimeTime } from './utils';
 import { checkBackendHealth, sendToBackend } from './api';
 
-// Import Local Experts for Fallback
+// --- "BÜYÜK 4" UZMANLARININ İÇE AKTARILMASI ---
 import { hrExpert } from './agents/hrAgent';
 import { financeExpert } from './agents/financeAgent';
 import { marinaExpert } from './agents/marinaAgent';
@@ -13,9 +13,13 @@ import { commercialExpert } from './agents/commercialAgent';
 import { customerExpert } from './agents/customerAgent';
 import { analyticsExpert } from './agents/analyticsAgent';
 import { legalExpert } from './agents/legalAgent';
-import { itExpert } from './agents/itAgent'; // NEW: IT Agent
+import { itExpert } from './agents/itAgent';
+import { berthExpert } from './agents/berthAgent';
+import { technicExpert } from './agents/technicAgent';
+import { reservationsExpert } from './agents/reservationsAgent';
+import { federationExpert } from './agents/federationAgent';
+import { kitesExpert } from './agents/travelAgent'; // Kites Travel
 
-// Helper
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
     timestamp: getCurrentMaritimeTime(),
@@ -39,171 +43,112 @@ export const orchestratorService = {
         const actions: AgentAction[] = [];
         const lowerPrompt = prompt.toLowerCase();
         
-        // --- HYBRID BRAIN CHECK ---
-        const isBackendOnline = await checkBackendHealth();
-
-        if (isBackendOnline) {
-            traces.push(createLog('ada.stargate', 'ROUTING', `Hybrid Core: ONLINE. Routing to Hyperscale Brain...`, 'ORCHESTRATOR'));
-            
-            try {
-                // Delegate the entire thinking process to the Python Backend (Hybrid Graph)
-                const backendResponse = await sendToBackend(prompt, user, {
-                    vessels_in_port: vesselsInPort,
-                    active_tenant: activeTenantConfig.id,
-                    user_context: {
-                        name: user.name,
-                        role: user.role,
-                        legal_status: user.legalStatus
-                    }
-                });
-
-                if (backendResponse) {
-                    if (backendResponse.traces) {
-                        backendResponse.traces.forEach((t: any) => {
-                            traces.push(createLog(t.node || 'ada.core', t.step || 'THINKING', t.content, 'EXPERT'));
-                        });
-                    }
-                    
-                    if (backendResponse.actions) {
-                        actions.push(...backendResponse.actions);
-                    }
-
-                    return {
-                        text: backendResponse.text,
-                        actions: actions,
-                        traces: traces
-                    };
-                }
-            } catch (err) {
-                console.error("Backend Handover Failed:", err);
-                traces.push(createLog('ada.stargate', 'ERROR', `Hybrid Link Failed. Falling back to Local Logic.`, 'ORCHESTRATOR'));
-                // Log the IT failure explicitly here
-                traces.push(createLog('ada.it', 'CRITICAL', `Core System Unreachable. Diagnostic code: 503 Service Unavailable.`, 'WORKER'));
-            }
-        } else {
-            traces.push(createLog('ada.stargate', 'WARNING', `Hybrid Core: OFFLINE. Engaging Local Emergency Protocols.`, 'ORCHESTRATOR'));
-        }
-
-        // --- LOCAL FALLBACK ROUTER (JAVASCRIPT LOGIC) ---
-        // This runs if Backend is offline or fails.
-        // It uses simple Keyword Matching instead of LLM Intent Classification.
-
         const addTrace = (t: AgentTraceLog) => traces.push(t);
 
+        // --- HİBRİT BEYİN KONTROLÜ ---
+        const isBackendOnline = await checkBackendHealth();
+        if (isBackendOnline) {
+            traces.push(createLog('ada.stargate', 'ROUTING', `Hybrid Core: ONLINE. Routing to Hyperscale Brain...`));
+            try {
+                const backendResponse = await sendToBackend(prompt, user, { active_tenant: activeTenantConfig.id });
+                if (backendResponse) {
+                    traces.push(...(backendResponse.traces || []));
+                    actions.push(...(backendResponse.actions || []));
+                    return { text: backendResponse.text, actions, traces };
+                }
+            } catch (err) {
+                traces.push(createLog('ada.stargate', 'ERROR', `Hybrid Link Failed. Falling back to Local Logic.`));
+            }
+        } else {
+            traces.push(createLog('ada.stargate', 'WARNING', `Hybrid Core: OFFLINE. Engaging Local Emergency Protocols.`));
+        }
+
+        // --- YEREL ORKESTRATÖR: "BÜYÜK 4" MANTIK AKIŞI ---
         try {
-            // 0. IT / SYSTEM / CYBER (NEW PRIORITY)
-            if (lowerPrompt.includes('internet') || lowerPrompt.includes('connect') || lowerPrompt.includes('offline') || lowerPrompt.includes('online') || lowerPrompt.includes('status') || lowerPrompt.includes('cyber') || lowerPrompt.includes('hack') || lowerPrompt.includes('system')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: IT_OPS -> Delegating to ada.it`, 'ORCHESTRATOR'));
+            // --- 1. ADA.LEGAL (Hukuk Müşaviri) ---
+            // Sorumluluk: Kurallar, kanunlar, güvenlik, kimlik, personel.
+            if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY -> Delegating to Ada.Legal`));
                 
-                if (lowerPrompt.includes('cyber') || lowerPrompt.includes('hack') || lowerPrompt.includes('attack')) {
-                    const result = await itExpert.runCyberScan(addTrace);
-                    return { text: result.message, actions, traces };
-                } else {
-                    const result = await itExpert.checkConnectivity(addTrace);
+                if (lowerPrompt.includes('staff') || lowerPrompt.includes('patrol')) {
+                    const result = await hrExpert.trackPatrolStatus(addTrace);
                     return { text: result.message, actions, traces };
                 }
+                
+                const legalRes = await legalExpert.process({ query: prompt }, user, addTrace);
+                const advice = legalRes[0]?.params?.advice || "Consulting legal database...";
+                return { text: advice, actions, traces };
             }
 
-            // 1. HR / STAFF STATUS
-            if (lowerPrompt.includes('staff') || lowerPrompt.includes('patrol') || lowerPrompt.includes('security status') || lowerPrompt.includes('shift')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: HR/SECURITY_OPS -> Delegating to ada.hr`, 'ORCHESTRATOR'));
-                const result = await hrExpert.trackPatrolStatus(addTrace);
-                return { text: result.message, actions, traces };
-            }
+            // --- 2. ADA.FINANCE (CFO) ---
+            // Sorumluluk: Para, borç, fatura, müşteri değeri, rezervasyon.
+            if (['balance', 'debt', 'owe', 'finance', 'invoice', 'price', 'fee', 'commercial', 'shop', 'tenant', 'loyalty', 'booking', 'reservation'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: FINANCE/COMMERCIAL -> Delegating to Ada.Finance`));
 
-            // 2. FINANCE / DEBT / BALANCE
-            if (lowerPrompt.includes('balance') || lowerPrompt.includes('debt') || lowerPrompt.includes('owe') || lowerPrompt.includes('finance')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: FINANCE -> Delegating to ada.finance`, 'ORCHESTRATOR'));
-                
-                // Extract vessel name or default to context
-                const vesselName = "S/Y Phisedelia"; // Context-aware in full version
-                const debtInfo = await financeExpert.checkDebt(vesselName);
-                
-                let responseText = `**FINANCIAL STATUS: ${vesselName}**\n\n`;
-                if (debtInfo.status === 'DEBT') {
-                    responseText += `⚠️ **OUTSTANDING BALANCE:** €${debtInfo.amount.toFixed(2)}\n`;
-                    responseText += `Status: **${debtInfo.paymentHistoryStatus}**\n\n`;
-                    responseText += `Please settle this invoice to clear departure restrictions (Article H.2).`;
-                } else {
-                    responseText += `✅ **ACCOUNT CLEAR**\nNo outstanding dues. Thank you for your prompt payments.`;
+                if (lowerPrompt.includes('balance') || lowerPrompt.includes('debt')) {
+                    const debtInfo = await financeExpert.checkDebt("S/Y Phisedelia");
+                    const responseText = debtInfo.status === 'DEBT' 
+                        ? `⚠️ **OUTSTANDING BALANCE:** €${debtInfo.amount.toFixed(2)} (Status: ${debtInfo.paymentHistoryStatus})`
+                        : `✅ **ACCOUNT CLEAR**`;
+                    return { text: responseText, actions, traces };
                 }
-                return { text: responseText, actions, traces };
+                
+                if (lowerPrompt.includes('shop') || lowerPrompt.includes('tenant')) {
+                    const mixAnalysis = await commercialExpert.analyzeRetailMix(addTrace);
+                    return { text: mixAnalysis, actions, traces };
+                }
+
+                const booking = await reservationsExpert.processBooking({ name: "S/Y Wind Chaser", type: "Sailing Yacht", loa: 16, beam: 4.5 }, { start: "2025-06-10", end: "2025-06-15" }, addTrace);
+                return { text: booking.message, actions, traces };
             }
 
-            // 3. MARINA OPS / ARRIVAL / DEPARTURE
-            if (lowerPrompt.includes('arrival') || lowerPrompt.includes('departure') || lowerPrompt.includes('dock') || lowerPrompt.includes('berth')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: MARINA_OPS -> Delegating to ada.marina`, 'ORCHESTRATOR'));
+            // --- 3. ADA.MARINA (Operatör) ---
+            // Sorumluluk: Fiziksel dünya. Tekneler, palamar, hava, su, elektrik, rıhtım.
+            if (['arrival', 'departure', 'dock', 'berth', 'tender', 'water', 'electricity', 'waste', 'blue card', 'weather', 'facility', 'technical', 'lift'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: MARINA_OPS -> Delegating to Ada.Marina`));
                 
                 if (lowerPrompt.includes('arrival')) {
                     const result = await marinaExpert.processArrival("S/Y Phisedelia", tenders, { status: 'DEBT', amount: 850 }, addTrace);
                     actions.push(...result.actions);
                     return { text: result.message, actions, traces };
                 }
-                
-                // Default berth check
-                const vessel = { loa: 20.4, beam: 5.6, draft: 3.5, type: "VO65 Racing Yacht" };
-                const berth = await import('./agents/berthAgent').then(m => m.berthExpert.findOptimalBerth(vessel, addTrace));
-                
-                return { 
-                    text: `**BERTH ALLOCATION**\n\nBased on your vessel specs (${vessel.loa}m x ${vessel.beam}m):\n\n> **Assigned:** ${berth.berth}\n> **Reasoning:** ${berth.reasoning}\n> **Rate:** €${berth.priceQuote}/day`, 
-                    actions, 
-                    traces 
-                };
-            }
 
-            // 4. COMMERCIAL / TENANTS
-            if (lowerPrompt.includes('shop') || lowerPrompt.includes('restaurant') || lowerPrompt.includes('tenant') || lowerPrompt.includes('commercial')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: COMMERCIAL -> Delegating to ada.commercial`, 'ORCHESTRATOR'));
-                const mixAnalysis = await commercialExpert.analyzeRetailMix(addTrace);
-                return { text: mixAnalysis, actions, traces };
-            }
-
-            // 5. LEGAL / RULES
-            if (lowerPrompt.includes('rule') || lowerPrompt.includes('law') || lowerPrompt.includes('contract') || lowerPrompt.includes('sale')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: LEGAL -> Delegating to ada.legal`, 'ORCHESTRATOR'));
-                const legalRes = await legalExpert.process({ query: prompt }, user, addTrace);
-                const advice = legalRes[0]?.params?.advice || "Consulting legal database...";
-                return { text: advice, actions, traces };
-            }
-
-            // 6. CUSTOMER / LOYALTY
-            if (lowerPrompt.includes('loyalty') || lowerPrompt.includes('points') || lowerPrompt.includes('score')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: CRM -> Delegating to ada.customer`, 'ORCHESTRATOR'));
-                const risk = await customerExpert.evaluateCustomerRisk("S/Y Phisedelia", addTrace);
-                return { 
-                    text: `**CUSTOMER TRUST SCORE (ATS)**\n\n> **Score:** ${risk.totalScore}/1000\n> **Segment:** ${risk.segment}\n\n*Breakdown: Financial(${risk.breakdown.financial}), Operational(${risk.breakdown.operational})*`, 
-                    actions, 
-                    traces 
-                };
-            }
-
-            // 7. FACILITY / INFRASTRUCTURE
-            if (lowerPrompt.includes('water') || lowerPrompt.includes('electricity') || lowerPrompt.includes('waste') || lowerPrompt.includes('blue card')) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent detected: FACILITY -> Delegating to ada.facility`, 'ORCHESTRATOR'));
-                
                 if (lowerPrompt.includes('blue card')) {
-                    const res = await import('./agents/technicAgent').then(m => m.technicExpert.processBlueCard("S/Y Phisedelia", "Fuel Dock", 150, addTrace));
+                    const res = await technicExpert.processBlueCard("S/Y Phisedelia", "Fuel Dock", 150, addTrace);
                     actions.push(...res.actions);
                     return { text: res.message, actions, traces };
                 }
 
-                const status = await facilityExpert.checkInfrastructureStatus(addTrace);
-                return { text: `**INFRASTRUCTURE REPORT**\n\nStatus: **${status.status}**\nAlerts: ${status.alerts.length > 0 ? status.alerts.join(', ') : 'None'}`, actions, traces };
+                const vessel = { loa: 20.4, beam: 5.6, draft: 3.5, type: "VO65 Racing Yacht" };
+                const berth = await berthExpert.findOptimalBerth(vessel, addTrace);
+                return { text: `**BERTH ALLOCATION:** ${berth.berth} - ${berth.reasoning}`, actions, traces };
             }
 
-            // 8. GENERAL / CHAT (Fallback)
-            // If no specific keyword matches, use the simple Gemini Flash responder from before
-            traces.push(createLog('ada.stargate', 'ROUTING', `No specific protocol matched. Routing to LLM Chitchat.`, 'ORCHESTRATOR'));
-            return { text: "", actions, traces }; // Returning empty text signals App.tsx to use streamChatResponse
+            // --- 4. ADA.STARGATE (Beyin & Dış Dünya) ---
+            // Sorumluluk: Sistem, ağ, analitik, seyahat, genel sohbet.
+            traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SYSTEM/GENERAL -> Delegating to Ada.Stargate`));
+            
+            if (['system', 'status', 'connect', 'offline', 'cyber'].some(kw => lowerPrompt.includes(kw))) {
+                const result = await itExpert.checkConnectivity(addTrace);
+                return { text: result.message, actions, traces };
+            }
+
+            if (['predict', 'forecast', 'analytics'].some(kw => lowerPrompt.includes(kw))) {
+                const data = await analyticsExpert.predictOccupancy('3M', addTrace);
+                return { text: data.message, actions, traces };
+            }
+            
+            if (['flight', 'hotel', 'travel', 'kites'].some(kw => lowerPrompt.includes(kw))) {
+                 const res = await kitesExpert.searchFlights("IST", "LHR", "tomorrow", addTrace);
+                 return { text: res.message, actions, traces };
+            }
+
+            // Genel sohbet için Gemini'ye yönlendir
+            return { text: "", actions, traces };
 
         } catch (error: any) {
-            console.error("Local Orchestration Error:", error);
-            traces.push(createLog('ada.stargate', 'ERROR', `Local Logic Failure: ${error.message}`, 'ORCHESTRATOR'));
-            return {
-                text: "⚠️ **SYSTEM ERROR:** Local protocols failed. Please try a simpler command.",
-                actions: [],
-                traces: traces
-            };
+            traces.push(createLog('ada.stargate', 'ERROR', `Local Logic Failure: ${error.message}`));
+            return { text: "⚠️ **SYSTEM ERROR:** Local protocols failed.", actions: [], traces };
         }
     }
 };

@@ -1,7 +1,9 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { PresentationState, UserProfile } from '../types';
+// FIX: Add AgentTraceLog to import
+import { PresentationState, UserProfile, AgentTraceLog } from '../types';
 import { generateSpeech } from '../services/geminiService';
 import { LiveSession } from '../services/liveService';
 import { introNarrative } from '../services/presenterContent';
@@ -14,6 +16,8 @@ interface PresentationOverlayProps {
     onEndMeeting: () => void;
     onScribeInput: (text: string) => void;
     onStateChange: React.Dispatch<React.SetStateAction<PresentationState>>;
+    // FIX: Add missing agentTraces prop
+    agentTraces: AgentTraceLog[];
 }
 
 // --- AUDIO DECODING HELPERS ---
@@ -67,7 +71,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     useEffect(() => {
         if (state.isActive) {
             if (!audioContextRef.current) {
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 44100 });
                 analyserRef.current = audioContextRef.current.createAnalyser();
                 analyserRef.current.fftSize = 64;
                 gainNodeRef.current = audioContextRef.current.createGain();
@@ -81,7 +85,8 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             sessionRef.current?.disconnect();
             sessionRef.current = null;
             if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-                audioContextRef.current.close().catch(e => console.error("Failed to close audio context", e));
+                // @ts-ignore
+                audioContextRef.current.close().catch((e: any) => console.error("Failed to close audio context", e));
             }
             audioContextRef.current = null;
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);

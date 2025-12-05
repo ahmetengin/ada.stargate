@@ -1,5 +1,6 @@
+
 import React, { useRef, useCallback, useEffect } from 'react';
-import { Sun, Moon, Monitor } from 'lucide-react';
+import { Sun, Moon, Monitor, Menu } from 'lucide-react';
 import { Message, ModelType, TenantConfig, ThemeMode, UserRole } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { InputArea } from './InputArea';
@@ -17,7 +18,8 @@ interface ChatInterfaceProps {
     onScanClick: () => void;
     onTraceClick: () => void;
     onThemeChange: (t: ThemeMode) => void;
-    onRadioClick: () => void; // ADDED THIS PROP
+    onRadioClick: () => void;
+    onToggleSidebar: () => void; // NEW PROP
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -33,7 +35,8 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     onScanClick,
     onTraceClick,
     onThemeChange,
-    onRadioClick // ADDED THIS PROP
+    onRadioClick,
+    onToggleSidebar // NEW PROP
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -55,31 +58,42 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
     return (
         <div className="flex flex-col h-full w-full relative transition-colors duration-300 pb-20 lg:pb-0">
-            {/* Background Base - Now uses CSS Variables */}
+            {/* Background Base */}
             <div className="absolute inset-0 bg-[var(--bg-primary)] z-0"></div>
             
-            {/* Atmospheric Glow - Only visible in Dark Mode */}
+            {/* Atmospheric Glow */}
             <div className="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-cyan-500/5 blur-[120px] pointer-events-none z-0"></div>
 
-            {/* Header - Hidden on Mobile (Handled by App.tsx Top Bar) */}
-            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors">
-                <div className="flex items-center gap-3 cursor-pointer group" onClick={onTraceClick}>
-                    <div className="relative">
-                        <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-[0_0_10px_#14b8a6] group-hover:scale-110 transition-transform"></div>
-                        <div className="absolute inset-0 bg-teal-400 rounded-full animate-ping opacity-75"></div>
-                    </div>
-                    <div>
-                        <span className="text-xs font-mono font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-color)] transition-colors">
-                            ● {activeTenantConfig.node_address}
-                        </span>
+            {/* Header */}
+            <div className="flex h-16 items-center justify-between px-4 lg:px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors">
+                
+                <div className="flex items-center gap-3">
+                    {/* Mobile Sidebar Toggle */}
+                    <button 
+                        onClick={onToggleSidebar}
+                        className="lg:hidden p-2 -ml-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"
+                    >
+                        <Menu size={20} />
+                    </button>
+
+                    <div className="flex items-center gap-3 cursor-pointer group" onClick={onTraceClick}>
+                        <div className="relative">
+                            <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-[0_0_10px_#14b8a6] group-hover:scale-110 transition-transform"></div>
+                            <div className="absolute inset-0 bg-teal-400 rounded-full animate-ping opacity-75"></div>
+                        </div>
+                        <div className="hidden sm:block">
+                            <span className="text-xs font-mono font-bold text-[var(--text-primary)] group-hover:text-[var(--accent-color)] transition-colors">
+                                ● {activeTenantConfig.node_address}
+                            </span>
+                        </div>
                     </div>
                 </div>
                 
                 <div className="flex items-center gap-3">
                     <div className="flex items-center text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--text-secondary)] bg-black/5 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-zinc-800 p-0.5">
-                        <button onClick={() => onThemeChange('light')} className={`px-3 py-1 rounded-full transition-colors ${theme === 'light' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Day</button>
-                        <button onClick={() => onThemeChange('dark')} className={`px-3 py-1 rounded-full transition-colors ${theme === 'dark' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Night</button>
-                        <button onClick={() => onThemeChange('auto')} className={`px-3 py-1 rounded-full transition-colors ${theme === 'auto' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Auto</button>
+                        <button onClick={() => onThemeChange('light')} className={`px-2 sm:px-3 py-1 rounded-full transition-colors ${theme === 'light' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Day</button>
+                        <button onClick={() => onThemeChange('dark')} className={`px-2 sm:px-3 py-1 rounded-full transition-colors ${theme === 'dark' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Night</button>
+                        <button onClick={() => onThemeChange('auto')} className={`hidden sm:block px-3 py-1 rounded-full transition-colors ${theme === 'auto' ? 'text-[var(--text-primary)] bg-[var(--bg-secondary)] shadow-sm' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}>Auto</button>
                     </div>
                 </div>
             </div>
