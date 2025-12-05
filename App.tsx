@@ -185,7 +185,6 @@ const App: React.FC = () => {
   };
 
   const handleEnterObserverMode = () => {
-    // UPDATED: Now triggers the full page overlay instead of presentation mode
     setIsObserverOpen(true);
   };
 
@@ -275,7 +274,8 @@ const App: React.FC = () => {
                 userRole={userProfile.role} theme={theme} activeTenantConfig={activeTenantConfig}
                 onModelChange={setSelectedModel} onSend={handleSend}
                 onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
-                onRadioClick={() => setIsVoiceModalOpen(true)} onTraceClick={() => {}} 
+                onRadioClick={() => setIsVoiceModalOpen(true)} 
+                onTraceClick={handleEnterObserverMode} 
                 onThemeChange={handleThemeChange}
                 onToggleSidebar={() => setIsMobileMenuOpen(true)} 
             />
@@ -286,7 +286,7 @@ const App: React.FC = () => {
           <div className="hidden lg:flex" style={{ width: `${canvasWidth}px` }}>
             <Canvas 
               vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
-              onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => {}}
+              onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
               agentTraces={agentTraces} aisTargets={aisTargets} activeTenantConfig={activeTenantConfig}
             />
           </div>
@@ -300,7 +300,7 @@ const App: React.FC = () => {
           userProfile={userProfile} 
           weatherData={weatherData ? [weatherData] : []} activeTenantConfig={activeTenantConfig}
           tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
-          onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => {}}
+          onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
       />
       <VoiceModal
           isOpen={isVoiceModalOpen}
