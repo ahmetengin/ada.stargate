@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
-import { ArrowUp, AudioWaveform, ScanLine, Sparkles, Zap } from 'lucide-react';
+import { ArrowUp, AudioWaveform, ScanLine, Radio } from 'lucide-react';
 import { ModelType, UserRole } from '../types';
 import { QuickActions } from './QuickActions';
 
@@ -12,6 +11,7 @@ interface InputAreaProps {
   userRole?: UserRole;
   onQuickAction?: (text: string) => void;
   onScanClick?: () => void;
+  onRadioClick?: () => void;
 }
 
 export const InputArea: React.FC<InputAreaProps> = ({ 
@@ -22,6 +22,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
   userRole,
   onQuickAction,
   onScanClick,
+  onRadioClick,
 }) => {
   const [text, setText] = useState('');
   const [isDictating, setIsDictating] = useState(false);
@@ -111,24 +112,22 @@ export const InputArea: React.FC<InputAreaProps> = ({
   return (
     <div className="w-full max-w-4xl mx-auto">
       
-      {/* Quick Actions */}
-      <div className="flex justify-end items-end mb-2 sm:mb-3">
-          {userRole && onQuickAction && (
-              <div className="opacity-80 hover:opacity-100 transition-opacity w-full">
-                  <QuickActions userRole={userRole} onAction={onQuickAction} />
-              </div>
-          )}
-      </div>
+      {userRole && onQuickAction && (
+          <div className="opacity-80 hover:opacity-100 transition-opacity w-full mb-2">
+              <QuickActions userRole={userRole} onAction={onQuickAction} />
+          </div>
+      )}
 
-      {/* Main Input Capsule */}
       <div className={`relative bg-white/80 dark:bg-[#0a101d]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border shadow-sm transition-all duration-300 flex items-end p-1.5 sm:p-2 
           ${isLoading ? 'border-[var(--accent-color)] shadow-md' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]'}
           ${isDictating ? 'ring-1 ring-red-500/50 border-red-500/50' : ''}`}>
           
-          {/* Tools: Scanner */}
           <div className="flex items-center gap-0.5 sm:gap-1 pr-1.5 sm:pr-2 border-r border-[var(--border-color)] mr-1.5 sm:mr-2 mb-1.5">
               <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Scanner">
                   <ScanLine size={16} />
+              </button>
+              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="VHF Radio Mode">
+                  <Radio size={16} />
               </button>
           </div>
           
