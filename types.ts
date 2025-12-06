@@ -7,6 +7,13 @@ export enum MessageRole {
   System = 'system'
 }
 
+export enum LiveConnectionState {
+  Disconnected = 'disconnected',
+  Connecting = 'connecting',
+  Connected = 'connected',
+  Error = 'error'
+}
+
 export type ThemeMode = 'light' | 'dark' | 'auto';
 
 export interface Attachment {

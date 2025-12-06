@@ -48,7 +48,6 @@ export class LiveSession {
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                 config: {
                     responseModalities: [Modality.AUDIO],
-                    // @UPDATE: Changed voice to 'Kore' for a natural female tone
                     speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
                     systemInstruction: `You are Ada, the intelligent maritime operating system for West Istanbul Marina. Your operator is ${userProfile.name} (${userProfile.role}). 
                     
@@ -106,10 +105,17 @@ export class LiveSession {
 
         this.scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
             const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+            
+            // Audio Level Calculation (RMS)
             let sum = 0.0;
             for (let i = 0; i < inputData.length; ++i) sum += inputData[i] * inputData[i];
             const rms = Math.sqrt(sum / inputData.length);
-            if (this.onAudioLevel) this.onAudioLevel(rms);
+            
+            // Normalize slightly for visualizer sensitivity (boost low signals)
+            const normalizedLevel = Math.min(rms * 5, 1); 
+            if (this.onAudioLevel) this.onAudioLevel(normalizedLevel);
+
+            // CONTINUOUS STREAMING (Hands-Free)
             const pcmBlob = this.createBlob(inputData);
             this.sessionPromise?.then((session) => {
                 session.sendRealtimeInput({ media: pcmBlob });

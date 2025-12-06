@@ -6,10 +6,10 @@ import { ChatInterface } from './components/chat/ChatInterface';
 import { Canvas } from './components/dashboards/Canvas';
 import { BootSequence } from './components/layout/BootSequence';
 import { PassportScanner } from './components/modals/PassportScanner';
-import { DailyReportModal } from './components/dashboards/DailyReportModal';
+import { DailyReportModal } from './components/modals/DailyReportModal';
 import { AuthOverlay } from './components/layout/AuthOverlay';
 import { PresentationOverlay } from './components/PresentationOverlay';
-import { ObserverOverlay } from './components/ObserverOverlay'; // NEW IMPORT
+import { ObserverOverlay } from './components/ObserverOverlay'; // CONFIRMED IMPORT
 import { VoiceModal } from './components/modals/VoiceModal';
 import { orchestratorService } from './services/orchestratorService';
 import { executiveExpert } from './services/agents/executiveExpert';
@@ -49,7 +49,7 @@ const App: React.FC = () => {
   }, []);
     
   const [appMode, setAppMode] = useState<'main' | 'presentation'>('main');
-  const [isObserverOpen, setIsObserverOpen] = useState(false); // NEW STATE FOR OBSERVER
+  const [isObserverOpen, setIsObserverOpen] = useState(false); 
 
   const [activeTenantId, setActiveTenantId] = useState<string>(persistenceService.load(STORAGE_KEYS.ACTIVE_TENANT_ID, FEDERATION_REGISTRY.peers[0].id));
   const [userProfile, setUserProfile] = useState<UserProfile>(MOCK_USER_DATABASE['GENERAL_MANAGER']);
