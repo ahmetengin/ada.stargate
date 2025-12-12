@@ -13,18 +13,10 @@ langchain-community
 langchain-google-genai
 langchain-text-splitters
 qdrant-client
+# tabpfn # Bu kütüphane genellikle manuel kurulum gerektirir, şimdilik yorumda
+# fastmcp # Bu kütüphane konsept olduğu için yorumda
 asyncpg
 markdown
 beautifulsoup4
 pandas
 scikit-learn
-# Local LLM Support
-ollama
-langchain-huggingface
-# FastRTC/Gradio Voice Interface
-gradio>=4.0
-sounddevice
-pyaudio
-soundfile
-# IoT Integration
-paho-mqtt

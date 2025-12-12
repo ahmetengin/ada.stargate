@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { OpsTab } from './gm/OpsTab';
@@ -115,9 +116,9 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   };
 
   return (
-      <div className="h-full flex flex-col bg-zinc-50 dark:bg-black/20">
+      <div className="h-full flex flex-col bg-zinc-50 dark:bg-black/20 overflow-hidden">
           {/* Top Navigation Bar */}
-          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shrink-0 overflow-x-auto">
+          <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 shrink-0 overflow-x-auto no-scrollbar">
               <div className="flex gap-2">
                   <button onClick={() => setActiveTab('ops')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'ops' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
                       <Navigation size={14} /> OPS
@@ -131,15 +132,15 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
                   <button onClick={() => setActiveTab('congress')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'congress' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
                       <Globe size={14} /> CONGRESS
                   </button>
-                  <div className="w-px bg-zinc-200 dark:bg-zinc-700 mx-2"></div>
+                  <div className="w-px bg-zinc-200 dark:bg-zinc-700 mx-2 h-6 self-center"></div>
                   <button onClick={() => setActiveTab('guest_checkin')} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'guest_checkin' ? 'bg-indigo-600 text-white shadow-md' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800'}`}>
                       <Users size={14} /> ENTRY
                   </button>
               </div>
               
-              <div className="flex gap-2">
+              <div className="flex gap-2 pl-2">
                   <select 
-                      className="bg-zinc-100 dark:bg-zinc-800 border-none text-xs font-bold text-zinc-600 dark:text-zinc-400 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+                      className="bg-zinc-100 dark:bg-zinc-800 border-none text-xs font-bold text-zinc-600 dark:text-zinc-400 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none w-32 md:w-auto"
                       value={activeTab}
                       onChange={(e) => setActiveTab(e.target.value)}
                   >

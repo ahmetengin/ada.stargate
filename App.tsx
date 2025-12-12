@@ -9,7 +9,7 @@ import { PassportScanner } from './components/modals/PassportScanner';
 import { DailyReportModal } from './components/modals/DailyReportModal';
 import { AuthOverlay } from './components/layout/AuthOverlay';
 import { PresentationOverlay } from './components/PresentationOverlay';
-import { ObserverOverlay } from './components/ObserverOverlay'; // CONFIRMED IMPORT
+import { ObserverOverlay } from './components/ObserverOverlay'; 
 import { VoiceModal } from './components/modals/VoiceModal';
 import { orchestratorService } from './services/orchestratorService';
 import { executiveExpert } from './services/agents/executiveExpert';
@@ -18,6 +18,7 @@ import { streamChatResponse } from './services/geminiService';
 import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
 import { telemetryStream } from './services/telemetryStream';
 import { DraggableSplitter } from './components/layout/DraggableSplitter';
+import { StatusBar } from './components/layout/StatusBar';
 
 export const MOCK_USER_DATABASE: Record<string, UserProfile> = {
   'VISITOR': { id: 'usr_visitor', name: 'Anonymous Visitor', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
@@ -30,8 +31,9 @@ const MIN_PANEL_WIDTH = 280;
 const MAX_PANEL_WIDTH = 600;
 
 const App: React.FC = () => {
-  const [sidebarWidth, setSidebarWidth] = useState(320);
-  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth / 3);
+  // Start with responsive defaults
+  const [sidebarWidth, setSidebarWidth] = useState(300);
+  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth > 1400 ? 500 : 400); // Dynamic initial width
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSidebarDrag = useCallback((dx: number) => {
@@ -44,7 +46,7 @@ const App: React.FC = () => {
   const handleCanvasDrag = useCallback((dx: number) => {
     setCanvasWidth(prev => {
         const newWidth = prev - dx;
-        return Math.max(MIN_PANEL_WIDTH, Math.min(newWidth, MAX_PANEL_WIDTH));
+        return Math.max(MIN_PANEL_WIDTH, Math.min(newWidth, 800)); // Allow larger canvas
     });
   }, []);
     
@@ -238,59 +240,72 @@ const App: React.FC = () => {
       )}
 
       {appMode === 'main' && !showBootSequence && !showAuthOverlay && (
-        <main className="flex-1 flex overflow-hidden relative">
-          
-          {/* Mobile Sidebar Overlay */}
-          {isMobileMenuOpen && (
-            <div className="fixed inset-0 z-50 bg-black/80 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-                <div className="w-72 h-full bg-[var(--glass-bg)] backdrop-blur-xl border-r border-[var(--border-color)] animate-in slide-in-from-left duration-300" onClick={e => e.stopPropagation()}>
-                    <Sidebar 
-                        nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
-                        onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
-                        onEnterObserverMode={() => { handleEnterObserverMode(); setIsMobileMenuOpen(false); }}
-                        onEnterScribeMode={() => { handleEnterScribeMode(); setIsMobileMenuOpen(false); }} 
-                        activeTenantId={activeTenantId} vhfLogs={vhfLogs}
-                    />
+        <>
+            <main className="flex-1 flex overflow-hidden relative">
+            
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div className="fixed inset-0 z-50 bg-black/80 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+                    <div className="w-72 h-full bg-[var(--glass-bg)] backdrop-blur-xl border-r border-[var(--border-color)] animate-in slide-in-from-left duration-300 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <Sidebar 
+                            nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
+                            onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
+                            onEnterObserverMode={() => { handleEnterObserverMode(); setIsMobileMenuOpen(false); }}
+                            onEnterScribeMode={() => { handleEnterScribeMode(); setIsMobileMenuOpen(false); }} 
+                            activeTenantId={activeTenantId} vhfLogs={vhfLogs}
+                        />
+                    </div>
                 </div>
-            </div>
-          )}
+            )}
 
-          {/* Desktop Sidebar with Resizable Container */}
-          <div className="hidden lg:flex flex-col flex-shrink-0" style={{ width: `${sidebarWidth}px` }}>
-              <Sidebar 
-                  nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
-                  onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
-                  onEnterObserverMode={handleEnterObserverMode}
-                  onEnterScribeMode={handleEnterScribeMode} 
-                  activeTenantId={activeTenantId} vhfLogs={vhfLogs}
-              />
-          </div>
-          
-          <DraggableSplitter onDrag={handleSidebarDrag} />
-          
-          <div className="flex-1 flex flex-col min-w-0">
-            <ChatInterface
-                messages={messages} isLoading={isLoading} selectedModel={selectedModel}
-                userRole={userProfile.role} theme={theme} activeTenantConfig={activeTenantConfig}
-                onModelChange={setSelectedModel} onSend={handleSend}
-                onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
-                onRadioClick={() => setIsVoiceModalOpen(true)} 
-                onTraceClick={handleEnterObserverMode} 
-                onThemeChange={handleThemeChange}
-                onToggleSidebar={() => setIsMobileMenuOpen(true)} 
-            />
-          </div>
-          
-          <DraggableSplitter onDrag={handleCanvasDrag} />
-          
-          <div className="hidden lg:flex" style={{ width: `${canvasWidth}px` }}>
-            <Canvas 
-              vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
-              onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
-              agentTraces={agentTraces} aisTargets={aisTargets} activeTenantConfig={activeTenantConfig}
-            />
-          </div>
-        </main>
+            {/* Desktop Sidebar with Resizable Container */}
+            <div className="hidden lg:flex flex-col flex-shrink-0 border-r border-[var(--border-color)]" style={{ width: `${sidebarWidth}px` }}>
+                <Sidebar 
+                    nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
+                    onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
+                    onEnterObserverMode={handleEnterObserverMode}
+                    onEnterScribeMode={handleEnterScribeMode} 
+                    activeTenantId={activeTenantId} vhfLogs={vhfLogs}
+                />
+            </div>
+            
+            <div className="hidden lg:block">
+                <DraggableSplitter onDrag={handleSidebarDrag} />
+            </div>
+            
+            {/* Main Chat Area - Flexible width */}
+            <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-primary)]">
+                <ChatInterface
+                    messages={messages} isLoading={isLoading} selectedModel={selectedModel}
+                    userRole={userProfile.role} theme={theme} activeTenantConfig={activeTenantConfig}
+                    onModelChange={setSelectedModel} onSend={handleSend}
+                    onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
+                    onRadioClick={() => setIsVoiceModalOpen(true)} 
+                    onTraceClick={handleEnterObserverMode} 
+                    onThemeChange={handleThemeChange}
+                    onToggleSidebar={() => setIsMobileMenuOpen(true)} 
+                />
+            </div>
+            
+            <div className="hidden xl:block">
+                <DraggableSplitter onDrag={handleCanvasDrag} />
+            </div>
+            
+            {/* Right Canvas (Operations Deck) - Hidden on smaller screens, Resizable */}
+            <div className="hidden xl:flex flex-col border-l border-[var(--border-color)] bg-[var(--bg-secondary)]" style={{ width: `${canvasWidth}px` }}>
+                <Canvas 
+                vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
+                onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
+                agentTraces={agentTraces} aisTargets={aisTargets} activeTenantConfig={activeTenantConfig}
+                />
+            </div>
+            </main>
+
+            {/* Status Bar - Always Fixed at Bottom */}
+            <div className="flex-shrink-0">
+                <StatusBar userProfile={userProfile} onToggleAuth={() => handleRoleChange('GENERAL_MANAGER')} />
+            </div>
+        </>
       )}
 
       <PassportScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScanComplete={(res) => console.log(res)} />
@@ -298,7 +313,7 @@ const App: React.FC = () => {
           isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}
           registry={registry} logs={agentTraces} vesselsInPort={vesselsInPort}
           userProfile={userProfile} 
-          weatherData={weatherData ? [weatherData] : []} activeTenantConfig={activeTenantConfig}
+          weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }} activeTenantConfig={activeTenantConfig}
           tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
           onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
       />

@@ -28,7 +28,7 @@ docker-compose -f docker-compose.hyperscale.yml up -d --build
 ```bash
 curl http://localhost:8000/health
 ```
-*Beklenen Çıktı:* `{"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "FastRTC"]}`
+*Beklenen Çıktı:* `{"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "SEAL", "TabPFN"]}`
 
 ### Hafıza Yüklemesi (Dokümanları İşleme)
 Yeni PDF/MD dokümanları `docs/` klasörüne eklediğinizde veya mevcut dokümanları güncellediğinizde Ada'nın hafızasını tazelemeniz gerekir:
@@ -87,8 +87,6 @@ Ada'nın dokümanlarda kayıtlı olan tüm hukuk, kural ve yönetmelik bilgileri
 *   **"Sistem Uyarısı: Sinirsel Bağlantı Kararsız"**: Bu, Python backend'in bir hata fırlattığı anlamına gelir. Logları kontrol edin:
     `docker logs ada_core_hyperscale`
 *   **Hafıza Kaybı**: Ada, WIM kuralları yerine genel bilgilerle yanıt veriyorsa, Qdrant'ın çalıştığından emin olun ve `docker exec -it ada_core_hyperscale python ingest.py` komutunu çalıştırın.
-*   **Yerel LLM (Ollama) Başlatılamıyor**: `ada-local-llm` konteynerinin doğru şekilde başlatıldığından ve `offline_setup.sh` scriptinin çalıştırıldığından emin olun.
-*   **FastRTC (VHF Telsiz) Ses Sorunları**: Tarayıcınızın mikrofon izni verdiğinden ve Gradio arayüzünün doğru şekilde yüklendiğinden emin olun (`http://localhost:3000/radio`).
 
 ---
 

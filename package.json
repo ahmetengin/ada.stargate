@@ -1,3 +1,4 @@
+
 {
   "name": "ada-stargate",
   "version": "4.0.0",
@@ -5,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cleanup": "node scripts/cleanup.mjs"
   },
   "dependencies": {
     "@google/genai": "^0.14.0",

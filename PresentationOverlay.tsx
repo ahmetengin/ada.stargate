@@ -86,7 +86,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             sessionRef.current = null;
             // FIX: Applied workaround to `close()` call to address a misleading TypeScript error.
             // This is typically not required as `AudioContext.close()` takes no arguments.
-            audioContextRef.current?.close().catch(e => console.error("Failed to close audio context", e));
+            (audioContextRef.current as any)?.close().catch((e: any) => console.error("Failed to close audio context", e));
             audioContextRef.current = null;
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         }

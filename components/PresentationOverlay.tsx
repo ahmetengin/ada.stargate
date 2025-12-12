@@ -85,8 +85,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             sessionRef.current?.disconnect();
             sessionRef.current = null;
             if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-                // @ts-ignore
-                audioContextRef.current.close().catch((e: any) => console.error("Failed to close audio context", e));
+                (audioContextRef.current as any).close().catch((e: any) => console.error("Failed to close audio context", e));
             }
             audioContextRef.current = null;
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);

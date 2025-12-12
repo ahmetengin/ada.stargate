@@ -1,6 +1,8 @@
 
 import { GoogleGenAI, LiveServerMessage, Modality, Blob } from "@google/genai";
 import { UserProfile } from '../types';
+import { getVoiceSystemInstruction } from './voicePrompts'; // Import the new prompt generator
+import { TENANT_CONFIG } from './config'; // Import active tenant config
 
 export class LiveSession {
     private ai?: GoogleGenAI;
@@ -44,20 +46,24 @@ export class LiveSession {
             this.outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
             this.microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+            // Generate the dynamic system instruction (The Persona)
+            const systemInstruction = getVoiceSystemInstruction(userProfile, TENANT_CONFIG);
+
             this.sessionPromise = this.ai.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
                 config: {
                     responseModalities: [Modality.AUDIO],
-                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
-                    systemInstruction: `You are Ada, the intelligent maritime operating system for West Istanbul Marina. Your operator is ${userProfile.name} (${userProfile.role}). 
-                    
-                    Tone & Style:
-                    - Voice: Professional, warm, calm, and highly capable (Natural Female).
-                    - Context: You are managing a high-end superyacht marina. Use nautical terminology where appropriate (port, starboard, knots, berth).
-                    - Brevity: Keep responses concise and actionable, suitable for radio (VHF) communication.
-                    - Protocol: End transmissions with "Over" if waiting for a reply, or "Out" if finishing a task.
-                    
-                    Current Status: All systems nominal. Waiting for command.`,
+                    speechConfig: { 
+                        voiceConfig: { 
+                            prebuiltVoiceConfig: { 
+                                // Voice options: 'Puck', 'Charon', 'Kore', 'Fenrir', 'Zephyr'
+                                // 'Kore' is usually calm and feminine, good for Ada.
+                                // 'Fenrir' is deeper, more masculine (good for a rugged captain persona).
+                                voiceName: 'Kore' 
+                            } 
+                        } 
+                    },
+                    systemInstruction: systemInstruction, // Inject the prompt here
                     inputAudioTranscription: {},
                     outputAudioTranscription: {}
                 },

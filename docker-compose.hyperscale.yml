@@ -2,50 +2,50 @@
 version: '3.9'
 
 services:
-  # 1. THE BRAIN (Python LangGraph + IoT)
+  # 1. THE BRAIN (Python LangGraph + MAKER + SEAL)
   ada-core:
     build: 
       context: ./backend
       dockerfile: Dockerfile
     container_name: ada_core_hyperscale
     ports:
-      - "8000:8000" # API & Websocket
+      - "8000:8000" # Ana API
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
       - MQTT_BROKER=ada-mqtt
-      - OLLAMA_URL=http://ada-local-llm:11434
+      - OLLAMA_URL=http://ada-local-llm:11434 # Yerel LLM için
     depends_on:
       - ada-redis
       - ada-qdrant
       - ada-mqtt
-      - ada-local-llm
+      - ada-local-llm # Yerel LLM bağımlılığı
     volumes:
-      - ./backend:/app
-      - ./docs:/docs
+      - ./backend:/app # Backend kodları
+      - ./docs:/docs   # RAG için dokümanlar
+    restart: always
 
-  # 2. MEMORY (Vector DB)
+  # 2. MEMORY (Vector DB - Uzun Süreli Hafıza - RAG)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
     ports:
-      - "6333:6333"
+      - "6333:6333" # Qdrant API portu
     volumes:
-      - qdrant_data:/qdrant/storage
+      - qdrant_data:/qdrant/storage # Veri kalıcılığı için
 
-  # 3. LOCAL BRAIN (Ollama - Offline Intelligence)
-  # Runs Google Gemma locally without internet
+  # 3. LOCAL BRAIN (Ollama - Çevrimdışı Zeka - Google Gemma)
   ada-local-llm:
     image: ollama/ollama:latest
     container_name: ada_local_llm
     ports:
-      - "11434:11434"
+      - "11434:11434" # Ollama API portu
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama_data:/root/.ollama # Model kalıcılığı için
     restart: always
 
-  # 4. TRUTH (Relational DB)
+  # 4. TRUTH (Relational DB - Kesin Gerçekler - PostgreSQL)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -54,42 +54,42 @@ services:
       POSTGRES_PASSWORD: adapassword
       POSTGRES_DB: wim_db
     ports:
-      - "5432:5432"
+      - "5432:5432" # PostgreSQL portu
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data # Veri kalıcılığı için
 
-  # 5. NERVOUS SYSTEM (Event Bus)
+  # 5. NERVOUS SYSTEM (Event Bus - Kısa Süreli Hafıza - Redis)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
     ports:
-      - "6379:6379"
+      - "6379:6379" # Redis portu
     volumes:
-      - redis_data:/data
+      - redis_data:/data # Veri kalıcılığı için
 
-  # 6. SENSORY SYSTEM (IoT)
+  # 6. SENSORY SYSTEM (IoT Broker - MQTT)
   ada-mqtt:
     image: eclipse-mosquitto:2
     container_name: ada_mqtt_broker
     ports:
-      - "1883:1883"
-      - "9001:9001"
+      - "1883:1883" # MQTT standart portu
+      - "9001:9001" # MQTT WebSocket portu
     volumes:
       - mqtt_data:/mosquitto/data
       - mqtt_log:/mosquitto/log
 
-  # 7. FRONTEND (React)
+  # 7. FRONTEND (React Interface - Görev Kontrol)
   ada-frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ada_frontend_hyperscale
     ports:
-      - "3000:80"
+      - "3000:80" # Mac M3 uyumluluğu için 80 yerine 3000 portu
     environment:
-      - API_KEY=${API_KEY}
+      - API_KEY=${API_KEY} # API anahtarı frontend için
     depends_on:
-      - ada-core
+      - ada-core # Backend'e bağımlı
 
 volumes:
   postgres_data:
@@ -97,4 +97,4 @@ volumes:
   redis_data:
   mqtt_data:
   mqtt_log:
-  ollama_data:
+  ollama_data: # Ollama modelleri için yeni volume

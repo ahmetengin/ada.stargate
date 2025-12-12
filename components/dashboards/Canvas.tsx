@@ -65,8 +65,13 @@ export const Canvas: React.FC<CanvasProps> = ({
   }
 
   // --- VIEW 1 & 2: VISITOR / MEMBER (LIFESTYLE DECK) ---
+  // Note: GuestDashboard now handles its own internal scrolling and layout.
   if (userProfile.role === 'VISITOR' || userProfile.role === 'MEMBER') {
-      return <GuestDashboard userProfile={userProfile} />;
+      return (
+        <div className="h-full w-full overflow-hidden">
+            <GuestDashboard userProfile={userProfile} />
+        </div>
+      );
   }
 
   // --- VIEW 3: CAPTAIN (VESSEL DECK) ---
@@ -76,7 +81,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // --- VIEW 4: GM / OPERATOR (MASTER OPS) ---
   return (
-      <div className="h-full w-full pb-20 lg:pb-0">
+      <div className="h-full w-full pb-20 lg:pb-0 overflow-hidden">
         <GMDashboard 
             userProfile={userProfile}
             logs={dashboardLogs} // Passing dynamic logs derived from traces
