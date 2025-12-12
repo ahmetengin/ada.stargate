@@ -16,7 +16,9 @@ interface CanvasProps {
   onOpenReport?: () => void;
   onOpenTrace?: () => void;
   agentTraces?: AgentTraceLog[];
-  activeTenantConfig: TenantConfig; 
+  activeTenantConfig: TenantConfig;
+  // NEW PROP to tunnel the tab override
+  activeTabOverride?: string; 
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ 
@@ -29,7 +31,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   onOpenReport,
   onOpenTrace,
   agentTraces = [],
-  activeTenantConfig
+  activeTenantConfig,
+  activeTabOverride // NEW
 }) => {
   // Live Data Simulation for "Static" fix
   const [occupancyRate, setOccupancyRate] = useState(92);
@@ -93,6 +96,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             onOpenReport={onOpenReport || (() => {})}
             onOpenTrace={onOpenTrace || (() => {})}
             activeTenantConfig={activeTenantConfig}
+            activeTabOverride={activeTabOverride} // Pass it down
         />
       </div>
   );

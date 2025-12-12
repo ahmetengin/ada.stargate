@@ -101,7 +101,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             const newSession = new LiveSession();
             newSession.onStatusChange = (s) => setStatus(s);
             newSession.onTurnComplete = (userText, modelText) => {
-                 onStateChange(prev => ({...prev, transcript: prev.transcript + `\n[USER]: ${userText}\n[ADA]: ${modelText}`}));
+                 onStateChange(prev => ({...prev, transcript: prev.transcript + `\n[MİSAFİR]: ${userText}\n[ADA]: ${modelText}`}));
             };
             newSession.connect(userProfile).catch(console.error);
             sessionRef.current = newSession;
@@ -195,7 +195,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 </div>
                  <div className="h-8 w-px bg-white/20"></div>
                  <div className="text-[10px] text-zinc-400 flex flex-col">
-                    <span>SYSTEM STATUS</span>
+                    <span>SİSTEM DURUMU</span>
                      <span className={status === 'CONNECTED' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>{status.toUpperCase()}</span>
                 </div>
              </div>
@@ -206,15 +206,15 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 </button>
                 {currentVisualSlide < introNarrative.length ? (
                     <div className="px-8 py-3 bg-white/5 rounded-full text-xs font-bold tracking-widest text-zinc-400 border border-white/10 animate-pulse">
-                        {isSpeaking ? 'ADA IS SPEAKING...' : 'INITIALIZING...'}
+                        {isSpeaking ? 'ADA KONUŞUYOR...' : 'BAŞLATILIYOR...'}
                     </div>
                 ) : currentVisualSlide === introNarrative.length ? (
                     <button onClick={onStartMeeting} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse transition-all flex items-center gap-2">
-                        <Mic size={14} /> ACTIVATE SCRIBE
+                        <Mic size={14} /> DİNLEMEYİ BAŞLAT
                     </button>
                 ) : (
                     <button onClick={onEndMeeting} className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center gap-2">
-                        <FileText size={14} /> END SESSION
+                        <FileText size={14} /> OTURUMU BİTİR
                     </button>
                 )}
                 <button onClick={onClose} className="p-3 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 rounded-full transition-all">
@@ -242,11 +242,11 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
              {renderHeader()}
              <div className="flex-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl flex flex-col relative overflow-hidden">
                 <div className="flex justify-between items-center pb-6 border-b border-white/10 mb-6">
-                     <div className="flex items-center gap-4"><Terminal size={24} className="text-emerald-500" /><span className="text-xl font-mono font-bold text-white tracking-wider">LIVE_LEDGER_V5.0</span></div>
-                     <div className="flex items-center gap-2"><div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div><span className="text-xs font-bold text-red-500 uppercase">Recording</span></div>
+                     <div className="flex items-center gap-4"><Terminal size={24} className="text-emerald-500" /><span className="text-xl font-mono font-bold text-white tracking-wider">CANLI_KAYIT_V5.0</span></div>
+                     <div className="flex items-center gap-2"><div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div><span className="text-xs font-bold text-red-500 uppercase">Kayıt Alınıyor</span></div>
                 </div>
                  <div ref={transcriptRef} className="flex-1 overflow-y-auto custom-scrollbar space-y-4 font-mono text-lg">
-                     {state.transcript ? (state.transcript.split('\n').map((line, i) => (<div key={i} className={`flex gap-4 animate-in slide-in-from-left-4 fade-in duration-300 ${line.startsWith('[ADA]') ? 'text-cyan-400' : 'text-zinc-300'}`}><span className="text-emerald-500/50 select-none">{(i+1).toString().padStart(2, '0')}</span><span>{line}</span></div>))) : (<div className="h-full flex items-center justify-center text-zinc-600 italic">Listening... Say "Hey Ada" to ask a question.</div>)}
+                     {state.transcript ? (state.transcript.split('\n').map((line, i) => (<div key={i} className={`flex gap-4 animate-in slide-in-from-left-4 fade-in duration-300 ${line.startsWith('[ADA]') ? 'text-cyan-400' : 'text-zinc-300'}`}><span className="text-emerald-500/50 select-none">{(i+1).toString().padStart(2, '0')}</span><span>{line}</span></div>))) : (<div className="h-full flex items-center justify-center text-zinc-600 italic">Dinleniyor... Konuşmaya başlayabilirsiniz.</div>)}
                 </div>
             </div>
         </div>
@@ -257,26 +257,26 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             {renderHeader()}
              <div className="flex-1 bg-zinc-900/80 backdrop-blur-xl border border-white/10 rounded-3xl p-12 shadow-2xl flex flex-col relative overflow-hidden">
                 <div className="pb-6 border-b border-white/10 mb-6 text-center">
-                    <div className="flex items-center justify-center gap-2 text-emerald-500"><CheckCircle2 size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Analysis Complete</span></div>
-                    <h2 className="text-2xl font-bold text-white mt-2">Meeting Debrief</h2>
+                    <div className="flex items-center justify-center gap-2 text-emerald-500"><CheckCircle2 size={16} /> <span className="text-xs font-bold uppercase tracking-widest">Analiz Tamamlandı</span></div>
+                    <h2 className="text-2xl font-bold text-white mt-2">Toplantı Özeti</h2>
                 </div>
                  <div className="flex-1 grid grid-cols-2 gap-8 overflow-y-auto custom-scrollbar">
                      <div>
-                         <h3 className="text-lg font-bold text-cyan-400 mb-4 border-b border-cyan-500/20 pb-2">Meeting Minutes</h3>
+                         <h3 className="text-lg font-bold text-cyan-400 mb-4 border-b border-cyan-500/20 pb-2">Toplantı Tutanakları</h3>
                          <div className="prose prose-sm prose-invert prose-p:text-zinc-300 prose-li:text-zinc-300 prose-headings:text-white">
-                             <ReactMarkdown>{state.analysisResults?.minutes || "No minutes generated."}</ReactMarkdown>
+                             <ReactMarkdown>{state.analysisResults?.minutes || "Tutanak oluşturulamadı."}</ReactMarkdown>
                          </div>
                      </div>
                      <div>
-                         <h3 className="text-lg font-bold text-amber-400 mb-4 border-b border-amber-500/20 pb-2">Proposal Draft</h3>
+                         <h3 className="text-lg font-bold text-amber-400 mb-4 border-b border-amber-500/20 pb-2">Teklif Taslağı</h3>
                          <div className="prose prose-sm prose-invert prose-p:text-zinc-300 prose-li:text-zinc-300 prose-headings:text-white">
-                             <ReactMarkdown>{state.analysisResults?.proposal || "No proposal generated."}</ReactMarkdown>
+                             <ReactMarkdown>{state.analysisResults?.proposal || "Teklif oluşturulamadı."}</ReactMarkdown>
                          </div>
                      </div>
                  </div>
                  <div className="mt-8 pt-6 border-t border-white/10 flex justify-end gap-4">
-                     <button className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold tracking-widest border border-white/20 transition-all"><Download size={14} /> ARCHIVE</button>
-                     <button className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all"><Mail size={14} /> SEND PROPOSAL</button>
+                     <button className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold tracking-widest border border-white/20 transition-all"><Download size={14} /> ARŞİVLE</button>
+                     <button className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all"><Mail size={14} /> TEKLİFİ GÖNDER</button>
                  </div>
             </div>
         </div>

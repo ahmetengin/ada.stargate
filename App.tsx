@@ -52,6 +52,7 @@ const App: React.FC = () => {
     
   const [appMode, setAppMode] = useState<'main' | 'presentation'>('main');
   const [isObserverOpen, setIsObserverOpen] = useState(false); 
+  const [gmDashboardTab, setGmDashboardTab] = useState<string | undefined>(undefined);
 
   const [activeTenantId, setActiveTenantId] = useState<string>(persistenceService.load(STORAGE_KEYS.ACTIVE_TENANT_ID, FEDERATION_REGISTRY.peers[0].id));
   const [userProfile, setUserProfile] = useState<UserProfile>(MOCK_USER_DATABASE['GENERAL_MANAGER']);
@@ -214,6 +215,25 @@ const App: React.FC = () => {
     setIsLoading(false);
   };
 
+  // --- MODE SWITCH HANDLERS ---
+  const handleOpenVoiceMode = () => {
+      setIsVoiceModalOpen(true);
+  };
+
+  const handleOpenCustomerMode = () => {
+      setGmDashboardTab('customer');
+      if (window.innerWidth > 1024 && canvasWidth < 100) {
+          setCanvasWidth(500); // Open canvas if closed
+      }
+  };
+
+  const handleOpenTeamMode = () => {
+      setGmDashboardTab('hr');
+      if (window.innerWidth > 1024 && canvasWidth < 100) {
+          setCanvasWidth(500); // Open canvas if closed
+      }
+  };
+
   return (
     <div className={`w-screen h-screen font-sans flex flex-col transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
       {showBootSequence && <BootSequence />}
@@ -252,6 +272,9 @@ const App: React.FC = () => {
                             onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
                             onEnterObserverMode={() => { handleEnterObserverMode(); setIsMobileMenuOpen(false); }}
                             onEnterScribeMode={() => { handleEnterScribeMode(); setIsMobileMenuOpen(false); }} 
+                            onOpenVoiceMode={() => { handleOpenVoiceMode(); setIsMobileMenuOpen(false); }}
+                            onOpenCustomerMode={() => { handleOpenCustomerMode(); setIsMobileMenuOpen(false); }}
+                            onOpenTeamMode={() => { handleOpenTeamMode(); setIsMobileMenuOpen(false); }}
                             activeTenantId={activeTenantId} vhfLogs={vhfLogs}
                         />
                     </div>
@@ -265,6 +288,9 @@ const App: React.FC = () => {
                     onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
                     onEnterObserverMode={handleEnterObserverMode}
                     onEnterScribeMode={handleEnterScribeMode} 
+                    onOpenVoiceMode={handleOpenVoiceMode}
+                    onOpenCustomerMode={handleOpenCustomerMode}
+                    onOpenTeamMode={handleOpenTeamMode}
                     activeTenantId={activeTenantId} vhfLogs={vhfLogs}
                 />
             </div>
@@ -294,9 +320,10 @@ const App: React.FC = () => {
             {/* Right Canvas (Operations Deck) - Hidden on smaller screens, Resizable */}
             <div className="hidden xl:flex flex-col border-l border-[var(--border-color)] bg-[var(--bg-secondary)]" style={{ width: `${canvasWidth}px` }}>
                 <Canvas 
-                vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
-                onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
-                agentTraces={agentTraces} aisTargets={aisTargets} activeTenantConfig={activeTenantConfig}
+                    vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
+                    onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
+                    agentTraces={agentTraces} aisTargets={aisTargets} activeTenantConfig={activeTenantConfig}
+                    activeTabOverride={gmDashboardTab}
                 />
             </div>
             </main>

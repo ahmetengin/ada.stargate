@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { OpsTab } from './gm/OpsTab';
 import { FleetTab } from './gm/FleetTab';
@@ -22,6 +22,7 @@ interface GMDashboardProps {
   agentTraces?: AgentTraceLog[];
   vesselsInPort: number;
   activeTenantConfig: TenantConfig;
+  activeTabOverride?: string; // New Prop for external control
 }
 
 export const GMDashboard: React.FC<GMDashboardProps> = ({
@@ -34,9 +35,17 @@ export const GMDashboard: React.FC<GMDashboardProps> = ({
   onOpenTrace,
   agentTraces,
   vesselsInPort,
-  activeTenantConfig
+  activeTenantConfig,
+  activeTabOverride
 }) => {
   const [activeTab, setActiveTab] = useState('ops');
+
+  // React to external tab changes (from Sidebar modes)
+  useEffect(() => {
+      if (activeTabOverride) {
+          setActiveTab(activeTabOverride);
+      }
+  }, [activeTabOverride]);
 
   // Prepare Data for Tabs
   

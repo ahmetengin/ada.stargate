@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
 import { ArrowUp, AudioWaveform, ScanLine, Radio } from 'lucide-react';
 import { ModelType, UserRole } from '../../types';
@@ -64,7 +65,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
 
   const toggleDictation = () => {
     if (!recognitionRef.current) {
-        alert("Browser does not support speech recognition.");
+        alert("Tarayıcı sesli komutu desteklemiyor.");
         return;
     }
 
@@ -123,10 +124,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
           ${isDictating ? 'ring-1 ring-red-500/50 border-red-500/50' : ''}`}>
           
           <div className="flex items-center gap-0.5 sm:gap-1 pr-1.5 sm:pr-2 border-r border-[var(--border-color)] mr-1.5 sm:mr-2 mb-1.5">
-              <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Scanner">
+              <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Tarayıcı">
                   <ScanLine size={16} />
               </button>
-              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="VHF Radio Mode">
+              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="VHF Telsiz Modu">
                   <Radio size={16} />
               </button>
           </div>
@@ -137,7 +138,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             value={text}
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
-            placeholder={isDictating ? "Listening..." : "Command..."}
+            placeholder={isDictating ? "Dinliyorum..." : "Talimat verin..."}
             className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] py-3 font-mono min-w-0 max-h-[150px] resize-none ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
             disabled={isLoading}
           />
@@ -146,7 +147,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
               <button 
                 onClick={toggleDictation} 
                 className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5'}`}
-                title="Voice Input"
+                title="Sesli Giriş"
               >
                   <AudioWaveform size={16} />
               </button>
@@ -162,7 +163,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       
       <div className="hidden sm:flex text-[9px] text-center text-[var(--text-secondary)] mt-3 uppercase tracking-[0.2em] font-bold opacity-50 items-center justify-center gap-2">
           <div className="w-1 h-1 bg-emerald-500 rounded-full"></div>
-          Secure Connection Established • 256-BIT Encryption
+          GÜVENLİ BAĞLANTI KURULDU • 256-BIT ŞİFRELEME
       </div>
     </div>
   );

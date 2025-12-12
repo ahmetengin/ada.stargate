@@ -3,7 +3,7 @@ import React from 'react';
 import { UserProfile, VhfLog } from '../../types';
 import { FEDERATION_REGISTRY } from '../../services/config';
 import { 
-    Anchor, ChevronRight, Projector, Activity
+    Anchor, ChevronRight, Projector, Activity, Radio, Users, Briefcase, UserCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -17,6 +17,9 @@ interface SidebarProps {
   onTenantSwitch: (tenantId: string) => void;
   onEnterObserverMode?: () => void;
   onEnterScribeMode?: () => void;
+  onOpenVoiceMode?: () => void;
+  onOpenCustomerMode?: () => void;
+  onOpenTeamMode?: () => void;
   activeTenantId: string;
 }
 
@@ -34,13 +37,25 @@ const SectionHeader = ({ title }: { title: string }) => (
     </h3>
 );
 
-const MenuButton = ({ icon: Icon, label }: { icon: any, label: string }) => (
-    <button className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[var(--text-primary)] transition-all group border border-transparent hover:border-[var(--border-color)]">
+const PersonaButton = ({ icon: Icon, label, subtext, onClick, active }: { icon: any, label: string, subtext: string, onClick: () => void, active?: boolean }) => (
+    <button 
+        onClick={onClick}
+        className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group mb-2 ${
+            active 
+            ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] text-[var(--text-primary)]' 
+            : 'bg-black/5 dark:bg-white/5 border-transparent hover:border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+        }`}
+    >
         <div className="flex items-center gap-3">
-            <Icon size={14} className="text-[var(--text-secondary)] group-hover:text-[var(--accent-color)] transition-colors" />
-            {label}
+            <div className={`p-2 rounded-lg ${active ? 'bg-[var(--accent-color)] text-white' : 'bg-white/10 text-[var(--text-secondary)] group-hover:text-[var(--accent-color)]'}`}>
+                <Icon size={16} />
+            </div>
+            <div className="text-left">
+                <div className="text-xs font-bold uppercase tracking-wider leading-none mb-1">{label}</div>
+                <div className="text-[9px] opacity-60 font-mono">{subtext}</div>
+            </div>
         </div>
-        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-[var(--accent-color)]" />
+        <ChevronRight size={14} className={`transition-transform ${active ? 'rotate-90 text-[var(--accent-color)]' : 'opacity-0 group-hover:opacity-100'}`} />
     </button>
 );
 
@@ -80,50 +95,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTenantSwitch,
   onEnterObserverMode,
   onEnterScribeMode,
+  onOpenVoiceMode,
+  onOpenCustomerMode,
+  onOpenTeamMode,
   activeTenantId
 }) => {
-
-  const nodeGroups = [
-    { 
-        title: 'ADA.MARINA (OPS)', 
-        color: 'text-cyan-400',
-        nodes: [
-            { id: 'ada.marina', label: 'HARBOUR MASTER' },
-            { id: 'ada.sea', label: 'SEA / COLREGS' },
-            { id: 'ada.technic', label: 'BOATYARD / LIFT' },
-            { id: 'ada.energy', label: 'GRID (MONACO PROTOCOL)' },
-            { id: 'ada.robotics', label: 'ROBOTICS (SUBSEA/SKY)' }
-        ]
-    },
-    { 
-        title: 'ADA.FINANCE (CFO)', 
-        color: 'text-emerald-400',
-        nodes: [
-            { id: 'ada.finance', label: 'LEDGER & INVOICE' },
-            { id: 'ada.commercial', label: 'COMMERCIAL / RETAIL' }, 
-            { id: 'ada.customer', label: 'CRM / LOYALTY' },
-            { id: 'ada.yield', label: 'YIELD (MIAMI MODE)' } 
-        ]
-    },
-    { 
-        title: 'ADA.LEGAL (COUNSEL)', 
-        color: 'text-indigo-400',
-        nodes: [
-            { id: 'ada.legal', label: 'RULES & RAG' },
-            { id: 'ada.security', label: 'SECURITY / ISPS' },
-            { id: 'ada.shield', label: 'SHIELD (ANTIBES DOME)' }, 
-            { id: 'ada.passkit', label: 'ACCESS CONTROL' }
-        ]
-    },
-    { 
-        title: 'ADA.STARGATE (BRAIN)', 
-        color: 'text-purple-400',
-        nodes: [
-            { id: 'ada.orchestrator', label: 'ROUTER & SEAL' },
-            { id: 'ada.federation', label: 'NETWORK LINK' }
-        ]
-    }
-  ];
 
   const isGM = userProfile.role === 'GENERAL_MANAGER';
   const activeTenant = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || FEDERATION_REGISTRY.peers[0];
@@ -154,67 +130,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
                 </div>
             </div>
-
-            {/* Header Actions (Only for GM) */}
-            {isGM && (
-                <div className="flex items-center gap-2">
-                    {/* Presentation Mode (Sunum) */}
-                    {onEnterScribeMode && (
-                        <button 
-                            onClick={onEnterScribeMode}
-                            className="p-2 rounded-full bg-purple-500/10 hover:bg-purple-500 text-purple-500 hover:text-white transition-all border border-purple-500/30 hover:border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.2)] group"
-                            title="Presentation Mode"
-                        >
-                            <Projector size={18} className="group-hover:scale-110 transition-transform" />
-                        </button>
-                    )}
-
-                    {/* Observer Mode (Matrix) */}
-                    {onEnterObserverMode && (
-                        <button 
-                            onClick={onEnterObserverMode}
-                            className="p-2 rounded-full bg-cyan-500/10 hover:bg-cyan-500 text-cyan-500 hover:text-white transition-all border border-cyan-500/30 hover:border-cyan-500 shadow-[0_0_15px_rgba(6,182,212,0.2)] group"
-                            title="Neural Observer"
-                        >
-                            <Activity size={18} className="group-hover:animate-pulse" />
-                        </button>
-                    )}
-                </div>
-            )}
         </div>
       </div>
 
       {/* CONTENT AREA */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-8 relative z-10">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-4 relative z-10">
           
           {/* GENERAL MANAGER VIEW */}
           {isGM ? (
               <div className="space-y-6">
-                {nodeGroups.map((group) => (
-                    <div key={group.title}>
-                        <h3 className={`text-[9px] font-bold uppercase tracking-widest mb-2 pl-2 border-l-2 ${group.color.replace('text', 'border')} ${group.color}`}>
-                            {group.title}
-                        </h3>
-                        <div className="grid grid-cols-1 gap-1">
-                            {group.nodes.map((node) => {
-                                const isWorking = nodeStates[node.id] === 'working';
-                                return (
-                                    <div key={node.id} className="flex items-center justify-between group py-2 px-3 hover:bg-black/5 dark:hover:bg-cyan-500/5 rounded-lg transition-all border border-transparent hover:border-[var(--border-color)]">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-1 h-1 rounded-full ${isWorking ? 'bg-amber-400 animate-pulse' : 'bg-slate-400'}`} />
-                                            <span className={`text-[10px] font-mono font-medium transition-colors ${isWorking ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                                                {node.label}
-                                            </span>
-                                        </div>
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {isWorking ? <ActivityIcon color="text-amber-400" /> : <div className="text-[8px] text-[var(--accent-color)] font-mono">IDLE</div>}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                
+                {/* 1. ADA PERSONAS (Modes) */}
+                <div>
+                    <SectionHeader title="Select Persona" />
+                    <div className="space-y-1">
+                        <PersonaButton 
+                            icon={Radio} 
+                            label="VHF Operator" 
+                            subtext="Voice & Radio Protocol" 
+                            onClick={onOpenVoiceMode || (() => {})} 
+                        />
+                        <PersonaButton 
+                            icon={Projector} 
+                            label="Presenter" 
+                            subtext="Sales & Negotiation" 
+                            onClick={onEnterScribeMode || (() => {})} 
+                        />
+                        <PersonaButton 
+                            icon={UserCheck} 
+                            label="CRM Analyst" 
+                            subtext="Customer Intelligence" 
+                            onClick={onOpenCustomerMode || (() => {})} 
+                        />
+                        <PersonaButton 
+                            icon={Briefcase} 
+                            label="Team Lead" 
+                            subtext="HR & Internal Ops" 
+                            onClick={onOpenTeamMode || (() => {})} 
+                        />
                     </div>
-                ))}
+                </div>
+
+                {/* 2. SYSTEM UTILITIES */}
+                <div className="mt-6">
+                    <SectionHeader title="System Utils" />
+                    <button 
+                        onClick={onEnterObserverMode}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[var(--text-primary)] transition-all group border border-transparent hover:border-[var(--border-color)]"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Activity size={14} />
+                            Neural Observer
+                        </div>
+                    </button>
+                </div>
+
               </div>
           ) : (
               <div className="text-center p-4 text-xs text-[var(--text-secondary)] italic">

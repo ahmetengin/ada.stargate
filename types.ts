@@ -293,10 +293,11 @@ export interface TravelItinerary {
   transfers: any[];
 }
 
+// NEW: Presentation Mode State
 export interface PresentationState {
   isActive: boolean;
   slide: 'intro' | 'scribe' | 'analysis' | 'observer';
-  transcript: string;
+  transcript: string; // The live speech-to-text buffer
   language?: 'en' | 'tr';
   analysisResults: {
     minutes: string;

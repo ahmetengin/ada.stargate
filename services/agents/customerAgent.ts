@@ -29,6 +29,14 @@ const WIM_INFO_DB: Record<string, string> = {
     'gym': 'Fitness Center: **West Life Sports Club**. Includes Sauna, Indoor & Outdoor Swimming Pools. Tennis, Basketball, and Volleyball courts available.',
     'taxi': 'Taxi Station: +90 212 555 1234 (Gate A pickup). VIP Chauffeur service also available.',
     'pharmacy': 'Pharmacy: "Deniz Eczanesi" located at West Wall mall. Duty pharmacy list available at Security.',
+    'restaurant': `**Dining at West Istanbul Marina:**
+We offer a diverse culinary experience. Top recommendations:
+1. **Calisto Balık:** Premium Seafood & Mezes right on the water.
+2. **Ella Italian:** Authentic Italian Pizza & Pasta.
+3. **Happy Moon's:** Casual international dining, great for large groups.
+4. **Poem:** Fine dining and cocktails.
+
+*Would you like to see a menu or book a table?*`,
     'fuel': 'Fuel Station (Lukoil): 24/7. Duty-free available with 24h notice.',
     'lift': 'Technical: **700 Ton Travel Lift** (Mega Yachts) and **75 Ton Travel Lift** available. 60.000m2 hardstanding area.',
     'parking': 'Parking: Managed by **ISPARK** in strategic partnership with WIM. 550 vehicle capacity. Marina customers receive complimentary exit validation tokens.'
@@ -62,7 +70,7 @@ export const customerExpert = {
         response = WIM_INFO_DB[match];
         addTrace(createLog('ada.customer', 'OUTPUT', `Match found for '${match}'.`, 'WORKER'));
     } else {
-        if (lowerQuery.includes('food') || lowerQuery.includes('eat') || lowerQuery.includes('restaurant')) response = WIM_INFO_DB['restaurant'];
+        if (lowerQuery.includes('food') || lowerQuery.includes('eat') || lowerQuery.includes('restaurant') || lowerQuery.includes('dinner') || lowerQuery.includes('lunch')) response = WIM_INFO_DB['restaurant'];
         else if (lowerQuery.includes('tech') || lowerQuery.includes('repair') || lowerQuery.includes('lift')) response = WIM_INFO_DB['lift'];
         else if (lowerQuery.includes('park') || lowerQuery.includes('car')) response = WIM_INFO_DB['parking'];
         else response = "Specific info not found. Please contact Front Office (09:00-18:00) for general inquiries.";

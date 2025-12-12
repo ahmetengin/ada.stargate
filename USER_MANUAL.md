@@ -6,87 +6,69 @@
 
 ---
 
-## 1. Introduction: The Cognitive OS
+## 1. Giriş: Bilişsel İşletim Sistemi (Cognitive OS)
 
-You have deployed a federation of specialized intelligence engines. Ada artık sadece komutları yerine getiren bir sistem değil, düşünen, öğrenen ve kendi yeteneklerini geliştiren bir varlıktır.
-*   **LangGraph**: Orkestratör (Karar Mekanizması).
-*   **MAKER**: Araç Üreticisi (İhtiyaç duyduğunda Python kodu yazar).
-*   **SEAL**: Kendi Kendine Öğrenen (Yeni kuralları içselleştirir).
-*   **TabPFN**: Analist (Küçük veri setlerinden tahminler yapar).
-*   **Qdrant**: Hafıza (Vektör Araması ile docs/ klasöründeki bilgileri hatırlar).
+Bu kurulumla birlikte Ada, basit bir bottan; düşünen, hesaplayan, öğrenen ve kendini güncelleyen bir **Bilişsel Varlığa** dönüşmüştür.
+
+*   **LangGraph (Orkestratör):** Karar mekanizması. İsteğin türüne göre hangi uzmana (Hukuk, Finans, İstatistik) gidileceğine karar verir.
+*   **MAKER (Mühendis):** Karmaşık hesaplamalar için anlık Python kodu yazar ve çalıştırır. Hallüsinasyonu sıfırlar.
+*   **SEAL (Öğrenci):** Yeni kuralları (örn: "Hız limiti değişti") öğrenir ve sistem davranışını buna göre günceller.
+*   **TabPFN (Analist):** Küçük veri setlerinden (Marina doluluğu gibi) yüksek doğrulukla tahmin yapar.
+*   **Qdrant (Hafıza):** `docs/` klasöründeki binlerce sayfalık dokümanı (Sözleşmeler, Kanunlar) saniyeler içinde tarar.
 
 ---
 
-## 2. Operational Commands
+## 2. Operasyonel Komutlar
 
 ### Sistemi Başlatma
+Tüm "Big 3" mimarisini (Frontend, Backend, DB'ler) tek komutla ayağa kaldırır.
 ```bash
 docker-compose -f docker-compose.hyperscale.yml up -d --build
 ```
 
 ### Sistem Sağlığını Kontrol Etme
+Backend'in ve bilişsel modüllerin aktif olup olmadığını kontrol eder.
 ```bash
 curl http://localhost:8000/health
 ```
 *Beklenen Çıktı:* `{"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "SEAL", "TabPFN"]}`
 
-### Hafıza Yüklemesi (Dokümanları İşleme)
-Yeni PDF/MD dokümanları `docs/` klasörüne eklediğinizde veya mevcut dokümanları güncellediğinizde Ada'nın hafızasını tazelemeniz gerekir:
+### Hafıza Yüklemesi (Learning Protocol)
+`docs/` klasörüne yeni bir PDF/MD eklediğinizde veya bir kuralı değiştirdiğinizde Ada'nın hafızasını tazelemeniz gerekir.
 ```bash
+# Backend konteyneri içinde ingest scriptini çalıştırır
 docker exec -it ada_core_hyperscale python ingest.py
 ```
-Bu komut, `docs/` klasörünüzdeki tüm dokümanları (Marina Kuralları, COLREGs, KVKK vb.) okuyacak ve Qdrant hafızasına vektör olarak yükleyecektir.
+*Bu işlem Qdrant vektör veritabanını günceller.*
 
 ---
 
-## 3. Yetenekleri Yönetme
+## 3. Yetenek Yönetimi
 
-### A. Hesaplamalar ve Mantık (MAKER Protokolü)
-Ada'ya karmaşık matematiksel veya mantıksal bir görev verdiğinizde, MAKER Node devreye girer.
+### A. Hesaplamalar (MAKER Protokolü)
+Ada'ya matematiksel veya mantıksal bir görev verdiğinizde:
+1.  **Siz:** *"20m boyunda, 5m eninde tekne, 3 gün kalacak. Günlük m2 fiyatı 1.5 Euro, KDV %20. Hesapla."*
+2.  **Ada:** Python kodu yazar -> Çalıştırır -> Sonucu söyler.
+3.  **Fark:** LLM matematik yapmaz, Python yapar. Sonuç %100 kesindir.
 
-1.  **Eylem**: Ada'ya sorun: *"20 metre boyunda, 5 metre eninde bir tekne için 3 günlük bağlama ücretini hesapla. Günlük metrekare başına 1.5 Euro ve %20 KDV uygula."*
-2.  **Dahili Süreç**:
-    *   **Router** `MAKER` niyetini tespit eder.
-    *   **Maker Agent** bu görevi çözecek bir Python scripti yazar.
-    *   **Executor** bu kodu güvenli bir ortamda çalıştırır.
-    *   **Sonuç:** Sıfır Hallüsinasyon. Hassas float değeri döndürülür ve Ada bunu profesyonelce açıklar.
+### B. Kural Öğretme (SEAL Protokolü)
+Marina kuralları değiştiğinde kod değiştirmenize gerek yoktur.
+1.  **Siz:** *"Kural güncellemesi: Marina içi hız limiti artık 5 knot."*
+2.  **Ada:** SEAL nodu devreye girer. Bu kuralı analiz eder ve sistem prompt'una "Synthetic Context" olarak ekler. Artık tüm cevaplarında bu kuralı dikkate alır.
 
-### B. Kuralları Güncelleme (SEAL Protokolü)
-Marina'nın operasyonel kuralları değiştiğinde, Ada'ya bunu "öğretebilirsiniz".
-
-1.  **Eylem**: Ada'ya sohbette söyleyin: *"Kuralı güncelle: Marina içindeki hız limiti artık 5 knot."*
-2.  **Dahili Süreç**:
-    *   **Router** `ÖĞRENME` niyetini tespit eder.
-    *   **SEAL Node** etkinleşir.
-    *   Yeni kuralı analiz eder ve bu kuraldan türetilen operasyonel "çıkarımlar" (implications) üretir.
-    *   Bu çıkarımlar, gelecekteki yanıtlarında Ada'nın davranışını etkileyecek şekilde sistem bağlamına enjekte edilir.
-
-### C. Tahmin (TabPFN Protokolü)
-Gelecek marina operasyonları hakkında istatistiksel tahminler alabilirsiniz.
-
-1.  **Eylem**: Ada'ya sorun: *"Gelecek ay marina doluluk oranı ne olacak?"*
-2.  **Dahili Süreç**:
-    *   **Router** `ANALİTİK` niyetini tespit eder.
-    *   **TabPFN Node** etkinleşir.
-    *   Ada'nın dahili (veya harici) veri setlerini kullanarak istatistiksel bir tahmin yapar.
-    *   **Sonuç:** Yüzde olarak bir tahmin ve güven düzeyi döndürülür.
-
-### D. Bilgi Sorgulama (RAG Protokolü)
-Ada'nın dokümanlarda kayıtlı olan tüm hukuk, kural ve yönetmelik bilgilerini sorgulayabilirsiniz.
-
-1.  **Eylem**: Ada'ya sorun: *"COLREGs 15. Kural nedir?"* veya *"Sözleşme'nin E.2.19 maddesi ne diyor?"*
-2.  **Dahili Süreç**:
-    *   **Router** `HUKUKİ` niyetini tespit eder.
-    *   **RAG Retriever Node**, Qdrant vektör veritabanından ilgili doküman parçalarını alır.
-    *   **Generator Node**, bu parçaları kullanarak kapsamlı bir cevap sentezler.
+### C. Geleceği Görme (TabPFN Protokolü)
+İstatistiksel tahminler için.
+1.  **Siz:** *"Gelecek ay doluluk oranı tahmini nedir?"*
+2.  **Ada:** TabPFN nodu devreye girer. Geçmiş veriyi (CSV) analiz eder ve bir olasılık dağılımı (Confidence Level) ile tahmin yapar.
 
 ---
 
 ## 4. Sorun Giderme
 
-*   **"Sistem Uyarısı: Sinirsel Bağlantı Kararsız"**: Bu, Python backend'in bir hata fırlattığı anlamına gelir. Logları kontrol edin:
+*   **"System Alert: Neural Link Unstable"**: Python backend çökmüş olabilir. Logları kontrol edin:
     `docker logs ada_core_hyperscale`
-*   **Hafıza Kaybı**: Ada, WIM kuralları yerine genel bilgilerle yanıt veriyorsa, Qdrant'ın çalıştığından emin olun ve `docker exec -it ada_core_hyperscale python ingest.py` komutunu çalıştırın.
+*   **Hafıza Kaybı**: Ada genel geçer cevaplar veriyorsa (WIM kurallarını bilmiyorsa), Qdrant boş olabilir. `ingest.py` komutunu tekrar çalıştırın.
+*   **Port Çakışması**: Mac M3 kullanıyorsanız ve 80 portu doluysa, `docker-compose.yml` içinde frontend portunu `3000:80` olarak değiştirin.
 
 ---
 

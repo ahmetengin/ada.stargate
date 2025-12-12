@@ -1,3 +1,4 @@
+
 // services/wimMasterData.ts
 import { MasterDataStructure } from '../types';
 
@@ -67,11 +68,11 @@ export const wimMasterData: MasterDataStructure = {
       "lease_model": "Fixed Rent + % Turnover Share",
       "common_area_charge_formula": "Total Cost / Total Leased Area * Tenant Area",
       "key_tenants": [
+          { "name": "Calisto Balık", "type": "F&B", "location": "Kumsal Street" },
+          { "name": "Ella Italian", "type": "F&B", "location": "Kumsal Street" },
+          { "name": "Happy Moon's", "type": "F&B", "location": "Kumsal Street" },
           { "name": "Poem Restaurant", "type": "F&B", "location": "Social Zone" },
           { "name": "Fersah", "type": "F&B", "location": "Social Zone" },
-          { "name": "Calisto", "type": "F&B", "location": "Social Zone" },
-          { "name": "Happy Moon's", "type": "F&B", "location": "Social Zone" },
-          { "name": "Big Chefs", "type": "F&B", "location": "Social Zone" },
           { "name": "West Life Sports Club", "type": "Wellness", "location": "Block B" },
           { "name": "Migros Jet", "type": "Market", "location": "Block A" },
           { "name": "Yacht Brokerage Row", "type": "Office", "location": "Commercial Street" }
@@ -132,9 +133,9 @@ export const wimMasterData: MasterDataStructure = {
         { id: 'PROV-005', name: 'Turkish Coffee', price: 7.50, unit: 'pack' }
     ],
     "catering_menus": [
-        { id: 'CAT-001', itemName: 'Seafood Platter', description: 'Fresh calamari, shrimp, and octopus grilled to perfection.', price: 45, restaurant: 'Poem Restaurant', prepTime: 30 },
-        { id: 'CAT-002', itemName: 'Sushi Deluxe Set', description: 'Assorted nigiri and maki rolls, chef\'s selection.', price: 60, restaurant: 'Fersah', prepTime: 45 },
-        { id: 'CAT-003', itemName: 'Turkish Mezze Platter', description: 'Selection of local dips, cheeses, and olives.', price: 30, restaurant: 'Calisto', prepTime: 20 }
+        { id: 'CAT-001', itemName: 'Salt Baked Sea Bass', description: 'Daily catch prepared in sea salt crust.', price: 85, restaurant: 'Calisto Balık', prepTime: 45 },
+        { id: 'CAT-002', itemName: 'Truffle Mushroom Pizza', description: 'Stone oven, fresh truffle oil, mozzarella.', price: 28, restaurant: 'Ella Italian', prepTime: 25 },
+        { id: 'CAT-003', itemName: 'Big Texas Burger', description: '200g Beef patty, cheddar, caramelized onions.', price: 22, restaurant: 'Happy Moon\'s', prepTime: 20 }
     ],
     "housekeeping_services": [
         { type: 'Interior Cleaning', rate: 80, unit: 'hour' },
@@ -142,10 +143,15 @@ export const wimMasterData: MasterDataStructure = {
         { type: 'Laundry Service', rate: 25, unit: 'load' }
     ]
   },
-  "facility_management": { // FIX: Added missing 'facility_management' property
+  "facility_management": { 
     "environmental_compliance": {
         "zero_waste_certificate": "GOLD_TIER",
         "blue_flag_status": "ACTIVE"
+    }
+  },
+  "services": {
+    "amenities": {
+        "restaurants": ["Calisto Balık", "Ella Italian", "Happy Moon's", "Poem Restaurant"]
     }
   }
 };
