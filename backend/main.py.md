@@ -16,7 +16,7 @@ except ImportError:
     # Removed from vhf_radio import stream as radio_stream
     from schemas import ChatRequest
 
-app = FastAPI(title="Ada Stargate Hyperscale API", version="4.6")
+app = FastAPI(title="Ada Stargate Hyperscale API", version="5.1")
 
 app.add_middleware(
     CORSMiddleware,

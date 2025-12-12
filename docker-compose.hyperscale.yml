@@ -11,7 +11,6 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: ada_core_hyperscale
-    # PORTS REMOVED: Communicates only via internal 'ada_onenet'
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
@@ -30,11 +29,24 @@ services:
       - ada_onenet
     restart: always
 
+  # --- NEW: THE GATEWAY (Go Lang - High Performance Comms) ---
+  ada-gateway:
+    build:
+      context: ./backend-go
+      dockerfile: Dockerfile
+    container_name: ada_gateway_hyperscale
+    environment:
+      - REDIS_URL=redis://ada-redis:6379
+    depends_on:
+      - ada-redis
+    networks:
+      - ada_onenet
+    restart: always
+
   # 2. MEMORY (Vector DB - RAG)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
-    # PORTS REMOVED: Accessed via Gateway /qdrant
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
@@ -44,7 +56,6 @@ services:
   ada-local-llm:
     image: ollama/ollama:latest
     container_name: ada_local_llm
-    # PORTS REMOVED: Internal brain use only
     volumes:
       - ollama_data:/root/.ollama
     networks:
@@ -59,7 +70,6 @@ services:
       POSTGRES_USER: ada
       POSTGRES_PASSWORD: adapassword
       POSTGRES_DB: wim_db
-    # PORTS REMOVED: Internal ledger only
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -69,7 +79,6 @@ services:
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
-    # PORTS REMOVED: Internal signal bus only
     volumes:
       - redis_data:/data
     networks:
@@ -79,25 +88,24 @@ services:
   ada-mqtt:
     image: eclipse-mosquitto:2
     container_name: ada_mqtt_broker
-    # PORTS REMOVED: Sensors connect via Gateway tunnel
     volumes:
       - mqtt_data:/mosquitto/data
       - mqtt_log:/mosquitto/log
     networks:
       - ada_onenet
 
-  # 7. GATEWAY & FRONTEND (The Single Port Interface)
+  # 7. FRONTEND (OneNet Interface)
   ada-frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ada_frontend_hyperscale
     ports:
-      - "3000:80" # THE ONLY OPEN PORT (OneNet Gateway)
+      - "3000:80" # THE ONLY OPEN PORT
     environment:
       - API_KEY=${API_KEY}
     depends_on:
-      - ada-core
+      - ada-gateway # Frontend talks to Go Gateway via Nginx
     networks:
       - ada_onenet
 

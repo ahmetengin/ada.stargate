@@ -44,7 +44,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
                   <div className="w-12 h-12 rounded-xl bg-[#020617] border border-cyan-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.1)] mb-4 animate-pulse-slow">
                     <Anchor className="text-cyan-400" size={24} />
                   </div>
-                  <div className="text-[9px] font-bold text-cyan-600/70 uppercase tracking-[0.25em] mb-2">ADA MARINA <span className="text-slate-700 mx-2">——</span> <span className="text-cyan-400">v4.1</span></div>
+                  <div className="text-[9px] font-bold text-cyan-600/70 uppercase tracking-[0.25em] mb-2">ADA MARINA <span className="text-slate-700 mx-2">——</span> <span className="text-cyan-400">v5.1</span></div>
                   <div className="max-w-md text-[10px] text-slate-500 leading-relaxed font-medium">
                       <span className="text-slate-400 font-bold">Protocol Initialized</span><br/>
                       [ <span className="text-emerald-500 font-bold">OK</span> ] Core System. [ <span className="text-emerald-500 font-bold">OK</span> ] COLREGs. [ <span className="text-emerald-500 font-bold">OK</span> ] Secure Mesh.<br/>

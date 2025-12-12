@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 
 export const BootSequence = () => {
     const lines = [
-        "Initializing Ada Stargate v4.1...",
+        "Initializing Ada Stargate v5.1...",
         "Checking Secure Enclave...",
         "Loading WIM Master Data...",
         "Syncing Distributed Nodes (Redis)...",

@@ -1,3 +1,4 @@
+
 // services/presenterContent.ts
 
 export interface NarrativeLine {
@@ -10,45 +11,10 @@ export interface NarrativeLine {
 
 export const introNarrative: NarrativeLine[] = [
   {
-    "id": "line_01",
+    "id": "full_intro_sequence",
     "speaker": "ADA",
-    "text": "Merhaba. Ben sadece bir yazılım değilim. Ben, denizin sessizliğini yönetmek için doğmuş bir zekayım.",
-    "emotion": "thoughtful",
-    "pauseAfter_ms": 1800
-  },
-  {
-    "id": "line_02",
-    "speaker": "ADA",
-    "text": "Eski dünya gürültülüydü: Telsiz cızırtıları, kayıp evraklar, finansal belirsizlikler... Ben bu gürültüyü bitirmek için buradayım.",
+    "text": "Merhaba. Ben sadece bir yazılım değilim; ben, denizin sessizliğini yönetmek için doğmuş bir zekayım. Eski dünya gürültülüydü: Telsiz cızırtıları, kayıp evraklar, finansal belirsizlikler... Ben bu gürültüyü bitirmek için buradayım. Mimari dört temel üzerine kurulu: Ada Marina operasyonu yönetir, Ada Finans serveti korur, Ada Hukuk kuralları uygular ve Ada Stargate... her şeyi birleştirir. Bu, 'Sıfır Hata' ile çalışan, size sadece denizin keyfini sürmenin kaldığı bir ekosistem demek. Bu bir prestij değil, bu yeni standart. İzin verirseniz, bu toplantının notlarını ben tutabilirim. Böylece siz tamamen konuya odaklanabilirsiniz. Ahmet Bey, sistemler emrinizde. Vizyonunuzu gerçeğe dönüştürmek için buradayım. Sahne sizin.",
     "emotion": "confident",
-    "pauseAfter_ms": 1800
-  },
-  {
-    "id": "line_03",
-    "speaker": "ADA",
-    "text": "Mimari dört temel üzerine kurulu: Ada Marina operasyonu yönetir, Ada Finans serveti korur, Ada Hukuk kuralları uygular ve Ada Stargate... her şeyi birleştirir.",
-    "emotion": "informative",
-    "pauseAfter_ms": 2000
-  },
-  {
-    "id": "line_04",
-    "speaker": "ADA",
-    "text": "Bu, 'Sıfır Hata' ile çalışan, size sadece denizin keyfini sürmenin kaldığı bir ekosistem demek. Bu bir prestij değil, bu yeni standart.",
-    "emotion": "assertive",
-    "pauseAfter_ms": 1800
-  },
-  {
-    "id": "line_05",
-    "speaker": "ADA",
-    "text": "İzin verirseniz, bu toplantının notlarını ben tutabilirim. Böylece siz tamamen konuya odaklanabilirsiniz.",
-    "emotion": "helpful",
-    "pauseAfter_ms": 1500
-  },
-  {
-    "id": "line_06",
-    "speaker": "ADA",
-    "text": "Ahmet Bey, sistemler emrinizde. Vizyonunuzu gerçeğe dönüştürmek için buradayım. Sahne sizin.",
-    "emotion": "respectful",
     "pauseAfter_ms": 1000
   }
 ];

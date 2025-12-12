@@ -1,14 +1,15 @@
-
-```python
+import os
 import operator
 import re
 from typing import Annotated, TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import BaseMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.embeddings import HuggingFaceEmbeddings # Local
-from langchain_community.chat_models import ChatOllama # Local
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.chat_models import ChatOllama
 from qdrant_client import QdrantClient
+from events import publish_event # Import the new event publisher
+
 try:
     from backend.config import Config
 except ImportError:
@@ -27,21 +28,20 @@ class AgentState(TypedDict):
 
 # --- FACTORY ---
 def get_llm():
-    """Hybrid Factory: Tries Cloud, falls back to Ollama"""
     try:
         if Config.API_KEY:
             return ChatGoogleGenerativeAI(model=Config.SMART_MODEL, google_api_key=Config.API_KEY, temperature=0.1)
     except:
         pass
-    
-    print("⚠️ Using Local LLM (Gemma)")
     return ChatOllama(model=Config.OFFLINE_MODEL, base_url=Config.OLLAMA_URL)
 
 # --- NODES ---
 
 async def router_node(state: AgentState):
     msg = state['messages'][-1].content.lower()
-    print(f"--- [ROUTER] Analyzing: {msg} ---")
+    
+    # Emit "Thinking" Trace to Frontend via Go Gateway
+    publish_event("trace", f"[ROUTER] Analyzing intent for: {msg[:50]}...")
     
     if any(x in msg for x in ["calculate", "solve", "math", "hesapla"]):
         return {"intent": "MAKER", "next_node": "maker_agent"}
@@ -52,7 +52,8 @@ async def router_node(state: AgentState):
     return {"intent": "GENERAL", "next_node": "generator"}
 
 async def maker_agent_node(state: AgentState):
-    print("--- [MAKER] Writing Python Code ---")
+    publish_event("trace", "[MAKER] Generating Python code for calculation...")
+    
     query = state['messages'][-1].content
     prompt = f"Write Python code to solve: {query}. Output ONLY code inside ```python``` blocks. Use print() for output."
     
@@ -64,7 +65,8 @@ async def maker_agent_node(state: AgentState):
     return {"generated_code": code, "next_node": "executor"}
 
 async def executor_node(state: AgentState):
-    print("--- [EXECUTOR] Running Code ---")
+    publish_event("trace", "[EXECUTOR] Running logic in sandbox...")
+    
     code = state.get("generated_code", "")
     try:
         import math, datetime, json, random, io, sys
@@ -84,13 +86,10 @@ async def executor_node(state: AgentState):
         return {"execution_result": f"Error: {str(e)}", "next_node": "generator"}
 
 async def rag_retriever_node(state: AgentState):
-    """
-    Hybrid RAG: Uses Local Embeddings to search Qdrant (works offline).
-    """
-    print("--- [RAG] Searching Memory (Local Embeddings) ---")
+    publish_event("trace", "[RAG] Searching Vector Memory (Qdrant)...")
+    
     try:
         client = QdrantClient(url=Config.QDRANT_URL)
-        # MUST use the same model as ingest.py
         embeddings = HuggingFaceEmbeddings(model_name=Config.OFFLINE_EMBEDDING)
         vector = embeddings.embed_query(state['messages'][-1].content)
         
@@ -105,7 +104,8 @@ async def rag_retriever_node(state: AgentState):
     return {"memories": memories, "next_node": "generator"}
 
 async def generator_node(state: AgentState):
-    print("--- [GENERATOR] Speaking ---")
+    publish_event("trace", "[GENERATOR] Synthesizing final response...")
+    
     context = ""
     if state.get("memories"): context += f"RULES:\n{state['memories']}\n"
     if state.get("execution_result"): context += f"CALCULATION:\n{state['execution_result']}\n"
@@ -117,7 +117,7 @@ async def generator_node(state: AgentState):
     return {"final_response": res.content, "next_node": END}
 
 # --- GRAPH BUILDER ---
-def build_graph():
+def build_hyperscale_graph():
     workflow = StateGraph(AgentState)
     workflow.add_node("router", router_node)
     workflow.add_node("maker_agent", maker_agent_node)
@@ -139,4 +139,3 @@ def build_graph():
     workflow.add_edge("generator", END)
     
     return workflow.compile()
-```

@@ -61,7 +61,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const gainNodeRef = useRef<GainNode | null>(null);
-    const animationFrameRef = useRef<number>();
+    const animationFrameRef = useRef<number | null>(null);
     
     const [narrativeStep, setNarrativeStep] = useState(0);
 
@@ -69,10 +69,12 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         if (state.isActive) {
             if (!audioContextRef.current) {
                 const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                audioContextRef.current = new AudioContextClass({ sampleRate: 44100 });
-                analyserRef.current = audioContextRef.current.createAnalyser();
+                // Fix: Constructor arguments provided for compatibility with standard AudioContext
+                audioContextRef.current = new AudioContextClass({ sampleRate: 24000 });
+                // Fix: Cast to any to bypass potential TS issues with 0-argument calls
+                analyserRef.current = (audioContextRef.current as any).createAnalyser();
                 analyserRef.current.fftSize = 64;
-                gainNodeRef.current = audioContextRef.current.createGain();
+                gainNodeRef.current = (audioContextRef.current as any).createGain();
                 gainNodeRef.current.connect(analyserRef.current);
                 analyserRef.current.connect(audioContextRef.current.destination);
             }
@@ -86,10 +88,10 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 audioContextRef.current.close().catch((e: any) => console.error("Failed to close audio context", e));
             }
             audioContextRef.current = null;
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
         }
         return () => {
-             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+             if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
              sessionRef.current?.disconnect();
         };
     }, [state.isActive]);

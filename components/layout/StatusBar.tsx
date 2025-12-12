@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { GitBranch, RefreshCw, AlertCircle, User } from 'lucide-react';
 import { UserProfile } from '../../types';
@@ -43,7 +42,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         
         <Item border={true}>
            <RefreshCw size={12} className={'text-emerald-400'} /> {/* Simplified to static color */}
-           <span>v4.1.0</span>
+           <span>v5.1.0</span>
         </Item>
       </div>
 

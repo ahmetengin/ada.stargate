@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { PresentationState, UserProfile } from './types';
+import { PresentationState, UserProfile, AgentTraceLog } from './types';
 import { generateSpeech } from './services/geminiService';
 import { LiveSession } from './services/liveService';
 import { introNarrative } from './services/presenterContent';
@@ -14,6 +14,7 @@ interface PresentationOverlayProps {
     onEndMeeting: () => void;
     onScribeInput: (text: string) => void;
     onStateChange: React.Dispatch<React.SetStateAction<PresentationState>>;
+    agentTraces: AgentTraceLog[];
 }
 
 // --- AUDIO DECODING HELPERS ---
@@ -47,7 +48,7 @@ async function decodeAudioData(
 }
 
 
-export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange }) => {
+export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange, agentTraces }) => {
     const [subtitles, setSubtitles] = useState<string>("");
     const [audioVis, setAudioVis] = useState<number[]>(new Array(30).fill(5));
     const [isMuted, setIsMuted] = useState(false);
@@ -60,19 +61,20 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const gainNodeRef = useRef<GainNode | null>(null);
-    const animationFrameRef = useRef<number>();
+    const animationFrameRef = useRef<number | null>(null);
     
     const [narrativeStep, setNarrativeStep] = useState(0);
 
-    // Initialize & Clean up Audio Context and Live Session
     useEffect(() => {
         if (state.isActive) {
             if (!audioContextRef.current) {
                 const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                audioContextRef.current = new AudioContextClass({ sampleRate: 44100 });
-                analyserRef.current = audioContextRef.current.createAnalyser();
+                // Fix: Constructor arguments provided for compatibility with standard AudioContext
+                audioContextRef.current = new AudioContextClass({ sampleRate: 24000 });
+                // Fix: Cast to any to bypass potential TS issues with 0-argument calls
+                analyserRef.current = (audioContextRef.current as any).createAnalyser();
                 analyserRef.current.fftSize = 64;
-                gainNodeRef.current = audioContextRef.current.createGain();
+                gainNodeRef.current = (audioContextRef.current as any).createGain();
                 gainNodeRef.current.connect(analyserRef.current);
                 analyserRef.current.connect(audioContextRef.current.destination);
             }
@@ -86,15 +88,14 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 audioContextRef.current.close().catch((e: any) => console.error("Failed to close audio context", e));
             }
             audioContextRef.current = null;
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
         }
         return () => {
-             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+             if (animationFrameRef.current !== null) cancelAnimationFrame(animationFrameRef.current);
              sessionRef.current?.disconnect();
         };
     }, [state.isActive]);
     
-    // Phase 2: Scribe Mode Activation
     useEffect(() => {
         if (state.slide === 'scribe' && !sessionRef.current) {
             const newSession = new LiveSession();
@@ -123,7 +124,6 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         draw();
     };
 
-    // Phase 1: Monologue Player
     useEffect(() => {
         if (state.slide !== 'intro' || isSpeaking || narrativeStep >= introNarrative.length || status !== 'CONNECTED') return;
 
@@ -151,11 +151,11 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                         setIsSpeaking(false);
                         setNarrativeStep(prev => prev + 1);
                     }
-                } else { // Fallback if TTS fails
+                } else { 
                     setTimeout(() => {
                          setIsSpeaking(false);
                          setNarrativeStep(prev => prev + 1);
-                    }, textToSpeak.length * 80); // Simulate speech duration
+                    }, textToSpeak.length * 80); 
                 }
             }
         };
