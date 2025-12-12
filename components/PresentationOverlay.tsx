@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -51,7 +50,7 @@ async function decodeAudioData(
 }
 
 
-export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange }) => {
+export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange, agentTraces }) => {
     const [subtitles, setSubtitles] = useState<string>("");
     const [audioVis, setAudioVis] = useState<number[]>(new Array(30).fill(5));
     const [isMuted, setIsMuted] = useState(false);
@@ -71,7 +70,8 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     useEffect(() => {
         if (state.isActive) {
             if (!audioContextRef.current) {
-                audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 44100 });
+                const AudioCtor = window.AudioContext || (window as any).webkitAudioContext;
+                audioContextRef.current = new AudioCtor({ sampleRate: 44100 });
                 analyserRef.current = audioContextRef.current.createAnalyser();
                 analyserRef.current.fftSize = 64;
                 gainNodeRef.current = audioContextRef.current.createGain();
@@ -82,7 +82,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             startVisualizer();
         } else {
             setStatus("OFFLINE");
-            sessionRef.current?.disconnect();
+            (sessionRef.current as any)?.disconnect();
             sessionRef.current = null;
             if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
                 (audioContextRef.current as any).close().catch((e: any) => console.error("Failed to close audio context", e));
@@ -92,7 +92,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         }
         return () => {
              if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-             sessionRef.current?.disconnect();
+             (sessionRef.current as any)?.disconnect();
         };
     }, [state.isActive]);
     
@@ -106,7 +106,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             newSession.connect(userProfile).catch(console.error);
             sessionRef.current = newSession;
         } else if (state.slide !== 'scribe' && sessionRef.current) {
-            sessionRef.current.disconnect();
+            (sessionRef.current as any).disconnect();
             sessionRef.current = null;
         }
     }, [state.slide, userProfile, onStateChange]);
@@ -141,7 +141,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                         const source = audioContextRef.current.createBufferSource();
                         source.buffer = audioBuffer;
                         source.connect(gainNodeRef.current);
-                        source.start();
+                        source.start(0);
                         source.onended = () => {
                             setIsSpeaking(false);
                             setNarrativeStep(prev => prev + 1);
