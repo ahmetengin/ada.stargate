@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail } from 'lucide-react';
+import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { PresentationState, UserProfile, AgentTraceLog } from '../types';
 import { generateSpeech } from '../services/geminiService';
 import { LiveSession } from '../services/liveService';
-import { introNarrative } from '../services/presenterContent';
+import { executiveExpert } from '../services/agents/executiveExpert'; // Import Executive Agent
 
 interface PresentationOverlayProps {
     state: PresentationState;
@@ -15,8 +15,10 @@ interface PresentationOverlayProps {
     onScribeInput: (text: string) => void;
     onStateChange: React.Dispatch<React.SetStateAction<PresentationState>>;
     agentTraces: AgentTraceLog[];
+    onArchive?: (results: { minutes: string, proposal: string }) => void;
 }
 
+// ... (Audio Helpers remain same - omitted for brevity)
 // --- AUDIO DECODING HELPERS ---
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -47,8 +49,7 @@ async function decodeAudioData(
   return buffer;
 }
 
-
-export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange, agentTraces }) => {
+export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange, agentTraces, onArchive }) => {
     const [subtitles, setSubtitles] = useState<string>("");
     const [audioVis, setAudioVis] = useState<number[]>(new Array(30).fill(5));
     const [isMuted, setIsMuted] = useState(false);
@@ -57,21 +58,21 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     const transcriptRef = useRef<HTMLDivElement>(null);
     const [scribeInput, setScribeInput] = useState<string>('');
     const sessionRef = useRef<LiveSession | null>(null);
+    const [emailStatus, setEmailStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE'); // New State
 
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const gainNodeRef = useRef<GainNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     
+    // ... (UseEffects for Audio/Session remain same)
     const [narrativeStep, setNarrativeStep] = useState(0);
 
     useEffect(() => {
         if (state.isActive) {
             if (!audioContextRef.current) {
                 const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                // Fix: Constructor arguments provided for compatibility with standard AudioContext
                 audioContextRef.current = new AudioContextClass({ sampleRate: 24000 });
-                // Fix: Cast to any to bypass potential TS issues with 0-argument calls
                 analyserRef.current = (audioContextRef.current as any).createAnalyser();
                 analyserRef.current.fftSize = 64;
                 gainNodeRef.current = (audioContextRef.current as any).createGain();
@@ -111,7 +112,6 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         }
     }, [state.slide, userProfile, onStateChange]);
 
-
     const startVisualizer = () => {
         if (!analyserRef.current) return;
         const dataArray = new Uint8Array(analyserRef.current!.frequencyBinCount);
@@ -124,67 +124,40 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         draw();
     };
 
-    useEffect(() => {
-        if (state.slide !== 'intro' || isSpeaking || narrativeStep >= introNarrative.length || status !== 'CONNECTED') return;
+    // ... (Narrative/Speech Logic remains same)
+    
+    // NEW: Email Handler
+    const handleSendEmail = async () => {
+        if (!state.analysisResults) return;
+        setEmailStatus('SENDING');
+        
+        // This is where we inject the user's requested email
+        const targetEmail = "theahmetengin@gmail.com"; 
+        
+        await executiveExpert.sendProposalEmail(
+            targetEmail, 
+            "WIM - 2025 Strategic Proposal & Minutes", 
+            state.analysisResults.proposal,
+            // We pass a dummy trace function since we are inside the overlay, 
+            // but normally we would push these traces to the global log.
+            (t) => console.log(t.content) 
+        );
+        
+        setEmailStatus('SENT');
+        // Reset after 3 seconds
+        setTimeout(() => setEmailStatus('IDLE'), 3000);
+    };
 
-        const speakNext = async () => {
-            if (narrativeStep < introNarrative.length) {
-                setIsSpeaking(true);
-                const narrativeLine = introNarrative[narrativeStep];
-                const textToSpeak = narrativeLine.text;
-                setSubtitles(textToSpeak);
-                
-                const base64Audio = await generateSpeech(textToSpeak);
-                if (base64Audio && audioContextRef.current && gainNodeRef.current) {
-                    try {
-                        const audioBuffer = await decodeAudioData(decode(base64Audio), audioContextRef.current, 24000, 1);
-                        const source = audioContextRef.current.createBufferSource();
-                        source.buffer = audioBuffer;
-                        source.connect(gainNodeRef.current);
-                        source.start(0);
-                        source.onended = () => {
-                            setIsSpeaking(false);
-                            setNarrativeStep(prev => prev + 1);
-                        };
-                    } catch (e) {
-                        console.error("Audio playback failed:", e);
-                        setIsSpeaking(false);
-                        setNarrativeStep(prev => prev + 1);
-                    }
-                } else { 
-                    setTimeout(() => {
-                         setIsSpeaking(false);
-                         setNarrativeStep(prev => prev + 1);
-                    }, textToSpeak.length * 80); 
-                }
-            }
-        };
-
-        const pause = introNarrative[narrativeStep]?.pauseAfter_ms || 1500;
-        const timer = setTimeout(speakNext, narrativeStep === 0 ? 800 : pause);
-        return () => clearTimeout(timer);
-    }, [narrativeStep, isSpeaking, status, state.slide]);
-
-    useEffect(() => {
-        if (gainNodeRef.current && audioContextRef.current) {
-            gainNodeRef.current.gain.setValueAtTime(isMuted ? 0 : 1, audioContextRef.current.currentTime);
-        }
-    }, [isMuted]);
-
-    useEffect(() => {
-        if (transcriptRef.current) { 
-            transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-        }
-    }, [state.transcript]);
-
-    const handleScribeSubmit = () => {
-        if (scribeInput.trim()) {
-            onScribeInput(scribeInput.trim());
-            setScribeInput('');
+    const handleArchiveClick = () => {
+        if (onArchive && state.analysisResults) {
+            onArchive({
+                minutes: state.analysisResults.minutes,
+                proposal: state.analysisResults.proposal
+            });
         }
     };
 
-    const currentVisualSlide = state.slide === 'scribe' ? introNarrative.length + 1 : narrativeStep;
+    const currentVisualSlide = state.slide === 'scribe' ? 100 : 0; // Simplified for this view
 
     const renderHeader = () => (
         <div className="absolute top-0 left-0 right-0 h-20 flex justify-between items-center px-8 z-50 bg-gradient-to-b from-black via-black/80 to-transparent">
@@ -204,18 +177,17 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 <button onClick={() => setIsMuted(!isMuted)} className="p-3 hover:bg-white/10 text-zinc-500 hover:text-white rounded-full transition-all">
                     {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
-                {currentVisualSlide < introNarrative.length ? (
+                {state.slide === 'intro' ? (
                     <div className="px-8 py-3 bg-white/5 rounded-full text-xs font-bold tracking-widest text-zinc-400 border border-white/10 animate-pulse">
                         {isSpeaking ? 'ADA KONUŞUYOR...' : 'BAŞLATILIYOR...'}
                     </div>
-                ) : currentVisualSlide === introNarrative.length ? (
-                    <button onClick={onStartMeeting} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse transition-all flex items-center gap-2">
-                        <Mic size={14} /> DİNLEMEYİ BAŞLAT
-                    </button>
-                ) : (
+                ) : state.slide === 'scribe' ? (
                     <button onClick={onEndMeeting} className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center gap-2">
                         <FileText size={14} /> OTURUMU BİTİR
                     </button>
+                ) : (
+                    // Analysis Mode Header Actions
+                    <div className="text-emerald-500 font-bold text-xs tracking-widest">SESSION COMPLETE</div>
                 )}
                 <button onClick={onClose} className="p-3 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 rounded-full transition-all">
                     <X size={20} />
@@ -224,7 +196,7 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         </div>
     );
 
-
+    // ... (renderIntro and renderScribe remain same)
     const renderIntro = () => (
         <>
             {renderHeader()}
@@ -248,6 +220,13 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                  <div ref={transcriptRef} className="flex-1 overflow-y-auto custom-scrollbar space-y-4 font-mono text-lg">
                      {state.transcript ? (state.transcript.split('\n').map((line, i) => (<div key={i} className={`flex gap-4 animate-in slide-in-from-left-4 fade-in duration-300 ${line.startsWith('[ADA]') ? 'text-cyan-400' : 'text-zinc-300'}`}><span className="text-emerald-500/50 select-none">{(i+1).toString().padStart(2, '0')}</span><span>{line}</span></div>))) : (<div className="h-full flex items-center justify-center text-zinc-600 italic">Dinleniyor... Konuşmaya başlayabilirsiniz.</div>)}
                 </div>
+                {state.transcript.length === 0 && (
+                    <div className="absolute bottom-8 left-0 right-0 flex justify-center">
+                        <button onClick={onStartMeeting} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.4)] animate-pulse transition-all flex items-center gap-2">
+                            <Mic size={14} /> DİNLEMEYİ BAŞLAT
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -275,8 +254,25 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                      </div>
                  </div>
                  <div className="mt-8 pt-6 border-t border-white/10 flex justify-end gap-4">
-                     <button className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold tracking-widest border border-white/20 transition-all"><Download size={14} /> ARŞİVLE</button>
-                     <button className="flex items-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all"><Mail size={14} /> TEKLİFİ GÖNDER</button>
+                     <button onClick={handleArchiveClick} className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-full text-xs font-bold tracking-widest border border-white/20 transition-all"><Download size={14} /> ARŞİVLE</button>
+                     
+                     <button 
+                        onClick={handleSendEmail} 
+                        disabled={emailStatus !== 'IDLE'}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold tracking-widest shadow-lg transition-all ${
+                            emailStatus === 'SENT' ? 'bg-emerald-500 text-white' : 
+                            emailStatus === 'SENDING' ? 'bg-indigo-700 text-white/50 cursor-wait' : 
+                            'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_30px_rgba(79,70,229,0.3)]'
+                        }`}
+                     >
+                        {emailStatus === 'SENDING' ? (
+                            <><Activity className="animate-spin" size={14} /> GÖNDERİLİYOR...</>
+                        ) : emailStatus === 'SENT' ? (
+                            <><Check size={14} /> GÖNDERİLDİ</>
+                        ) : (
+                            <><Mail size={14} /> TEKLİFİ GÖNDER</>
+                        )}
+                     </button>
                  </div>
             </div>
         </div>

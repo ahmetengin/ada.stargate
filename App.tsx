@@ -21,10 +21,10 @@ import { DraggableSplitter } from './components/layout/DraggableSplitter';
 import { StatusBar } from './components/layout/StatusBar';
 
 export const MOCK_USER_DATABASE: Record<string, UserProfile> = {
-  'VISITOR': { id: 'usr_visitor', name: 'Anonymous Visitor', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
+  'VISITOR': { id: 'usr_visitor', name: 'Ziyaretçi', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
   'MEMBER': { id: 'usr_member_01', name: 'Caner Erkin', role: 'MEMBER', clearanceLevel: 1, legalStatus: 'GREEN', loyalty: { tier: 'COMMANDER', totalMiles: 32500, spendableMiles: 12400, nextTierProgress: 65, milesToNextTier: 17500, memberSince: '2023', cardNumber: 'TK-19238123'}},
   'CAPTAIN': { id: 'usr_cpt_01', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN', loyalty: { tier: 'ADMIRAL', totalMiles: 154000, spendableMiles: 45000, nextTierProgress: 100, milesToNextTier: 0, memberSince: '2019', cardNumber: 'TK-88123991'}},
-  'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Fuat Çimen', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
+  'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Ahmet Engin', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
 };
 
 const MIN_PANEL_WIDTH = 280;
@@ -86,7 +86,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const initialSystemMessage: Message = {
-      id: 'init', role: MessageRole.System, text: "System Initialized.", timestamp: Date.now()
+      id: 'init', role: MessageRole.System, text: "Sistem Başlatıldı.", timestamp: Date.now()
     };
     if (showBootSequence) {
       setMessages([initialSystemMessage]);
@@ -126,7 +126,7 @@ const App: React.FC = () => {
       const tenant = FEDERATION_REGISTRY.peers.find(p => p.id === tenantId);
       setMessages(prev => [...prev, {
           id: `sys_${Date.now()}`, role: MessageRole.System,
-          text: `Switched context to ${tenant?.name || 'Unknown Node'}.`, timestamp: Date.now()
+          text: `Bağlam değiştirildi: ${tenant?.name || 'Bilinmeyen Düğüm'}.`, timestamp: Date.now()
       }]);
   };
   
@@ -210,9 +210,21 @@ const App: React.FC = () => {
         return;
     }
     setIsLoading(true);
-    const results = await executiveExpert.analyzeMeeting(presentationState.transcript, 'Valued Client', (trace: AgentTraceLog) => setAgentTraces(prev => [trace, ...prev]));
+    const results = await executiveExpert.analyzeMeeting(presentationState.transcript, 'Değerli Müşteri', (trace: AgentTraceLog) => setAgentTraces(prev => [trace, ...prev]));
     setPresentationState(prev => ({ ...prev, slide: 'analysis', analysisResults: results }));
     setIsLoading(false);
+  };
+
+  // --- ARCHIVE MEETING (Saves to Main Chat) ---
+  const handleArchiveMeeting = (results: { minutes: string, proposal: string }) => {
+      const archiveMessage: Message = {
+          id: `archive_${Date.now()}`,
+          role: MessageRole.Model,
+          text: `**📁 TOPLANTI ARŞİVİ KAYDEDİLDİ**\n\nAda Executive Modu üzerinden gerçekleştirilen toplantı notları ve teklif taslağı başarıyla oluşturulmuştur.\n\n---\n\n${results.minutes}\n\n---\n\n${results.proposal}`,
+          timestamp: Date.now()
+      };
+      setMessages(prev => [...prev, archiveMessage]);
+      handleClosePresentation();
   };
 
   // --- MODE SWITCH HANDLERS ---
@@ -256,6 +268,7 @@ const App: React.FC = () => {
               onScribeInput={handleScribeInput}
               onStateChange={setPresentationState}
               agentTraces={agentTraces}
+              onArchive={handleArchiveMeeting} // Pass the archive handler
           />
       )}
 

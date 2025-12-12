@@ -1,0 +1,116 @@
+version: '3.9'
+
+networks:
+  ada_edge_net:
+    driver: bridge
+
+services:
+  # 1. THE BRAIN (Python LangGraph)
+  # Vision module removed to save resources for LLM
+  ada-core-edge:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ada_core_edge
+    environment:
+      - API_KEY=${API_KEY}
+      - REDIS_URL=redis://ada-redis:6379
+      - QDRANT_URL=http://ada-qdrant:6333
+      - MQTT_BROKER=ada-mqtt
+      - OLLAMA_URL=http://ada-local-llm:11434
+      # Disable Vision/Hailo logic
+      - HAILO_ENABLED=false
+    depends_on:
+      - ada-redis
+      - ada-qdrant
+      - ada-mqtt
+      - ada-local-llm
+    volumes:
+      - ./backend:/app
+      - ./docs:/docs
+    networks:
+      - ada_edge_net
+    restart: always
+
+  # 2. LOCAL BRAIN (Ollama - High Performance Mode)
+  ada-local-llm:
+    image: ollama/ollama:latest
+    container_name: ada_local_llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # CRITICAL FOR PI 5 PERFORMANCE:
+    environment:
+      - OLLAMA_NUM_PARALLEL=1   # Focus on one task at a time for max speed
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=24h   # Keep model in RAM, don't reload (saves 5-10s per request)
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0' # Use all 4 cores of Pi 5
+          memory: 14G # Use almost all RAM for the model context
+    networks:
+      - ada_edge_net
+    restart: always
+
+  # 3. MEMORY (Vector DB)
+  ada-qdrant:
+    image: qdrant/qdrant
+    container_name: ada_qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    deploy:
+      resources:
+        limits:
+          memory: 512M # Limit Qdrant to save RAM for Ollama
+    networks:
+      - ada_edge_net
+
+  # 4. NERVOUS SYSTEM (Redis)
+  ada-redis:
+    image: redis:alpine
+    container_name: ada_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ada_edge_net
+
+  # 5. SENSORY SYSTEM (MQTT)
+  ada-mqtt:
+    image: eclipse-mosquitto:2
+    container_name: ada_mqtt_broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - mqtt_data:/mosquitto/data
+      - mqtt_log:/mosquitto/log
+    networks:
+      - ada_edge_net
+
+  # 6. FRONTEND (Interface)
+  ada-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ada_frontend_edge
+    ports:
+      - "3000:80"
+    environment:
+      - API_KEY=${API_KEY}
+    depends_on:
+      - ada-core-edge
+    networks:
+      - ada_edge_net
+
+volumes:
+  qdrant_data:
+  redis_data:
+  mqtt_data:
+  mqtt_log:
+  ollama_data:

@@ -34,34 +34,29 @@ export const executiveExpert = {
         Return a JSON object with two fields: "minutes" (Markdown string) and "proposal" (Markdown string for Email).
         `;
 
-        // In a real application, this would call generateSimpleResponse with a higher-context model like Gemini-3-Pro
-        // For the demo, if the transcript is very short (simulated), we provide a default structured output.
-        
         // Simulating the "Thinking" delay of a large context model
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Increased thinking time for realism
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
         addTrace(createLog('ada.executive', 'TOOL_EXECUTION', `Extracting financial commitments and deliverables from transcript...`, 'WORKER'));
         
         let minutesOutput = "";
         let proposalOutput = "";
 
-        if (transcript.length > 100) { // If a substantial transcript exists, try to use LLM (simulated)
+        if (transcript.length > 100) { 
             try {
                 const llmResponse = await generateSimpleResponse(
                     prompt, 
-                    MOCK_USER_DATABASE['GENERAL_MANAGER'], // Pass GM profile for context
-                    [], [], 0, [], // Empty registry, tenders, vesselsInPort, messages for this specific call
-                    { id: 'wim', name: 'West Istanbul Marina', fullName: 'ADA.MARINA.WIM', network: 'wim.ada.network', node_address: 'ada.marina.wim', status: 'ONLINE', mission: '', contextSources: [], rules: {}, doctrine: '', masterData: {} } // Minimal tenant config
+                    MOCK_USER_DATABASE['GENERAL_MANAGER'],
+                    [], [], 0, [], 
+                    { id: 'wim', name: 'West Istanbul Marina', fullName: 'ADA.MARINA.WIM', network: 'wim.ada.network', node_address: 'ada.marina.wim', status: 'ONLINE', mission: '', contextSources: [], rules: {}, doctrine: '', masterData: {} }
                 );
                 
-                // Attempt to parse JSON response
                 const jsonMatch = llmResponse.match(/```json\n(.*)\n```/s);
                 if (jsonMatch && jsonMatch[1]) {
                     const parsed = JSON.parse(jsonMatch[1]);
                     minutesOutput = parsed.minutes || "";
                     proposalOutput = parsed.proposal || "";
                 } else {
-                    // Fallback if LLM doesn't return perfect JSON
                     minutesOutput = `**TOPLANTI TUTANAĞI:**\n\nLLM JSON döndüremedi. İşte transkriptten özet:\n${llmResponse.substring(0, 500)}...`;
                     proposalOutput = `**TEKLİF TASLAĞI:**\n\nLLM JSON döndüremedi. İşte transkriptten özet:\n${llmResponse.substring(500, 1000)}...`;
                 }
@@ -69,12 +64,10 @@ export const executiveExpert = {
             } catch (llmError) {
                 console.error("LLM Analysis Error:", llmError);
                 addTrace(createLog('ada.executive', 'ERROR', `LLM analysis failed: ${llmError}. Generating default documents.`, 'EXPERT'));
-                // Fallback to default if LLM fails
                 minutesOutput = generateDefaultMinutes(clientName);
                 proposalOutput = generateDefaultProposal(clientName);
             }
         } else {
-            // Default structured output for short/empty transcripts (demo scenario)
             minutesOutput = generateDefaultMinutes(clientName);
             proposalOutput = generateDefaultProposal(clientName);
         }
@@ -84,6 +77,27 @@ export const executiveExpert = {
         return {
             minutes: minutesOutput.trim(),
             proposal: proposalOutput.trim()
+        };
+    },
+
+    // NEW SKILL: Send Email
+    sendProposalEmail: async (recipient: string, subject: string, body: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string }> => {
+        addTrace(createLog('ada.executive', 'THINKING', `Preparing secure email transmission to ${recipient}...`, 'EXPERT'));
+        
+        // 1. Generate PDF (Simulation)
+        addTrace(createLog('ada.executive', 'TOOL_EXECUTION', `Rendering PDF: 'WIM_Proposal_2025.pdf'...`, 'WORKER'));
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 2. Connect to SMTP (Simulation)
+        addTrace(createLog('ada.executive', 'TOOL_EXECUTION', `Connecting to SMTP Relay (smtp.ada.network)... Authenticated.`, 'WORKER'));
+        await new Promise(resolve => setTimeout(resolve, 600));
+
+        // 3. Send
+        addTrace(createLog('ada.executive', 'OUTPUT', `EMAIL SENT: To: ${recipient} | Subject: ${subject}`, 'EXPERT'));
+
+        return {
+            success: true,
+            message: `Proposal successfully sent to **${recipient}**.`
         };
     }
 };
