@@ -1,5 +1,4 @@
 
-
 import { TaskHandlerFn } from '../decomposition/types';
 import { AgentAction, AgentTraceLog, VesselIntelligenceProfile, NodeName, Tender, VesselSystemsStatus, AisTarget } from '../../types';
 import { wimMasterData } from '../wimMasterData';
@@ -60,7 +59,6 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
 let FLEET_DB: VesselIntelligenceProfile[] = persistenceService.load(STORAGE_KEYS.FLEET, DEFAULT_FLEET);
 
 // FIX: Force S/Y Phisedelia to DOCKED if it was stuck in INBOUND from previous state
-// This prevents the "Welcome Home" message from triggering on every reload.
 const phisedelia = FLEET_DB.find(v => v.name.includes('Phisedelia'));
 if (phisedelia && phisedelia.status === 'INBOUND') {
     phisedelia.status = 'DOCKED';
@@ -194,17 +192,26 @@ export const marinaExpert = {
         return available;
     },
 
-    // Proactive Hailing Logic - The "Welcome Home" Protocol
+    // Proactive Hailing Logic - The "Welcome Home" Protocol (Protocol: CH16 -> CH72)
     generateProactiveHail: async (vesselName: string): Promise<string> => {
-        // This simulates checking the "Concierge Database"
         const profile = await marinaExpert.getVesselIntelligence(vesselName);
         const berth = profile?.location || "C-12"; 
         
-        // The "WIM Gold Standard" Message
-        return `**PROACTIVE HAIL [CH 72]:**
-> **"West Istanbul Marina calling ${vesselName}. Welcome home, Captain."**
-> "We have visual on AIS at 20nm. Your berth at **${berth}** is prepped, shore power is ready, and your linesmen are standing by."
-> "Tender **ada.sea.wimBravo** has been dispatched to escort you in for a seamless entry. Do you require a golf cart at the pontoon. Over."`;
+        return `**📡 PROACTIVE HAIL SEQUENCE**\n\n` +
+               `**[VHF CH 16 - GENERAL CALLING]**\n` +
+               `> "S/Y Phisedelia, S/Y Phisedelia, S/Y Phisedelia. This is West Istanbul Marina Control."\n` +
+               `> "Captain, reading you loud and clear. Please switch to **Channel 72** for arrival instructions. Over."\n\n` +
+               `**[VHF CH 72 - OPERATIONS]**\n` +
+               `> "Welcome home, Captain. We have your AIS target at 2nm."\n\n` +
+               `**TRAFFIC & APPROACH:**\n` +
+               `- **Sector Status:** Green. Fairway is clear.\n` +
+               `- **Caution:** Keep clear of the fishing vessel exiting port side, 0.5nm ahead.\n` +
+               `- **Wind:** North-West at 12 knots. Prepare port side fenders.\n\n` +
+               `**ARRIVAL INSTRUCTIONS:**\n` +
+               `- **Berth:** ${berth} (Your Home Berth)\n` +
+               `- **Assistance:** Tender *WIM-Bravo* is engaging to escort you.\n` +
+               `- **Shore Power:** ACTIVE and waiting.\n\n` +
+               `*Linesmen standing by. Standing by on 72. Out.*`;
     },
 
     // ATC Priority Calculator
@@ -336,29 +343,28 @@ export const marinaExpert = {
         let welcomeMessage = "";
 
         if (isMember && vesselProfile) {
-            // MEMBER LOGIC (Homecoming)
+            // MEMBER LOGIC (Homecoming) - Updated to CH16 first concept
             berth = vesselProfile.location || "Pontoon C-12";
-            welcomeMessage = `**PROACTIVE HAIL [CH 72]**\n` +
-                `> **"West Istanbul Marina calling ${vesselName}. Welcome home, Captain."**\n` +
-                `> "We have you on AIS at 20nm. Your home berth at **${berth}** is prepped, shore power is live."\n` +
-                `> "Tender has been dispatched for escort. Proceed to waypoints."`;
+            welcomeMessage = `**PROACTIVE HAIL [CH 16 -> 72]**\n` +
+                `> **"S/Y ${vesselName}, West Istanbul Marina Control on 16. Switch to 72."**\n` +
+                `> **(On 72):** "Welcome home, Captain. AIS Contact confirmed. Traffic is clear."\n` +
+                `> "Your home berth at **${berth}** is ready. Tender dispatched."`;
         } else {
             // GUEST LOGIC (Reservation)
-            // Simulating a lookup for the specific prompt scenario
             addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Checking Reservation Database for '${vesselName}'...`, 'WORKER'));
             addTrace(createLog('ada.marina', 'OUTPUT', `CONFIRMED: Reservation #RES-9921 found. Duration: 4 Nights.`, 'EXPERT'));
             
             berth = "Pontoon A-08 (Visitor)";
             squawk = "7001"; // Visitor Squawk
-            welcomeMessage = `**PROACTIVE HAIL [CH 72]**\n` +
-                `> **"West Istanbul Marina calling ${vesselName}. Welcome to Istanbul."**\n` +
-                `> "We have confirmed your **4-Night Reservation**. We have you on radar at 20nm."\n` +
-                `> "Your designated berth is **${berth}**. We are ready to welcome you."`;
+            welcomeMessage = `**PROACTIVE HAIL [CH 16 -> 72]**\n` +
+                `> **"S/Y ${vesselName}, West Istanbul Marina Control on 16. Switch to 72."**\n` +
+                `> **(On 72):** "Welcome to Istanbul. Reservation confirmed."\n` +
+                `> "Please proceed to **${berth}**. Follow the pilot boat."`;
         }
 
         // Append Debt Warning if applicable
         if (hasDebt) {
-            welcomeMessage += `\n\n**⚠️ IMPORTANT:** Captain, please report to the **Finance Office** immediately upon docking regarding your account status.\n> **Protocol:** **Article H.2** (Right of Retention) Applied.`;
+            welcomeMessage += `\n\n**⚠️ IMPORTANT:** Captain, please report to the **Finance Office** immediately upon docking.\n> **Protocol:** **Article H.2** (Right of Retention) Applied.`;
         }
 
         const priority = marinaExpert.calculateTrafficPriority(vesselProfile);

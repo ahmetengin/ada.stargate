@@ -19,6 +19,7 @@ import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
 import { telemetryStream } from './services/telemetryStream';
 import { DraggableSplitter } from './components/layout/DraggableSplitter';
 import { StatusBar } from './components/layout/StatusBar';
+import { marinaExpert } from './services/agents/marinaAgent'; // Import marinaExpert for Proactive Hail
 
 export const MOCK_USER_DATABASE: Record<string, UserProfile> = {
   'VISITOR': { id: 'usr_visitor', name: 'Ziyaretçi', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
@@ -76,6 +77,9 @@ const App: React.FC = () => {
   const [presentationState, setPresentationState] = useState<PresentationState>({ isActive: false, slide: 'intro', transcript: '', analysisResults: null });
   const [weatherData, setWeatherData] = useState<WeatherForecast | null>(null);
   const [vhfLogs, setVhfLogs] = useState<VhfLog[]>([]);
+  
+  // Track if we have already announced the arrival to avoid spam
+  const [hasAnnouncedArrival, setHasAnnouncedArrival] = useState(false);
 
   const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
@@ -100,6 +104,24 @@ const App: React.FC = () => {
     }
   }, [showBootSequence, userProfile.name, userProfile.role]);
 
+  // PROACTIVE ARRIVAL TRIGGER FOR CAPTAIN BARBAROS (S/Y Phisedelia)
+  useEffect(() => {
+      // Check if current user is the specific Captain and we haven't welcomed them yet
+      if (userProfile.role === 'CAPTAIN' && userProfile.name.includes('Barbaros') && !hasAnnouncedArrival) {
+          const timer = setTimeout(async () => {
+              const hail = await marinaExpert.generateProactiveHail("S/Y Phisedelia");
+              setMessages(prev => [...prev, {
+                  id: `proactive_hail_${Date.now()}`,
+                  role: MessageRole.Model,
+                  text: hail,
+                  timestamp: Date.now()
+              }]);
+              setHasAnnouncedArrival(true);
+          }, 1500); // Slight delay for realism
+          return () => clearTimeout(timer);
+      }
+  }, [userProfile, hasAnnouncedArrival]);
+
   useEffect(() => {
     const unsubscribe = telemetryStream.subscribe(data => {
       if (data.type === 'VESSEL_TELEMETRY' && data.payload?.environment) {
@@ -118,6 +140,8 @@ const App: React.FC = () => {
   const handleAuthComplete = () => {
     setUserProfile(MOCK_USER_DATABASE[targetRole as keyof typeof MOCK_USER_DATABASE] || MOCK_USER_DATABASE['VISITOR']);
     setShowAuthOverlay(false);
+    // Reset announcement state if switching users, so it can trigger again if they switch back to Captain
+    setHasAnnouncedArrival(false);
   };
   
   const handleTenantSwitch = (tenantId: string) => {
