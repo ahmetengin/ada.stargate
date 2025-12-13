@@ -6,7 +6,7 @@ networks:
 
 services:
   # 1. THE BRAIN (Python LangGraph)
-  # Vision module removed to save resources for LLM
+  # Optimized for Edge: No heavy vision libraries, purely orchestration.
   ada-core-edge:
     build: 
       context: ./backend
@@ -18,8 +18,7 @@ services:
       - QDRANT_URL=http://ada-qdrant:6333
       - MQTT_BROKER=ada-mqtt
       - OLLAMA_URL=http://ada-local-llm:11434
-      # Disable Vision/Hailo logic
-      - HAILO_ENABLED=false
+      - VISION_ENABLED=false # Disabled to save resources
     depends_on:
       - ada-redis
       - ada-qdrant
@@ -32,7 +31,8 @@ services:
       - ada_edge_net
     restart: always
 
-  # 2. LOCAL BRAIN (Ollama - High Performance Mode)
+  # 2. LOCAL BRAIN (Ollama - CPU Optimized for Pi 5)
+  # This serves the LLM. We give it maximum priority.
   ada-local-llm:
     image: ollama/ollama:latest
     container_name: ada_local_llm
@@ -40,16 +40,16 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    # CRITICAL FOR PI 5 PERFORMANCE:
     environment:
-      - OLLAMA_NUM_PARALLEL=1   # Focus on one task at a time for max speed
-      - OLLAMA_MAX_LOADED_MODELS=1
-      - OLLAMA_KEEP_ALIVE=24h   # Keep model in RAM, don't reload (saves 5-10s per request)
+      # Performance Tuning for Pi 5 Quad-Core
+      - OLLAMA_NUM_PARALLEL=1     # Focus on one request at a time for max speed
+      - OLLAMA_MAX_LOADED_MODELS=1 # Keep only one model in RAM
+      - OLLAMA_KEEP_ALIVE=24h     # Don't unload model from RAM (saves loading time)
     deploy:
       resources:
         limits:
-          cpus: '4.0' # Use all 4 cores of Pi 5
-          memory: 14G # Use almost all RAM for the model context
+          cpus: '4.0'   # Allow using all 4 cores
+          memory: 12G   # Reserve 12GB of the 16GB strictly for the AI Model
     networks:
       - ada_edge_net
     restart: always
@@ -65,7 +65,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M # Limit Qdrant to save RAM for Ollama
+          memory: 1G # Limit memory usage to save room for LLM
     networks:
       - ada_edge_net
 
