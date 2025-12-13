@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Car, CheckCircle2, Zap, Utensils, Calendar, Wind, PartyPopper, QrCode, MapPin, Scan, LogIn, Lock, Award, Plane, ChevronRight, Anchor, CreditCard } from 'lucide-react';
+import { Car, CheckCircle2, Zap, Utensils, Calendar, Wind, PartyPopper, QrCode, MapPin, Scan, LogIn, Lock, Award, Plane, ChevronRight, Anchor, CreditCard, Signal, Fingerprint } from 'lucide-react';
 import { UserProfile, TenantConfig } from '../../types';
 import { wimMasterData } from '../../services/wimMasterData';
 import { securityExpert } from '../../services/agents/securityAgent';
@@ -69,7 +69,7 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
                 {isMember && userProfile.loyalty && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* 1. Ada Sea Miles Card */}
-                        <div className={`relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-br ${getTierColor(userProfile.loyalty.tier)} transition-all duration-500 group h-full flex flex-col justify-between min-h-[220px]`}>
+                        <div className={`relative overflow-hidden rounded-2xl shadow-xl bg-gradient-to-br ${getTierColor(userProfile.loyalty.tier)} transition-all duration-500 group h-full flex flex-col justify-between min-h-[240px]`}>
                             {/* Background Pattern */}
                             <div className="absolute inset-0 opacity-10">
                                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -129,51 +129,86 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
                             </div>
                         </div>
 
-                        {/* 2. Digital Gate Key */}
-                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-sm h-full">
-                            <div className="bg-white p-3 rounded-xl shadow-inner border border-zinc-100 flex-shrink-0">
-                                <img src={qrImageUrl} alt="Access QR" className="w-32 h-32 object-contain" />
-                            </div>
+                        {/* 2. Digital Gate Key (Redesigned) */}
+                        <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm h-full flex flex-col relative overflow-hidden group">
                             
-                            <div className="flex-1 w-full flex flex-col justify-between h-full py-2">
-                                <div>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div>
-                                            <h3 className="font-bold text-lg text-zinc-800 dark:text-zinc-100">Digital Pass</h3>
-                                            <p className="text-xs text-zinc-500">Scan at any pedestal or security gate.</p>
-                                        </div>
-                                        <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-                                            accessStatus === 'INSIDE' 
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                                            : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400'
-                                        }`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full ${accessStatus === 'INSIDE' ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`}></div>
-                                            {accessStatus === 'INSIDE' ? 'On Campus' : 'Away'}
-                                        </div>
-                                    </div>
-                                    
-                                    {lastGate && (
-                                        <div className="text-[10px] text-zinc-400 mb-4 flex items-center gap-1">
-                                            <CheckCircle2 size={10} className="text-emerald-500"/>
-                                            Access Granted: {lastGate} ({new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})
-                                        </div>
+                            {/* Header Status */}
+                            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-white/5">
+                                <div className="flex items-center gap-2">
+                                    <Scan size={16} className="text-zinc-400"/>
+                                    <h3 className="font-bold text-sm text-zinc-700 dark:text-zinc-200 uppercase tracking-wider">Digital Access</h3>
+                                </div>
+                                <div className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 border ${
+                                    accessStatus === 'INSIDE' 
+                                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                                    : 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700'
+                                }`}>
+                                    {accessStatus === 'INSIDE' ? (
+                                        <><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span></span> ON CAMPUS</>
+                                    ) : (
+                                        <><div className="w-1.5 h-1.5 rounded-full bg-zinc-400"></div> AWAY</>
                                     )}
                                 </div>
+                            </div>
 
-                                <div className="grid grid-cols-2 gap-2 mt-auto">
+                            {/* Main Body */}
+                            <div className="flex-1 p-6 flex items-center gap-6">
+                                {/* Left: QR Section */}
+                                <div className="relative group/qr">
+                                    <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full opacity-0 group-hover/qr:opacity-100 transition-opacity duration-500"></div>
+                                    <div className="relative bg-white p-2 rounded-xl border border-zinc-200 shadow-sm">
+                                        <img src={qrImageUrl} alt="Access QR" className="w-24 h-24 object-contain opacity-90 group-hover/qr:opacity-100 transition-opacity" />
+                                        
+                                        {/* Scanner Line Animation */}
+                                        <div className="absolute top-0 left-0 w-full h-0.5 bg-indigo-500/50 shadow-[0_0_10px_indigo] animate-[scan_2s_ease-in-out_infinite] pointer-events-none opacity-0 group-hover/qr:opacity-100"></div>
+                                    </div>
+                                    <div className="absolute -bottom-4 left-0 right-0 text-center">
+                                        <span className="text-[9px] font-mono text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700">ID: {userProfile.id}</span>
+                                    </div>
+                                </div>
+
+                                {/* Right: Controls */}
+                                <div className="flex-1 flex flex-col gap-3">
+                                    {lastGate && (
+                                        <div className="mb-1 p-2 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-right">
+                                            <CheckCircle2 size={12} className="text-emerald-500"/>
+                                            <div>
+                                                <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">Access Granted</div>
+                                                <div className="text-[9px] text-emerald-600/70 dark:text-emerald-500/70 truncate">{lastGate} • {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <button 
                                         onClick={() => simulateGateScan('Main Gate A')}
-                                        className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-all text-xs font-medium text-zinc-600 dark:text-zinc-300 group"
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all group/btn shadow-sm"
                                     >
-                                        <span className="flex items-center gap-2"><Car size={14}/> Main Gate</span>
-                                        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-500 group-hover/btn:text-indigo-500 transition-colors">
+                                                <Car size={14}/> 
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="text-xs font-bold text-zinc-700 dark:text-zinc-200">Main Gate</div>
+                                                <div className="text-[9px] text-zinc-400">Vehicle Access</div>
+                                            </div>
+                                        </div>
+                                        <Fingerprint size={14} className="text-zinc-300 group-hover/btn:text-indigo-500 transition-colors" />
                                     </button>
+
                                     <button 
                                         onClick={() => simulateGateScan('Pontoon C Gate')}
-                                        className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 transition-all text-xs font-medium text-zinc-600 dark:text-zinc-300 group"
+                                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-500/50 transition-all group/btn shadow-sm"
                                     >
-                                        <span className="flex items-center gap-2"><Anchor size={14}/> Pontoon</span>
-                                        <ChevronRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-1.5 rounded-md bg-zinc-100 dark:bg-zinc-900 text-zinc-500 group-hover/btn:text-indigo-500 transition-colors">
+                                                <Anchor size={14}/> 
+                                            </div>
+                                            <div className="text-left">
+                                                <div className="text-xs font-bold text-zinc-700 dark:text-zinc-200">Pontoon C</div>
+                                                <div className="text-[9px] text-zinc-400">Pedestrian</div>
+                                            </div>
+                                        </div>
+                                        <Signal size={14} className="text-zinc-300 group-hover/btn:text-indigo-500 transition-colors" />
                                     </button>
                                 </div>
                             </div>

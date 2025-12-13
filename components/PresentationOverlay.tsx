@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, Brain, Eye, Zap, Server, Scale, CheckCircle2, Send, Bot, Download, Mail, Check } from 'lucide-react';
+import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, CheckCircle2, Download, Mail, PieChart, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { PresentationState, UserProfile, AgentTraceLog } from '../types';
 import { generateSpeech } from '../services/geminiService';
 import { LiveSession } from '../services/liveService';
-import { executiveExpert } from '../services/agents/executiveExpert'; // Import Executive Agent
+import { executiveExpert } from '../services/agents/executiveExpert'; 
+import { introNarrative } from '../services/presenterContent';
 
 interface PresentationOverlayProps {
     state: PresentationState;
@@ -18,7 +19,6 @@ interface PresentationOverlayProps {
     onArchive?: (results: { minutes: string, proposal: string }) => void;
 }
 
-// ... (Audio Helpers remain same - omitted for brevity)
 // --- AUDIO DECODING HELPERS ---
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -58,15 +58,22 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
     const transcriptRef = useRef<HTMLDivElement>(null);
     const [scribeInput, setScribeInput] = useState<string>('');
     const sessionRef = useRef<LiveSession | null>(null);
-    const [emailStatus, setEmailStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE'); // New State
+    const [emailStatus, setEmailStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE');
+    
+    // NEW: To toggle between Intro and ROI content
+    const [contentMode, setContentMode] = useState<'INTRO' | 'ROI'>('INTRO'); 
 
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const gainNodeRef = useRef<GainNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     
-    // ... (UseEffects for Audio/Session remain same)
     const [narrativeStep, setNarrativeStep] = useState(0);
+
+    // Filter narrative based on mode
+    const activeNarrative = introNarrative.filter(line => 
+        contentMode === 'INTRO' ? line.id === 'intro_01' : line.id === 'roi_sequence'
+    );
 
     useEffect(() => {
         if (state.isActive) {
@@ -112,6 +119,12 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         }
     }, [state.slide, userProfile, onStateChange]);
 
+    // Reset narrative step when switching modes
+    useEffect(() => {
+        setNarrativeStep(0);
+        setIsSpeaking(false);
+    }, [contentMode]);
+
     const startVisualizer = () => {
         if (!analyserRef.current) return;
         const dataArray = new Uint8Array(analyserRef.current!.frequencyBinCount);
@@ -124,27 +137,61 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         draw();
     };
 
-    // ... (Narrative/Speech Logic remains same)
+    useEffect(() => {
+        if (state.slide !== 'intro' || isSpeaking || narrativeStep >= activeNarrative.length || status !== 'CONNECTED') return;
+
+        const speakNext = async () => {
+            if (narrativeStep < activeNarrative.length) {
+                setIsSpeaking(true);
+                const narrativeLine = activeNarrative[narrativeStep];
+                const textToSpeak = narrativeLine.text;
+                setSubtitles(textToSpeak);
+                
+                const base64Audio = await generateSpeech(textToSpeak);
+                if (base64Audio && audioContextRef.current && gainNodeRef.current) {
+                    try {
+                        const audioBuffer = await decodeAudioData(decode(base64Audio), audioContextRef.current, 24000, 1);
+                        const source = audioContextRef.current.createBufferSource();
+                        source.buffer = audioBuffer;
+                        source.connect(gainNodeRef.current);
+                        source.start(0);
+                        source.onended = () => {
+                            setIsSpeaking(false);
+                            setNarrativeStep(prev => prev + 1);
+                        };
+                    } catch (e) {
+                        console.error("Audio playback failed:", e);
+                        setIsSpeaking(false);
+                        setNarrativeStep(prev => prev + 1);
+                    }
+                } else { 
+                    setTimeout(() => {
+                         setIsSpeaking(false);
+                         setNarrativeStep(prev => prev + 1);
+                    }, textToSpeak.length * 80); 
+                }
+            }
+        };
+
+        const pause = activeNarrative[narrativeStep]?.pauseAfter_ms || 1500;
+        const timer = setTimeout(speakNext, narrativeStep === 0 ? 800 : pause);
+        return () => clearTimeout(timer);
+    }, [narrativeStep, isSpeaking, status, state.slide, activeNarrative]);
+
+    useEffect(() => {
+        if (gainNodeRef.current && audioContextRef.current) {
+            gainNodeRef.current.gain.setValueAtTime(isMuted ? 0 : 1, audioContextRef.current.currentTime);
+        }
+    }, [isMuted]);
+
+    // ... (Transcript scroll & email logic remains same)
     
-    // NEW: Email Handler
     const handleSendEmail = async () => {
         if (!state.analysisResults) return;
         setEmailStatus('SENDING');
-        
-        // This is where we inject the user's requested email
         const targetEmail = "theahmetengin@gmail.com"; 
-        
-        await executiveExpert.sendProposalEmail(
-            targetEmail, 
-            "WIM - 2025 Strategic Proposal & Minutes", 
-            state.analysisResults.proposal,
-            // We pass a dummy trace function since we are inside the overlay, 
-            // but normally we would push these traces to the global log.
-            (t) => console.log(t.content) 
-        );
-        
+        await executiveExpert.sendProposalEmail(targetEmail, "WIM - 2025 Strategic Proposal & Minutes", state.analysisResults.proposal, (t) => console.log(t.content));
         setEmailStatus('SENT');
-        // Reset after 3 seconds
         setTimeout(() => setEmailStatus('IDLE'), 3000);
     };
 
@@ -157,8 +204,6 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         }
     };
 
-    const currentVisualSlide = state.slide === 'scribe' ? 100 : 0; // Simplified for this view
-
     const renderHeader = () => (
         <div className="absolute top-0 left-0 right-0 h-20 flex justify-between items-center px-8 z-50 bg-gradient-to-b from-black via-black/80 to-transparent">
              <div className="flex items-center gap-6">
@@ -168,8 +213,8 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 </div>
                  <div className="h-8 w-px bg-white/20"></div>
                  <div className="text-[10px] text-zinc-400 flex flex-col">
-                    <span>SİSTEM DURUMU</span>
-                     <span className={status === 'CONNECTED' ? 'text-emerald-500 font-bold' : 'text-amber-500 font-bold'}>{status.toUpperCase()}</span>
+                    <span>SİSTEM MODU</span>
+                     <span className="text-emerald-500 font-bold">{contentMode === 'INTRO' ? 'VISION' : 'FINANCIAL CORE'}</span>
                 </div>
              </div>
 
@@ -177,16 +222,25 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 <button onClick={() => setIsMuted(!isMuted)} className="p-3 hover:bg-white/10 text-zinc-500 hover:text-white rounded-full transition-all">
                     {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
+                
+                {state.slide === 'intro' && (
+                    <button 
+                        onClick={() => setContentMode(prev => prev === 'INTRO' ? 'ROI' : 'INTRO')}
+                        className={`px-4 py-2 rounded-full text-[10px] font-bold tracking-widest border transition-all flex items-center gap-2 ${contentMode === 'ROI' ? 'bg-amber-500/20 text-amber-400 border-amber-500/50' : 'bg-white/5 text-zinc-400 border-white/10 hover:bg-white/10'}`}
+                    >
+                        <PieChart size={14} /> {contentMode === 'INTRO' ? 'GÖSTER: ANALİZ' : 'GÖSTER: VİZYON'}
+                    </button>
+                )}
+
                 {state.slide === 'intro' ? (
                     <div className="px-8 py-3 bg-white/5 rounded-full text-xs font-bold tracking-widest text-zinc-400 border border-white/10 animate-pulse">
-                        {isSpeaking ? 'ADA KONUŞUYOR...' : 'BAŞLATILIYOR...'}
+                        {isSpeaking ? 'ADA KONUŞUYOR...' : 'HAZIRLANIYOR...'}
                     </div>
                 ) : state.slide === 'scribe' ? (
                     <button onClick={onEndMeeting} className="px-8 py-3 bg-red-600 hover:bg-red-500 text-white rounded-full text-xs font-bold tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.4)] transition-all flex items-center gap-2">
                         <FileText size={14} /> OTURUMU BİTİR
                     </button>
                 ) : (
-                    // Analysis Mode Header Actions
                     <div className="text-emerald-500 font-bold text-xs tracking-widest">SESSION COMPLETE</div>
                 )}
                 <button onClick={onClose} className="p-3 hover:bg-red-500/20 text-zinc-500 hover:text-red-500 rounded-full transition-all">
@@ -196,15 +250,49 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         </div>
     );
 
-    // ... (renderIntro and renderScribe remain same)
     const renderIntro = () => (
         <>
             {renderHeader()}
-            <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black to-transparent z-40 flex flex-col justify-end pb-12 items-center pointer-events-none">
-                <div className="flex items-end gap-1 h-8 mb-4 opacity-50">
-                    {audioVis.map((h, i) => (<div key={i} className="w-1 bg-cyan-400 rounded-t-full transition-all duration-75" style={{ height: `${h}%` }}></div>))}
+            
+            {/* CENTRAL VISUAL FOR ROI MODE */}
+            {contentMode === 'ROI' && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                    <div className="grid grid-cols-4 gap-8 max-w-5xl w-full p-8">
+                        <div className="bg-black/60 backdrop-blur-md border border-emerald-500/30 p-6 rounded-2xl animate-in fade-in zoom-in duration-500 delay-100 flex flex-col items-center text-center shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+                            <div className="text-[10px] uppercase font-bold text-emerald-400 tracking-widest mb-2">Gelir Artışı</div>
+                            <div className="text-5xl font-black text-white mb-1">%22</div>
+                            <div className="text-xs text-zinc-400">Yıl Sonu EBITDA</div>
+                        </div>
+                        <div className="bg-black/60 backdrop-blur-md border border-cyan-500/30 p-6 rounded-2xl animate-in fade-in zoom-in duration-500 delay-300 flex flex-col items-center text-center shadow-[0_0_30px_rgba(6,182,212,0.1)]">
+                            <div className="text-[10px] uppercase font-bold text-cyan-400 tracking-widest mb-2">Doluluk (TabPFN)</div>
+                            <div className="text-5xl font-black text-white mb-1">%92</div>
+                            <div className="text-xs text-zinc-400">Öngörülen Kapasite</div>
+                        </div>
+                        <div className="bg-black/60 backdrop-blur-md border border-amber-500/30 p-6 rounded-2xl animate-in fade-in zoom-in duration-500 delay-500 flex flex-col items-center text-center shadow-[0_0_30px_rgba(245,158,11,0.1)]">
+                            <div className="text-[10px] uppercase font-bold text-amber-400 tracking-widest mb-2">Tahsilat Hızı</div>
+                            <div className="text-5xl font-black text-white mb-1">3 <span className="text-xl">Gün</span></div>
+                            <div className="text-xs text-zinc-400">45 Günden Düşüş</div>
+                        </div>
+                        <div className="bg-black/60 backdrop-blur-md border border-purple-500/30 p-6 rounded-2xl animate-in fade-in zoom-in duration-500 delay-700 flex flex-col items-center text-center shadow-[0_0_30px_rgba(147,51,234,0.1)]">
+                            <div className="text-[10px] uppercase font-bold text-purple-400 tracking-widest mb-2">ROI Süresi</div>
+                            <div className="text-5xl font-black text-white mb-1">8.5</div>
+                            <div className="text-xs text-zinc-400">Ay (Geri Dönüş)</div>
+                        </div>
+                    </div>
                 </div>
-                {subtitles && (<div className="text-2xl font-light tracking-wide text-white/90 text-shadow-lg italic max-w-4xl text-center leading-relaxed">"{subtitles}"</div>)}
+            )}
+
+            <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black via-black/90 to-transparent z-40 flex flex-col justify-end pb-12 items-center pointer-events-none">
+                <div className="flex items-end gap-1 h-12 mb-6 opacity-60">
+                    {audioVis.map((h, i) => (<div key={i} className={`w-2 rounded-t-full transition-all duration-75 ${contentMode === 'ROI' ? 'bg-amber-400' : 'bg-cyan-400'}`} style={{ height: `${h}%` }}></div>))}
+                </div>
+                {subtitles && (
+                    <div className="bg-black/40 backdrop-blur-sm p-6 rounded-2xl max-w-4xl mx-4 border border-white/5">
+                        <div className="text-xl font-light tracking-wide text-white/90 text-shadow-lg italic text-center leading-relaxed">
+                            "{subtitles}"
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

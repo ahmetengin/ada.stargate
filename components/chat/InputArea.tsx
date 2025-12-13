@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
 import { ArrowUp, AudioWaveform, ScanLine, Radio } from 'lucide-react';
 import { ModelType, UserRole } from '../../types';
@@ -127,7 +126,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
               <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Tarayıcı">
                   <ScanLine size={16} />
               </button>
-              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="VHF Telsiz Modu">
+              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-red-500 hover:text-red-600 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="VHF Telsiz Modu">
                   <Radio size={16} />
               </button>
           </div>

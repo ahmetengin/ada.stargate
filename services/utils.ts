@@ -95,7 +95,7 @@ export const formatCoordinate = (coord: number, type: 'lat' | 'lng'): string => 
     const minutesFloat = (absCoord - degrees) * 60;
     const minutes = Math.floor(minutesFloat);
     const seconds = Math.round((minutesFloat - minutes) * 60);
-    return `${degrees}°${minutes}'${seconds}'' ${direction}`;
+    return `${degrees}°${minutes}'${seconds}" ${direction}`;
 };
 
 /**
