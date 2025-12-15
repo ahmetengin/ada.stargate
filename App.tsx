@@ -19,22 +19,15 @@ import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
 import { telemetryStream } from './services/telemetryStream';
 import { DraggableSplitter } from './components/layout/DraggableSplitter';
 import { StatusBar } from './components/layout/StatusBar';
-import { marinaExpert } from './services/agents/marinaAgent'; // Import marinaExpert for Proactive Hail
-
-export const MOCK_USER_DATABASE: Record<string, UserProfile> = {
-  'VISITOR': { id: 'usr_visitor', name: 'Ziyaretçi', role: 'VISITOR', clearanceLevel: 0, legalStatus: 'GREEN' },
-  'MEMBER': { id: 'usr_member_01', name: 'Caner Erkin', role: 'MEMBER', clearanceLevel: 1, legalStatus: 'GREEN', loyalty: { tier: 'COMMANDER', totalMiles: 32500, spendableMiles: 12400, nextTierProgress: 65, milesToNextTier: 17500, memberSince: '2023', cardNumber: 'TK-19238123'}},
-  'CAPTAIN': { id: 'usr_cpt_01', name: 'Kpt. Barbaros', role: 'CAPTAIN', clearanceLevel: 3, legalStatus: 'GREEN', loyalty: { tier: 'ADMIRAL', totalMiles: 154000, spendableMiles: 45000, nextTierProgress: 100, milesToNextTier: 0, memberSince: '2019', cardNumber: 'TK-88123991'}},
-  'GENERAL_MANAGER': { id: 'usr_gm_01', name: 'Ahmet Engin', role: 'GENERAL_MANAGER', clearanceLevel: 5, legalStatus: 'GREEN' }
-};
+import { marinaExpert } from './services/agents/marinaAgent'; 
+import { MOCK_USER_DATABASE } from './services/mockData';
 
 const MIN_PANEL_WIDTH = 280;
 const MAX_PANEL_WIDTH = 600;
 
 const App: React.FC = () => {
-  // Start with responsive defaults
   const [sidebarWidth, setSidebarWidth] = useState(300);
-  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth > 1400 ? 500 : 400); // Dynamic initial width
+  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth > 1400 ? 500 : 400); 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleSidebarDrag = useCallback((dx: number) => {
@@ -47,7 +40,7 @@ const App: React.FC = () => {
   const handleCanvasDrag = useCallback((dx: number) => {
     setCanvasWidth(prev => {
         const newWidth = prev - dx;
-        return Math.max(MIN_PANEL_WIDTH, Math.min(newWidth, 800)); // Allow larger canvas
+        return Math.max(MIN_PANEL_WIDTH, Math.min(newWidth, 800)); 
     });
   }, []);
     
@@ -61,7 +54,9 @@ const App: React.FC = () => {
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [targetRole, setTargetRole] = useState<string>('');
   
+  // Theme State Initialization
   const [theme, setTheme] = useState<ThemeMode>(persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
@@ -78,35 +73,59 @@ const App: React.FC = () => {
   const [weatherData, setWeatherData] = useState<WeatherForecast | null>(null);
   const [vhfLogs, setVhfLogs] = useState<VhfLog[]>([]);
   
-  // Track if we have already announced the arrival to avoid spam
   const [hasAnnouncedArrival, setHasAnnouncedArrival] = useState(false);
 
   const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowBootSequence(false), 2500);
+    // Increase boot time slightly to show off the new sequence
+    const timer = setTimeout(() => setShowBootSequence(false), 4500);
     return () => clearTimeout(timer);
   }, []);
 
+  // Theme Handling Effect
+  useEffect(() => {
+    const applyTheme = () => {
+      const root = window.document.documentElement;
+      const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      
+      if (isDark) {
+        root.classList.add('dark');
+        root.style.colorScheme = 'dark';
+      } else {
+        root.classList.remove('dark');
+        root.style.colorScheme = 'light';
+      }
+    };
+
+    applyTheme();
+
+    if (theme === 'auto') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [theme]);
+
   useEffect(() => {
     const initialSystemMessage: Message = {
-      id: 'init', role: MessageRole.System, text: "Sistem Başlatıldı.", timestamp: Date.now()
+      id: 'init', role: MessageRole.System, text: "Bilişsel Sistem Aktif.", timestamp: Date.now()
     };
     if (showBootSequence) {
       setMessages([initialSystemMessage]);
     } else {
       const welcomeMessage: Message = {
         id: `model_welcome_${Date.now()}`, role: MessageRole.Model,
-        text: `ADA.STARGATE\n\nSistem kayıtlarıma ve mevcut oturum verilerine göre, West Istanbul Marina Genel Müdürü sizsiniz, **Sayın ${userProfile.name}**.\n\nŞu an sistemde **${userProfile.role}** yetkisiyle oturum açmış bulunmaktasınız. Size nasıl yardımcı olabilirim?`,
+        text: `**ADA.STARGATE (HYPERSCALE)**\n\nSistem Başlatıldı. Bilişsel Varlık Modu devrede.\n\nHoş geldiniz, **Sayın ${userProfile.name}**.\nŞu an **${userProfile.role}** yetkisiyle operasyon merkezindesiniz.\n\n*LangGraph, SEAL ve MAKER modülleri emrinize amade.*`,
         timestamp: Date.now()
       };
       setMessages([initialSystemMessage, welcomeMessage]);
     }
   }, [showBootSequence, userProfile.name, userProfile.role]);
 
-  // PROACTIVE ARRIVAL TRIGGER FOR CAPTAIN BARBAROS (S/Y Phisedelia)
+  // PROACTIVE ARRIVAL TRIGGER FOR CAPTAIN BARBAROS
   useEffect(() => {
-      // Check if current user is the specific Captain and we haven't welcomed them yet
       if (userProfile.role === 'CAPTAIN' && userProfile.name.includes('Barbaros') && !hasAnnouncedArrival) {
           const timer = setTimeout(async () => {
               const hail = await marinaExpert.generateProactiveHail("S/Y Phisedelia");
@@ -117,7 +136,7 @@ const App: React.FC = () => {
                   timestamp: Date.now()
               }]);
               setHasAnnouncedArrival(true);
-          }, 1500); // Slight delay for realism
+          }, 1500); 
           return () => clearTimeout(timer);
       }
   }, [userProfile, hasAnnouncedArrival]);
@@ -140,7 +159,6 @@ const App: React.FC = () => {
   const handleAuthComplete = () => {
     setUserProfile(MOCK_USER_DATABASE[targetRole as keyof typeof MOCK_USER_DATABASE] || MOCK_USER_DATABASE['VISITOR']);
     setShowAuthOverlay(false);
-    // Reset announcement state if switching users, so it can trigger again if they switch back to Captain
     setHasAnnouncedArrival(false);
   };
   
@@ -239,7 +257,6 @@ const App: React.FC = () => {
     setIsLoading(false);
   };
 
-  // --- ARCHIVE MEETING (Saves to Main Chat) ---
   const handleArchiveMeeting = (results: { minutes: string, proposal: string }) => {
       const archiveMessage: Message = {
           id: `archive_${Date.now()}`,
@@ -251,7 +268,6 @@ const App: React.FC = () => {
       handleClosePresentation();
   };
 
-  // --- MODE SWITCH HANDLERS ---
   const handleOpenVoiceMode = () => {
       setIsVoiceModalOpen(true);
   };
@@ -259,23 +275,22 @@ const App: React.FC = () => {
   const handleOpenCustomerMode = () => {
       setGmDashboardTab('customer');
       if (window.innerWidth > 1024 && canvasWidth < 100) {
-          setCanvasWidth(500); // Open canvas if closed
+          setCanvasWidth(500); 
       }
   };
 
   const handleOpenTeamMode = () => {
       setGmDashboardTab('hr');
       if (window.innerWidth > 1024 && canvasWidth < 100) {
-          setCanvasWidth(500); // Open canvas if closed
+          setCanvasWidth(500); 
       }
   };
 
   return (
-    <div className={`w-screen h-screen font-sans flex flex-col transition-colors duration-300 ${theme === 'dark' ? 'dark' : ''}`}>
+    <div className="w-screen h-screen font-sans flex flex-col transition-colors duration-300">
       {showBootSequence && <BootSequence />}
       {showAuthOverlay && <AuthOverlay targetRole={targetRole} onComplete={handleAuthComplete} />}
       
-      {/* OBSERVER OVERLAY (FULL SCREEN) */}
       <ObserverOverlay 
         isOpen={isObserverOpen} 
         onClose={() => setIsObserverOpen(false)} 
@@ -292,7 +307,7 @@ const App: React.FC = () => {
               onScribeInput={handleScribeInput}
               onStateChange={setPresentationState}
               agentTraces={agentTraces}
-              onArchive={handleArchiveMeeting} // Pass the archive handler
+              onArchive={handleArchiveMeeting} 
           />
       )}
 
@@ -300,7 +315,6 @@ const App: React.FC = () => {
         <>
             <main className="flex-1 flex overflow-hidden relative">
             
-            {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
                 <div className="fixed inset-0 z-50 bg-black/80 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="w-72 h-full bg-[var(--glass-bg)] backdrop-blur-xl border-r border-[var(--border-color)] animate-in slide-in-from-left duration-300 shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -318,7 +332,6 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            {/* Desktop Sidebar with Resizable Container */}
             <div className="hidden lg:flex flex-col flex-shrink-0 border-r border-[var(--border-color)]" style={{ width: `${sidebarWidth}px` }}>
                 <Sidebar 
                     nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
@@ -336,7 +349,6 @@ const App: React.FC = () => {
                 <DraggableSplitter onDrag={handleSidebarDrag} />
             </div>
             
-            {/* Main Chat Area - Flexible width */}
             <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-primary)]">
                 <ChatInterface
                     messages={messages} isLoading={isLoading} selectedModel={selectedModel}
@@ -354,7 +366,6 @@ const App: React.FC = () => {
                 <DraggableSplitter onDrag={handleCanvasDrag} />
             </div>
             
-            {/* Right Canvas (Operations Deck) - Hidden on smaller screens, Resizable */}
             <div className="hidden xl:flex flex-col border-l border-[var(--border-color)] bg-[var(--bg-secondary)]" style={{ width: `${canvasWidth}px` }}>
                 <Canvas 
                     vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
@@ -365,7 +376,6 @@ const App: React.FC = () => {
             </div>
             </main>
 
-            {/* Status Bar - Always Fixed at Bottom */}
             <div className="flex-shrink-0">
                 <StatusBar userProfile={userProfile} onToggleAuth={() => handleRoleChange('GENERAL_MANAGER')} />
             </div>

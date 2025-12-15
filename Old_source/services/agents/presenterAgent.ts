@@ -1,7 +1,9 @@
 
+// services/agents/presenterAgent.ts
+// DEPRECATED: Renamed to presenterExpert.ts
+
 import { AgentAction, AgentTraceLog } from '../../types';
 
-// Deprecated: Renamed to presenterExpert.ts
 export const presenterExpert = {
     playIntro: async (addTrace: (t: AgentTraceLog) => void): Promise<AgentAction[]> => {
         return [];

@@ -1,3 +1,4 @@
+
 // services/agents/registry.ts
 import { TaskHandlerFn } from '../decomposition/types';
 import { travelHandlers } from './travelAgent';
@@ -14,7 +15,8 @@ import { analyticsHandlers } from './analyticsAgent';
 import { facilityHandlers } from './facilityAgent';
 import { berthHandlers } from './berthAgent';
 import { reservationsHandlers } from './reservationsAgent';
-import { federationHandlers } from './federationAgent'; // NEW: Import federation handlers
+import { federationHandlers } from './federationAgent';
+import { systemHandlers } from './systemAgent'; // NEW: Import system handlers
 
 // Define a wrapper handler for passkit
 const passkitIssueHandler: TaskHandlerFn = async (ctx, obs) => {
@@ -42,7 +44,8 @@ const handlers: Record<string, TaskHandlerFn> = {
   ...facilityHandlers,
   ...berthHandlers,
   ...reservationsHandlers,
-  ...federationHandlers, // NEW: Add federation handlers
+  ...federationHandlers,
+  ...systemHandlers, // NEW: Register system handlers
   'passkit.issue': passkitIssueHandler, 
 };
 

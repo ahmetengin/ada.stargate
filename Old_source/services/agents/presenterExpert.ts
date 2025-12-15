@@ -1,7 +1,9 @@
 
+// services/agents/presenterExpert.ts
+// DEPRECATED: Narrative is now handled directly by PresentationOverlay.tsx
+
 import { AgentAction, AgentTraceLog } from '../../types';
 
-// Deprecated: Presentation logic is now in PresentationOverlay.tsx
 export const presenterExpert = {
     playIntro: async (addTrace: (t: AgentTraceLog) => void): Promise<AgentAction[]> => {
         return [];

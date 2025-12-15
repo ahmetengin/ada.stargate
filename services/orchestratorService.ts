@@ -3,7 +3,7 @@ import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName
 import { getCurrentMaritimeTime } from './utils';
 import { checkBackendHealth, sendToBackend } from './api';
 
-// --- "BÜYÜK 4" UZMANLARININ İÇE AKTARILMASI ---
+// --- THE BIG 4 EXPERTS ---
 import { hrExpert } from './agents/hrAgent';
 import { financeExpert } from './agents/financeAgent';
 import { marinaExpert } from './agents/marinaAgent';
@@ -18,7 +18,8 @@ import { berthExpert } from './agents/berthAgent';
 import { technicExpert } from './agents/technicAgent';
 import { reservationsExpert } from './agents/reservationsAgent';
 import { federationExpert } from './agents/federationAgent';
-import { kitesExpert } from './agents/travelAgent'; // Kites Travel
+import { kitesExpert } from './agents/travelAgent';
+import { systemExpert } from './agents/systemAgent';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
@@ -45,15 +46,16 @@ export const orchestratorService = {
         
         const addTrace = (t: AgentTraceLog) => traces.push(t);
 
-        // --- HİBRİT BEYİN KONTROLÜ ---
+        // --- 1. HYBRID CORE CHECK (Python Backend) ---
         const isBackendOnline = await checkBackendHealth();
         if (isBackendOnline) {
             traces.push(createLog('ada.stargate', 'ROUTING', `Hybrid Core: ONLINE. Routing to Hyperscale Brain...`));
             try {
                 const backendResponse = await sendToBackend(prompt, user, { active_tenant: activeTenantConfig.id });
                 if (backendResponse) {
-                    traces.push(...(backendResponse.traces || []));
-                    actions.push(...(backendResponse.actions || []));
+                    // Backend returns traces and actions, we merge them
+                    if (backendResponse.traces) traces.push(...backendResponse.traces);
+                    if (backendResponse.actions) actions.push(...backendResponse.actions);
                     return { text: backendResponse.text, actions, traces };
                 }
             } catch (err) {
@@ -63,10 +65,23 @@ export const orchestratorService = {
             traces.push(createLog('ada.stargate', 'WARNING', `Hybrid Core: OFFLINE. Engaging Local Emergency Protocols.`));
         }
 
-        // --- YEREL ORKESTRATÖR: "BÜYÜK 4" MANTIK AKIŞI ---
+        // --- 2. LOCAL FALLBACK LOGIC (The Big 4) ---
         try {
-            // --- 1. ADA.LEGAL (Hukuk Müşaviri) ---
-            // Sorumluluk: Kurallar, kanunlar, güvenlik, kimlik, personel.
+            // A. SYSTEM ADMINISTRATION (RULES & CONFIG)
+            if (['update', 'change', 'set'].some(kw => lowerPrompt.includes(kw)) && ['rule', 'limit', 'config', 'parameter', 'policy'].some(kw => lowerPrompt.includes(kw))) {
+                // Security Check: Only GM can change rules
+                if (user.role !== 'GENERAL_MANAGER') {
+                    traces.push(createLog('ada.stargate', 'ERROR', `Access Denied: Rule modification requires EXECUTIVE clearance.`));
+                    return { text: "⛔ **ACCESS DENIED**\n\nOnly General Managers are authorized to modify Operational Rules.", actions: [], traces };
+                }
+
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SYSTEM_ADMIN -> Delegating to Ada.System`));
+                const result = await systemExpert.processRuleUpdate(prompt, addTrace);
+                actions.push(...result.actions);
+                return { text: result.message, actions, traces };
+            }
+
+            // B. LEGAL & SECURITY
             if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk'].some(kw => lowerPrompt.includes(kw))) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY -> Delegating to Ada.Legal`));
                 
@@ -80,8 +95,7 @@ export const orchestratorService = {
                 return { text: advice, actions, traces };
             }
 
-            // --- 2. ADA.FINANCE (CFO) ---
-            // Sorumluluk: Para, borç, fatura, müşteri değeri, rezervasyon.
+            // C. FINANCE & COMMERCIAL
             if (['balance', 'debt', 'owe', 'finance', 'invoice', 'price', 'fee', 'commercial', 'shop', 'tenant', 'loyalty', 'booking', 'reservation'].some(kw => lowerPrompt.includes(kw))) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: FINANCE/COMMERCIAL -> Delegating to Ada.Finance`));
 
@@ -102,8 +116,7 @@ export const orchestratorService = {
                 return { text: booking.message, actions, traces };
             }
 
-            // --- 3. ADA.MARINA (Operatör) ---
-            // Sorumluluk: Fiziksel dünya. Tekneler, palamar, hava, su, elektrik, rıhtım.
+            // D. MARINA OPERATIONS
             if (['arrival', 'departure', 'dock', 'berth', 'tender', 'water', 'electricity', 'waste', 'blue card', 'weather', 'facility', 'technical', 'lift'].some(kw => lowerPrompt.includes(kw))) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: MARINA_OPS -> Delegating to Ada.Marina`));
                 
@@ -124,8 +137,7 @@ export const orchestratorService = {
                 return { text: `**BERTH ALLOCATION:** ${berth.berth} - ${berth.reasoning}`, actions, traces };
             }
 
-            // --- 4. ADA.STARGATE (Beyin & Dış Dünya) ---
-            // Sorumluluk: Sistem, ağ, analitik, seyahat, genel sohbet.
+            // E. SYSTEM & STARGATE
             traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SYSTEM/GENERAL -> Delegating to Ada.Stargate`));
             
             if (['system', 'status', 'connect', 'offline', 'cyber'].some(kw => lowerPrompt.includes(kw))) {
@@ -143,7 +155,6 @@ export const orchestratorService = {
                  return { text: res.message, actions, traces };
             }
 
-            // Genel sohbet için Gemini'ye yönlendir
             return { text: "", actions, traces };
 
         } catch (error: any) {

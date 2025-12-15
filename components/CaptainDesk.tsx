@@ -1,3 +1,6 @@
-// This component is deprecated. 
-// Functionality has been merged into Canvas.tsx for the "Single Canvas" architecture.
-export const CaptainDesk = () => null;
+
+import React from 'react';
+
+// This component is kept for backward compatibility with imports.
+// The actual dashboard logic has moved to Canvas.tsx
+export const CaptainDesk = () => <div className="hidden">Legacy CaptainDesk Component</div>;

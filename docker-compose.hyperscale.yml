@@ -1,3 +1,4 @@
+
 version: '3.9'
 
 networks:
@@ -5,7 +6,7 @@ networks:
     driver: bridge
 
 services:
-  # 1. THE BRAIN (Python LangGraph + MAKER + SEAL)
+  # 1. THE BRAIN (Python LangGraph)
   ada-core:
     build: 
       context: ./backend
@@ -15,104 +16,35 @@ services:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
-      - MQTT_BROKER=ada-mqtt
-      - OLLAMA_URL=http://ada-local-llm:11434
     depends_on:
       - ada-redis
       - ada-qdrant
-      - ada-mqtt
-      - ada-local-llm
-    volumes:
-      - ./backend:/app
-      - ./docs:/docs
     networks:
       - ada_onenet
-    restart: always
 
-  # --- NEW: THE GATEWAY (Go Lang - High Performance Comms) ---
-  ada-gateway:
-    build:
-      context: ./backend-go
-      dockerfile: Dockerfile
-    container_name: ada_gateway_hyperscale
-    environment:
-      - REDIS_URL=redis://ada-redis:6379
-    depends_on:
-      - ada-redis
-    networks:
-      - ada_onenet
-    restart: always
-
-  # 2. MEMORY (Vector DB - RAG)
+  # 3. MEMORY (Vector DB)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
-    volumes:
-      - qdrant_data:/qdrant/storage
     networks:
       - ada_onenet
 
-  # 3. LOCAL BRAIN (Ollama)
-  ada-local-llm:
-    image: ollama/ollama:latest
-    container_name: ada_local_llm
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - ada_onenet
-    restart: always
-
-  # 4. TRUTH (Relational DB)
-  ada-postgres:
-    image: postgres:15-alpine
-    container_name: ada_postgres
-    environment:
-      POSTGRES_USER: ada
-      POSTGRES_PASSWORD: adapassword
-      POSTGRES_DB: wim_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ada_onenet
-
-  # 5. NERVOUS SYSTEM (Redis)
+  # 4. EVENT BUS (Redis)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
-    volumes:
-      - redis_data:/data
     networks:
       - ada_onenet
 
-  # 6. SENSORY SYSTEM (MQTT)
-  ada-mqtt:
-    image: eclipse-mosquitto:2
-    container_name: ada_mqtt_broker
-    volumes:
-      - mqtt_data:/mosquitto/data
-      - mqtt_log:/mosquitto/log
-    networks:
-      - ada_onenet
-
-  # 7. FRONTEND (OneNet Interface)
+  # 5. FRONTEND (Nginx Gateway + React)
   ada-frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ada_frontend_hyperscale
     ports:
-      - "3000:80" # THE ONLY OPEN PORT
-    environment:
-      - API_KEY=${API_KEY}
+      - "3000:80"
     depends_on:
-      - ada-gateway # Frontend talks to Go Gateway via Nginx
+      - ada-core
     networks:
       - ada_onenet
-
-volumes:
-  postgres_data:
-  qdrant_data:
-  redis_data:
-  mqtt_data:
-  mqtt_log:
-  ollama_data:

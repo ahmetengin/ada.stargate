@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Mic, Radio, SignalHigh, Waves, Power, AlertTriangle, RefreshCw, Activity } from 'lucide-react';
+import { X, Mic, Radio, AlertTriangle, Power, RefreshCw, Activity } from 'lucide-react';
 import { LiveSession } from '../../services/liveService';
 import { LiveConnectionState, UserProfile } from '../../types';
 import { wimMasterData } from '../../services/wimMasterData';

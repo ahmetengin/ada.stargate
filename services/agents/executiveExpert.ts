@@ -1,7 +1,7 @@
 
 import { AgentTraceLog, NodeName, AgentAction } from '../../types';
 import { generateSimpleResponse } from '../geminiService'; // Reusing the Gemini connection
-import { MOCK_USER_DATABASE } from '../../App'; // Import user DB or pass as needed, for now utilizing context
+import { MOCK_USER_DATABASE } from '../mockData'; 
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_exec_${Date.now()}_${Math.random()}`,
