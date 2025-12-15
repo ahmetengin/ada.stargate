@@ -58,7 +58,7 @@ function simulateRagLookup(query: string, documentId: string, addTrace: (t: Agen
 
     if (allSections.length === 0) {
         // If no sections matched, return the whole doc if it's short (like encyclopedia entries) or a generic message
-        if(documentId.includes('encyclopedia') || documentId.includes('route')) {
+        if(documentId.includes('encyclopedia') || documentId.includes('route') || documentId.includes('practical')) {
              return docContent; 
         }
         return `No direct article related to "${query}" was found in the **${documentId}** document.`;
@@ -74,6 +74,8 @@ function simulateRagLookup(query: string, documentId: string, addTrace: (t: Agen
          formattedResponse += "**Maritime Encyclopedia Entry:**\n\n";
     } else if (documentId.includes('route')) {
          formattedResponse += "**Tactical Route Analysis:**\n\n";
+    } else if (documentId.includes('practical')) {
+         formattedResponse += "**Seamanship Advisory (SailingIssues Source):**\n\n";
     } else {
          formattedResponse += `**West Istanbul Marina Regulations (related to "${query}"):**\n\n`;
     }
@@ -176,18 +178,24 @@ export const legalExpert = {
     // --- SPECIAL SCENARIO: VESSEL SALE ---
     if (lowerQuery.includes('satış') || lowerQuery.includes('sell') || lowerQuery.includes('sale') || lowerQuery.includes('transfer')) {
         // ... (Existing sale logic remains same) ...
-        // For brevity in this diff, assume existing logic is preserved here
-        // ...
     }
 
     // --- DOCUMENT SELECTION LOGIC ---
     
-    // 1. Route Guide (Symi / Greece)
-    if (lowerQuery.includes('symi') || lowerQuery.includes('simi') || lowerQuery.includes('greece') || lowerQuery.includes('yunanistan') || (lowerQuery.includes('route') && lowerQuery.includes('istanbul'))) {
+    // 1. Practical Seamanship (SailingIssues) - NEW PRIORITY
+    if (lowerQuery.includes('meltemi') || lowerQuery.includes('demir') || lowerQuery.includes('anchor') || 
+        lowerQuery.includes('chain') || lowerQuery.includes('zincir') || lowerQuery.includes('stern') || 
+        lowerQuery.includes('kıçtan') || lowerQuery.includes('battery') || lowerQuery.includes('akü') ||
+        lowerQuery.includes('holding tank') || lowerQuery.includes('blue card') || lowerQuery.includes('mavi kart')) {
+        documentToQuery = 'mediterranean_practical_guide.md';
+        queryContext = "Practical Seamanship Guide";
+    }
+    // 2. Route Guide (Symi / Greece)
+    else if (lowerQuery.includes('symi') || lowerQuery.includes('simi') || lowerQuery.includes('greece') || lowerQuery.includes('yunanistan') || (lowerQuery.includes('route') && lowerQuery.includes('istanbul'))) {
         documentToQuery = 'route_istanbul_symi.md';
         queryContext = "Tactical Route Guide: Istanbul -> Symi";
     } 
-    // 2. Maritime Encyclopedia (Flags, Buoys, Wind)
+    // 3. Maritime Encyclopedia (Flags, Buoys, Wind)
     else if (lowerQuery.includes('flag') || lowerQuery.includes('bayrak') || lowerQuery.includes('flama') || 
              lowerQuery.includes('buoy') || lowerQuery.includes('şamandıra') || 
              lowerQuery.includes('cardinal') || lowerQuery.includes('kardinal') || 
@@ -195,22 +203,22 @@ export const legalExpert = {
         documentToQuery = 'maritime_encyclopedia.md';
         queryContext = "Maritime Encyclopedia";
     }
-    // 3. COLREGs
+    // 4. COLREGs
     else if (lowerQuery.includes('colregs') || lowerQuery.includes('rule') || lowerQuery.includes('navigation') || lowerQuery.includes('collision')) {
         documentToQuery = 'colregs_and_straits.md';
         queryContext = "COLREGs & Navigation Rules";
     } 
-    // 4. Turkish Guide
+    // 5. Turkish Guide
     else if (lowerQuery.includes('guide') || lowerQuery.includes('document') || lowerQuery.includes('equipment')) {
         documentToQuery = 'turkish_maritime_guide.md';
         queryContext = "Maritime Guide";
     } 
-    // 5. KVKK
+    // 6. KVKK
     else if (lowerQuery.includes('kvkk') || lowerQuery.includes('data') || lowerQuery.includes('privacy')) {
         documentToQuery = 'wim_kvkk.md';
         queryContext = "WIM Privacy Policy";
     } 
-    // 6. WIM Regulations (Default)
+    // 7. WIM Regulations (Default)
     else {
         documentToQuery = 'wim_contract_regulations.md';
         queryContext = "WIM Operation Regulations";

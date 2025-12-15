@@ -1,7 +1,7 @@
 
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
 import { getCurrentMaritimeTime } from './utils';
-import { checkBackendHealth, sendToBackend } from './api';
+// REMOVED: import { checkBackendHealth, sendToBackend } from './api';
 
 // --- THE BIG 4 EXPERTS ---
 import { hrExpert } from './agents/hrAgent';
@@ -47,26 +47,9 @@ export const orchestratorService = {
         
         const addTrace = (t: AgentTraceLog) => traces.push(t);
 
-        // --- 1. HYBRID CORE CHECK (Python Backend) ---
-        const isBackendOnline = await checkBackendHealth();
-        if (isBackendOnline) {
-            traces.push(createLog('ada.stargate', 'ROUTING', `Hybrid Core: ONLINE. Routing to Hyperscale Brain...`));
-            try {
-                const backendResponse = await sendToBackend(prompt, user, { active_tenant: activeTenantConfig.id });
-                if (backendResponse) {
-                    // Backend returns traces and actions, we merge them
-                    if (backendResponse.traces) traces.push(...backendResponse.traces);
-                    if (backendResponse.actions) actions.push(...backendResponse.actions);
-                    return { text: backendResponse.text, actions, traces };
-                }
-            } catch (err) {
-                traces.push(createLog('ada.stargate', 'ERROR', `Hybrid Link Failed. Falling back to Local Logic.`));
-            }
-        } else {
-            traces.push(createLog('ada.stargate', 'WARNING', `Hybrid Core: OFFLINE. Engaging Local Emergency Protocols.`));
-        }
+        // --- 1. LOCAL LOGIC ONLY (No Python Backend) ---
+        traces.push(createLog('ada.stargate', 'ROUTING', `Processing request locally. Hybrid Core disabled.`));
 
-        // --- 2. LOCAL FALLBACK LOGIC (The Big 4) ---
         try {
             // A. SYSTEM ADMINISTRATION (RULES & CONFIG)
             if (['update', 'change', 'set'].some(kw => lowerPrompt.includes(kw)) && ['rule', 'limit', 'config', 'parameter', 'policy'].some(kw => lowerPrompt.includes(kw))) {
@@ -82,17 +65,19 @@ export const orchestratorService = {
                 return { text: result.message, actions, traces };
             }
 
-            // B. LEGAL & SECURITY
-            if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk'].some(kw => lowerPrompt.includes(kw))) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY -> Delegating to Ada.Legal`));
+            // B. LEGAL, SECURITY & PRACTICAL KNOWLEDGE
+            // Expanded keywords to catch "anchor", "meltemi", "battery" for the new Practical Guide
+            if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk', 'anchor', 'demir', 'meltemi', 'wind', 'battery', 'akü', 'chain', 'zincir'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY/SEAMANSHIP -> Delegating to Ada.Legal`));
                 
                 if (lowerPrompt.includes('staff') || lowerPrompt.includes('patrol')) {
                     const result = await hrExpert.trackPatrolStatus(addTrace);
                     return { text: result.message, actions, traces };
                 }
                 
+                // Ada.Legal now handles Practical Seamanship questions too via simulateRagLookup
                 const legalRes = await legalExpert.process({ query: prompt }, user, addTrace);
-                const advice = legalRes[0]?.params?.advice || "Consulting legal database...";
+                const advice = legalRes[0]?.params?.advice || "Consulting knowledge base...";
                 return { text: advice, actions, traces };
             }
 
@@ -162,6 +147,7 @@ export const orchestratorService = {
                  return { text: res.message, actions, traces };
             }
 
+            // Return empty text to trigger LLM fallback in App.tsx
             return { text: "", actions, traces };
 
         } catch (error: any) {

@@ -3,7 +3,7 @@ import React from 'react';
 import { UserProfile, VhfLog } from '../../types';
 import { FEDERATION_REGISTRY } from '../../services/config';
 import { 
-    Anchor, ChevronRight, Projector, Activity, Radio, Users, Briefcase, UserCheck
+    Anchor, ChevronRight, Projector, Activity, Radio, Users, Briefcase, UserCheck, Wrench
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -161,6 +161,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             label="CRM Analyst" 
                             subtext="Customer Intelligence" 
                             onClick={onOpenCustomerMode || (() => {})} 
+                        />
+                        <PersonaButton 
+                            icon={Wrench} 
+                            label="Tech Support" 
+                            subtext="Equipment Repair & Guides" 
+                            onClick={onOpenTeamMode || (() => {})} 
                         />
                         <PersonaButton 
                             icon={Briefcase} 
