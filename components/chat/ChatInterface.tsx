@@ -57,7 +57,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full w-full relative transition-colors duration-300 pb-20 lg:pb-0">
+        <div className="flex flex-col h-full w-full relative transition-colors duration-300">
             {/* Background Base */}
             <div className="absolute inset-0 bg-[var(--bg-primary)] z-0"></div>
             

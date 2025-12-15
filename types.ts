@@ -333,6 +333,11 @@ export interface MasterDataStructure {
   type?: string;
   flag?: string;
   loa?: number;
+  
+  // Added properties for D-Marin global structure
+  loyalty_program?: any;
+  marina_portfolio?: any;
+  digital_services?: any;
 }
 
 export interface TenantConfig {

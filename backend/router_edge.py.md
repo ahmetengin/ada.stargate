@@ -23,6 +23,25 @@ class EdgeRouter:
     
     def __init__(self):
         print("🏔️ Mountain Mode Router Activated.")
+        
+        # --- STATIC KNOWLEDGE BASE (Reflex Memory) ---
+        self.flags = {
+            "alpha": "Alpha Flag (Beyaz-Mavi): Denizde dalgıç var, ağır yolla iyice açıktan geçiniz.",
+            "bravo": "Bravo Flag (Kırmızı): Tehlikeli madde (patlayıcı/akaryakıt) yüklüyorum, boşaltıyorum veya taşıyorum.",
+            "charlie": "Charlie Flag (Mavi-Beyaz-Kırmızı): 'Evet' (Olumlu).",
+            "delta": "Delta Flag (Sarı-Mavi): Benden açık durunuz, manevra yapmakta güçlük çekiyorum.",
+            "oscar": "Oscar Flag (Sarı-Kırmızı): Denize adam düştü.",
+            "quebec": "Quebec Flag (Sarı): Gemim sağlıklıdır, serbest pratika istiyorum.",
+            "whiskey": "Whiskey Flag (Mavi-Beyaz-Kırmızı): Tıbbi yardım istiyorum."
+        }
+        
+        self.buoys = {
+            "sancak": "Sancak (Starboard) Şamandırası: Yeşil renklidir. Limana girerken sağda bırakılır.",
+            "iskele": "İskele (Port) Şamandırası: Kırmızı renklidir. Limana girerken solda bırakılır.",
+            "kuzey": "Kuzey Kardinal: Siyah üzeri Sarı. Tepesinde iki koni yukarı bakar. Kuzeyinden geçiniz.",
+            "güney": "Güney Kardinal: Sarı üzeri Siyah. Tepesinde iki koni aşağı bakar. Güneyinden geçiniz.",
+            "izole": "İzole Tehlike: Siyah üzeri Kırmızı kuşaklı. Tepesinde iki siyah küre vardır. Üzerinde durulmaz, etrafından geçilir."
+        }
 
     def route_and_execute(self, user_input: str) -> str:
         text = user_input.lower()
@@ -42,12 +61,25 @@ class EdgeRouter:
                 result = SKILL_REGISTRY["finance_calc_mooring"](l_val, b_val, d_val)
                 return self._format_result(result)
 
-        # 2. Denizcilik Kuralları (COLREGs)
-        if "çatışma" in text or "colreg" in text or "geçiş" in text:
-            # Basit kural tabanlı cevap
-            return "EDGE: Çatışma riski durumunda sancak (sağ) tarafındaki tekneye yol ver. Hızını düşür."
+        # 2. Denizcilik Ansiklopedisi (Refleks Cevaplar)
+        
+        # Bayrak Sorgusu
+        if "bayrak" in text or "flag" in text:
+            for key, value in self.flags.items():
+                if key in text:
+                    return f"🚩 **ICS REFLEKS BİLGİSİ:**\n{value}"
+        
+        # Şamandıra / Yön Sorgusu
+        if "şamandıra" in text or "kardinal" in text or "fener" in text:
+            for key, value in self.buoys.items():
+                if key in text:
+                    return f"⚓ **IALA REFLEKS BİLGİSİ:**\n{value}"
 
-        # 3. Sistem Kontrolü (IoT)
+        # 3. Denizcilik Kuralları (COLREGs)
+        if "çatışma" in text or "colreg" in text or "geçiş" in text:
+            return "EDGE: Çatışma riski durumunda sancak (sağ) tarafındaki tekneye yol ver. Hızını düşür. (COLREGs Rule 15)"
+
+        # 4. Sistem Kontrolü (IoT)
         if "pedestal" in text or "elektrik" in text:
             if "aç" in text or "on" in text:
                 return SKILL_REGISTRY["iot_control_pedestal"]("PED-AUTO", "ON")
@@ -55,7 +87,7 @@ class EdgeRouter:
                 return SKILL_REGISTRY["iot_control_pedestal"]("PED-AUTO", "OFF")
 
         # Fallback
-        return "Dağ modundayım. Sadece 'hesapla', 'kural' veya 'kontrol' komutlarını işleyebilirim."
+        return "Dağ modundayım. Sadece 'hesapla', 'bayrak', 'kural' veya 'kontrol' komutlarını işleyebilirim."
 
     def _format_result(self, json_str: str) -> str:
         try:
@@ -70,5 +102,5 @@ class EdgeRouter:
 # Test
 if __name__ == "__main__":
     router = EdgeRouter()
-    print(router.route_and_execute("20m boyunda 5m eninde tekne için 3 günlük bağlama ücreti hesapla"))
+    print(router.route_and_execute("Alpha bayrağı ne anlama gelir?"))
 ```

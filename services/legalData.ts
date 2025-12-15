@@ -104,5 +104,87 @@ H.3. In the event that the Contract expires and the Yacht Owner notifies the Com
 ### 3. Critical Constraints
 *   **Max Speed:** 10 Knots over ground (SOG).
 *   **Currents:** Surface currents can reach 4-6 knots (North to South). Undercurrents flow South to North.
+`,
+  'maritime_encyclopedia.md': `
+# 📘 INTERNATIONAL MARITIME ENCYCLOPEDIA
+
+**Scope:** Universal Maritime Knowledge, Signals, and Seamanship.
+
+---
+
+## 1. INTERNATIONAL CODE OF SIGNALS (ICS) - FLAGS
+
+| Flag | Name | Meaning |
+| :--- | :--- | :--- |
+| ⬜️🟦 | **Alpha** | "I have a diver down; keep well clear at slow speed." |
+| 🟥 | **Bravo** | "I am taking in, or discharging, or carrying dangerous goods." |
+| 🟦⬜️🟥⬜️🟦 | **Charlie** | "Yes" (Affirmative). |
+| 🟨🟦🟨 | **Delta** | "Keep clear of me; I am maneuvering with difficulty." |
+| 🟥🟨 | **Oscar** | "Man overboard." |
+| 🟨 | **Quebec** | "My vessel is 'healthy' and I request free pratique." (Pratika/Gümrük) |
+| 🟦⬜️🟥 | **Whiskey** | "I require medical assistance." |
+
+---
+
+## 2. IALA BUOYAGE SYSTEM (REGION A - TURKEY/EUROPE)
+
+### Lateral Marks (Channel Markers)
+*   **Port Hand (İskele):** Red 🟥. Can Shape. Top Mark: Red Cylinder. **Rule:** "Red to Red when returning (entering harbor)."
+*   **Starboard Hand (Sancak):** Green 🟩. Conical Shape. Top Mark: Green Cone. **Rule:** Keep Green to Starboard when entering harbor.
+
+### Cardinal Marks (Compass Directions)
+*   **North Cardinal:** Black over Yellow. ▲▲ (Two cones up). Pass to North.
+*   **South Cardinal:** Yellow over Black. ▼▼ (Two cones down). Pass to South.
+*   **East Cardinal:** Black-Yellow-Black. ⬥ (Egg shape). Pass to East.
+*   **West Cardinal:** Yellow-Black-Yellow. ⧗ (Hourglass). Pass to West.
+
+---
+
+## 3. BEAUFORT WIND SCALE
+
+| Force | Description | Speed (knots) | Sea State |
+| :--- | :--- | :--- | :--- |
+| **0-1** | Calm/Light Air | 0-3 | Mirror like / Ripples |
+| **3** | Gentle Breeze | 7-10 | Large wavelets, crests break |
+| **5** | Fresh Breeze | 17-21 | Moderate waves, many white horses |
+| **8** | Gale | 34-40 | Moderately high waves, spindrift |
+| **10** | Storm | 48-55 | Very high waves, white sea |
+`,
+  'route_istanbul_symi.md': `
+# 🗺️ TACTICAL ROUTE GUIDE: ISTANBUL TO SYMI (GREECE)
+
+**Mission:** Safe & Compliant Navigation from WIM (Istanbul) to Symi Island.
+**Total Distance:** Approx. 380 NM.
+
+---
+
+## 🚩 PHASE 1: DEPARTURE & STRAITS (Turkish Waters)
+
+### 1. Exit Formalities (Turkey)
+Before leaving Turkish waters permanently for Greece, you must "Check-out".
+*   **Recommended Port of Exit:** Datça or Bozburun (Closest to Symi).
+*   **Procedure:** 1. Harbor Master (Liman) 2. Passport Police 3. Customs.
+
+### 2. The Route South
+*   **Marmara:** WIM -> Çanakkale Strait (Dardanelles). Alert: Monitor VTS Sector Nara on VHF Ch 12.
+*   **Aegean:** Baba Kale -> Ayvalık -> Çeşme -> Didim -> Bodrum -> Datça.
+
+---
+
+## 🇬🇷 PHASE 2: CROSSING THE BORDER (Entering Greece)
+
+### 1. The Line Protocol
+*   **Hoist:** Yellow "Q" Flag (Quarantine) on Starboard spreader immediately upon crossing the maritime border.
+*   **Hoist:** Greek Courtesy Flag above the Q flag.
+*   **VHF:** Monitor Ch 12 (Port Police).
+
+### 2. Symi Port of Entry (Gialos)
+*   **Approach:** Enter the main bay (Gialos). Keep clear of ferries.
+*   **Docking:** Proceed to the **North Quay** (near Clock Tower) for clearance.
+*   **Formalities:** Present Passports, Boat Papers, Insurance, and Crew List. Pay TEPAI (e-Tax).
+
+### 3. Symi Intel
+*   **Dining:** Manos Fish Restaurant (Famous), Pantelis.
+*   **Anchorage:** Pedi Bay (Quiet), Panormitis (South - Monastery).
 `
 };
