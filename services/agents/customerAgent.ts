@@ -28,6 +28,7 @@ export const customerExpert = {
     if (score > 1000) tier = 'PREMIUM';
     if (score > 5000) tier = 'PLATINUM';
 
+    // Type casting because we know the structure of dmarinMasterData
     const benefits = (program as any).tiers[tier].benefits;
 
     addTrace(createLog('ada.customer', 'THINKING', `Analyzing 'Happy Berth Days' eligibility for ${currentProfile.name} (Global Network)...`, 'EXPERT'));

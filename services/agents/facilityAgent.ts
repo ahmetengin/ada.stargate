@@ -30,8 +30,34 @@ export const facilityExpert = {
         };
     },
 
+    // NEW Skill: Project AURA (Smart Lighting Control)
+    activateAuraProtocol: async (berthId: string, mode: 'LANDING' | 'WELCOME' | 'ALERT', vesselName: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string }> => {
+        addTrace(createLog('ada.facility', 'THINKING', `Initiating Project AURA for ${vesselName} at ${berthId}. Mode: ${mode}...`, 'EXPERT'));
+        
+        // Mock DMX Control Logic
+        let effect = "";
+        let color = "";
+        
+        if (mode === 'LANDING') {
+            effect = "Pulsing Guide Lights (Runway Effect)";
+            color = "Amber/White";
+        } else if (mode === 'WELCOME') {
+            effect = "Steady Glow + Pedestal Text: 'WELCOME HOME'";
+            // Fun Logic: Determine color based on "vessel metadata" (simulated)
+            color = vesselName.includes('Red') ? 'Red' : 'Cyan'; 
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500)); // Latency
+
+        addTrace(createLog('ada.facility', 'TOOL_EXECUTION', `DMX Signal Sent -> Pontoon Controller -> ${berthId}. Effect: ${effect} (${color}).`, 'WORKER'));
+        
+        return { 
+            success: true, 
+            message: `**AURA ACTIVE:** Lighting sequence initiated for ${berthId}. Visual guidance enabled.` 
+        };
+    },
+
     // NEW Skill: Smart Grid Management (Monaco Protocol)
-    // Connects to "ada.energy" node
     monitorSmartGrid: async (addTrace: (t: AgentTraceLog) => void): Promise<EnergyGridStatus> => {
         addTrace(createLog('ada.energy', 'THINKING', `Connecting to Monaco-grade Smart Grid (PLC Network)... Analyzing Load...`, 'EXPERT'));
         

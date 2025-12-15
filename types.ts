@@ -338,6 +338,17 @@ export interface MasterDataStructure {
   loyalty_program?: any;
   marina_portfolio?: any;
   digital_services?: any;
+  ocean_guardians?: {
+      initiative_name: string;
+      mission: string;
+      active_missions: {
+          id: string;
+          name: string;
+          target: string;
+          reward: string;
+      }[];
+      partners: string[];
+  };
 }
 
 export interface TenantConfig {

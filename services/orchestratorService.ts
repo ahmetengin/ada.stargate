@@ -20,6 +20,7 @@ import { reservationsExpert } from './agents/reservationsAgent';
 import { federationExpert } from './agents/federationAgent';
 import { kitesExpert } from './agents/travelAgent';
 import { systemExpert } from './agents/systemAgent';
+import { scienceExpert } from './agents/scienceAgent'; // NEW
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
@@ -116,10 +117,16 @@ export const orchestratorService = {
                 return { text: booking.message, actions, traces };
             }
 
-            // D. MARINA OPERATIONS
-            if (['arrival', 'departure', 'dock', 'berth', 'tender', 'water', 'electricity', 'waste', 'blue card', 'weather', 'facility', 'technical', 'lift'].some(kw => lowerPrompt.includes(kw))) {
+            // D. MARINA OPERATIONS & SCIENCE
+            if (['arrival', 'departure', 'dock', 'berth', 'tender', 'water', 'electricity', 'waste', 'blue card', 'weather', 'facility', 'technical', 'lift', 'science', 'mission', 'ocean', 'research'].some(kw => lowerPrompt.includes(kw))) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: MARINA_OPS -> Delegating to Ada.Marina`));
                 
+                // NEW: SCIENCE ROUTING
+                if (lowerPrompt.includes('science') || lowerPrompt.includes('mission') || lowerPrompt.includes('ocean')) {
+                    const mission = await scienceExpert.assignMission("S/Y Phisedelia", "Sector Zulu", addTrace);
+                    return { text: mission, actions, traces };
+                }
+
                 if (lowerPrompt.includes('arrival')) {
                     const result = await marinaExpert.processArrival("S/Y Phisedelia", tenders, { status: 'DEBT', amount: 850 }, addTrace);
                     actions.push(...result.actions);
