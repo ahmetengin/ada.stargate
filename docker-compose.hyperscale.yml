@@ -78,7 +78,7 @@ services:
     depends_on:
       - ada-core
 
-  # 7. SIGNALK SERVER (NMEA Hub + MarineTraffic + Course Provider + OpenWeather + MQTT + Windy + WeatherFlow + Racer)
+  # 7. SIGNALK SERVER (NMEA Hub + MarineTraffic + Course Provider + OpenWeather + MQTT + Windy + WeatherFlow + Racer + PostgSail)
   ada-signalk:
     image: signalk/signalk-server
     container_name: ada_signalk
@@ -86,8 +86,8 @@ services:
       - "3001:3000" # Expose Admin UI on 3001
     environment:
       - SECURITYSTRATEGY=./node_modules/@signalk/server-admin/lib/security/never
-    # Hybrid Command: Install all plugins including signalk-racer
-    entrypoint: sh -c "cd /home/node/.signalk && npm install signalk-marinetraffic-public @signalk/course-provider openweather-signalk signalk-mosquitto signalk-windy-plugin signalk-weatherflow signalk-racer && cd /home/node/signalk && ./startup.sh"
+    # Hybrid Command: Install all plugins including signalk-racer and signalk-postgsail
+    entrypoint: sh -c "cd /home/node/.signalk && npm install signalk-marinetraffic-public @signalk/course-provider openweather-signalk signalk-mosquitto signalk-windy-plugin signalk-weatherflow signalk-racer signalk-postgsail && cd /home/node/signalk && ./startup.sh"
     volumes:
       - signalk_data:/home/node/.signalk
     restart: always

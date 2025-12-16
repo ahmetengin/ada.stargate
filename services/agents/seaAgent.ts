@@ -1,7 +1,8 @@
 
 import { AgentAction, AgentTraceLog, NodeName } from '../../types';
 import { getCurrentMaritimeTime } from '../utils';
-// import { FromPgn } from '@canboat/canboatjs'; // In a real node env, we import this. Here we simulate the capability.
+// import { FromPgn } from '@canboat/canboatjs'; 
+// import { PostgSail } from '@xbgmsharp/postgsail-mcp-server';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_sea_${Date.now()}_${Math.random()}`,
@@ -66,6 +67,13 @@ const N2K_PGNS: Record<string, string> = {
     '130306': 'Wind Data'
 };
 
+// PostgSail Trip Database (Simulated capability)
+const POSTGSAIL_TRIPS = [
+    { id: 294, name: "Gocek to Bodrum", date: "2025-10-15", duration: "14h 20m", distance: "85 nm", avgSpeed: "7.4 kn", maxWind: "22 kn" },
+    { id: 293, name: "Bay Tour (Fethiye)", date: "2025-10-12", duration: "4h 10m", distance: "22 nm", avgSpeed: "5.2 kn", maxWind: "15 kn" },
+    { id: 292, name: "Marmaris Transfer", date: "2025-10-05", duration: "9h 45m", distance: "60 nm", avgSpeed: "6.8 kn", maxWind: "18 kn" }
+];
+
 export const seaExpert = {
   
   // Skill: Autonomous Navigation Analysis (COLREGs)
@@ -126,7 +134,7 @@ export const seaExpert = {
       return { pgn, description, fields };
   },
 
-  // Skill: Get Real-Time Telemetry (Simulating SignalK MCP)
+  // Skill: Get Real-Time Telemetry (Simulating SignalK MCP & PostgSail)
   getSignalKData: async (query: string, addTrace: (t: AgentTraceLog) => void): Promise<{ message: string, data: any }> => {
       addTrace(createLog('ada.sea', 'THINKING', `Connecting to SignalK MCP Server for live telemetry: "${query}"...`, 'EXPERT'));
       
@@ -136,6 +144,20 @@ export const seaExpert = {
       const lowerQuery = query.toLowerCase();
       let path = '';
       let result = null;
+
+      // PostgSail: Logbook & Trips
+      if (lowerQuery.includes('logbook') || lowerQuery.includes('trip') || lowerQuery.includes('seyir') || lowerQuery.includes('history') || lowerQuery.includes('geçmiş')) {
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: postgsail.get_recent_trips()`, 'WORKER'));
+          const trip = POSTGSAIL_TRIPS[0];
+          
+          return {
+              message: `**DIGITAL LOGBOOK (PostgSail)**\n\n` +
+                       `I retrieved your recent trip history from the cloud:\n\n` +
+                       POSTGSAIL_TRIPS.map(t => `> **${t.date}:** ${t.name} (${t.distance})\n   *Dur: ${t.duration} | Avg: ${t.avgSpeed}*`).join('\n') +
+                       `\n\n*All tracks are synced to your cloud profile.*`,
+              data: POSTGSAIL_TRIPS
+          };
+      }
 
       // Sailing Tactics (SignalK Racer)
       if (lowerQuery.includes('sail') || lowerQuery.includes('yelken') || lowerQuery.includes('tack') || lowerQuery.includes('tramola') || lowerQuery.includes('polar') || lowerQuery.includes('vmg')) {

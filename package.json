@@ -19,7 +19,8 @@
     "mic": "^2.1.2",
     "speaker": "^0.5.5",
     "vhfinfo": "^2.0.0",
-    "@canboat/canboatjs": "^2.0.0"
+    "@canboat/canboatjs": "^2.0.0",
+    "@xbgmsharp/postgsail-mcp-server": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",

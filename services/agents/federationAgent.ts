@@ -1,3 +1,4 @@
+
 // services/agents/federationAgent.ts
 
 import { AgentAction, AgentTraceLog, NodeName, FederatedBerthAvailability } from '../../types';
@@ -19,77 +20,96 @@ export const federationExpert = {
     
     // Skill: Get Berth Availability from a Partner Marina
     getRemoteBerthAvailability: async (marinaId: string, date: string, addTrace: (t: AgentTraceLog) => void): Promise<FederatedBerthAvailability | null> => {
-        addTrace(createLog('ada.federation', 'THINKING', `Attempting to query berth availability from federated partner: '${marinaId}' for ${date}...`, 'EXPERT'));
+        const targetId = marinaId.toLowerCase();
+        addTrace(createLog('ada.federation', 'THINKING', `Federation Link Protocol initiated. Querying node: '${targetId}' for ${date}...`, 'EXPERT'));
 
-        const partner = FEDERATION_REGISTRY.peers.find(p => p.node_address === marinaId || p.id === marinaId.toLowerCase());
+        // 1. Identify Network Parent (WIM, D-Marin, or Setur) based on the marina ID requested
+        // In a real app, this would be a sophisticated routing table. Here we use heuristics.
+        
+        let networkName = "UNKNOWN";
+        if (targetId.includes('setur') || targetId.includes('kalamis') || targetId.includes('kas')) networkName = "SETUR";
+        if (targetId.includes('d-marin') || targetId.includes('gocek') || targetId.includes('turgutreis')) networkName = "D-MARIN";
+        if (targetId.includes('wim')) networkName = "WIM";
 
-        if (!partner) {
-            addTrace(createLog('ada.federation', 'ERROR', `Partner marina '${marinaId}' not found in Federation Registry.`, 'EXPERT'));
-            return null;
-        }
+        addTrace(createLog('ada.federation', 'ROUTING', `Routing request via ${networkName} secure gateway...`, 'ORCHESTRATOR'));
+        
+        // Simulate API latency
+        await new Promise(resolve => setTimeout(resolve, 1200)); 
 
-        if (partner.status !== 'ONLINE') {
-            addTrace(createLog('ada.federation', 'WARNING', `Partner marina '${partner.name}' is currently offline. Cannot retrieve real-time data.`, 'EXPERT'));
-            return null;
-        }
-
-        // Simulate API call to partner's endpoint
-        // In a real scenario, this would be a fetch() call to partner.api_endpoint
-        addTrace(createLog('ada.federation', 'TOOL_EXECUTION', `Invoking API for ${partner.name}: ${partner.api_endpoint}/berths/availability?date=${date}`, 'WORKER'));
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network latency
-
-        // --- MOCK RESPONSES FOR PARTNER MARINAS ---
+        // --- MOCK RESPONSES FOR FEDERATED PARTNERS ---
         let mockAvailability: FederatedBerthAvailability;
 
-        if (partner.id === 'setur_kalamis') {
+        // SETUR LOGIC
+        if (targetId.includes('kalamis')) {
             mockAvailability = {
-                marinaId: partner.id,
+                marinaId: 'TR_KAL',
                 date: date,
-                totalBerths: 1000,
-                availableBerths: 120,
-                occupancyRate: 88,
-                message: `Setur Kalamış & Fenerbahçe Marina has **120 berths available** for ${date}. Occupancy is 88%.`
+                totalBerths: 1291,
+                availableBerths: 12, // Very busy
+                occupancyRate: 99,
+                message: `**Setur Kalamış & Fenerbahçe:** High occupancy alert. Only 12 berths available (mostly <15m). Recommendation: Reserve immediately via Setur App.`
             };
-        } else if (partner.id === 'dmaris_gocek') {
+        } else if (targetId.includes('kas')) {
             mockAvailability = {
-                marinaId: partner.id,
+                marinaId: 'TR_KAS',
                 date: date,
-                totalBerths: 400,
-                availableBerths: 15,
-                occupancyRate: 96,
-                message: `D-Marin Göcek has **only 15 berths available** for ${date}. High season, occupancy is 96%.`
-            };
-        } else if (partner.id === 'setur_midilli') {
-            mockAvailability = {
-                marinaId: partner.id,
-                date: date,
-                totalBerths: 200,
+                totalBerths: 472,
                 availableBerths: 45,
-                occupancyRate: 77.5,
-                message: `Setur Mytilene Marina (Lesvos, Greece) has **45 berths available** for ${date}.`
+                occupancyRate: 90,
+                message: `**Setur Kaş Marina:** Availability confirmed. 45 berths open. Perfect stopover for Kastellorizo (Meis) transit.`
             };
-        } else if (partner.id === 'ycm_monaco') {
+        } else if (targetId.includes('midilli') || targetId.includes('mytilene')) {
             mockAvailability = {
-                marinaId: partner.id,
+                marinaId: 'GR_MYT',
                 date: date,
-                totalBerths: 100, // Very exclusive
-                availableBerths: 2,
-                occupancyRate: 98,
-                message: `Yacht Club de Monaco has **extremely limited availability (2 berths)** for ${date}. Requires advance booking.`
+                totalBerths: 222,
+                availableBerths: 50,
+                occupancyRate: 77,
+                message: `**Setur Mytilene (Lesvos):** Good availability. Please hoist Q-Flag upon entry to Greek waters.`
             };
-        } else {
-            // Default/Generic response for unknown partners
+        
+        // D-MARIN LOGIC
+        } else if (targetId.includes('gocek')) {
             mockAvailability = {
-                marinaId: partner.id,
+                marinaId: 'TR_GOC',
+                date: date,
+                totalBerths: 380,
+                availableBerths: 8,
+                occupancyRate: 98,
+                message: `**D-Marin Göcek:** Extremely limited availability (High Season). 'Happy Berth Days' free days may be restricted.`
+            };
+        } else if (targetId.includes('turgutreis')) {
+            mockAvailability = {
+                marinaId: 'TR_TUR',
+                date: date,
+                totalBerths: 550,
+                availableBerths: 35,
+                occupancyRate: 93,
+                message: `**D-Marin Turgutreis:** 35 berths available. Technical services fully operational.`
+            };
+        } else if (targetId.includes('dubai')) {
+            mockAvailability = {
+                marinaId: 'AE_DUB',
+                date: date,
+                totalBerths: 700,
+                availableBerths: 150,
+                occupancyRate: 78,
+                message: `**D-Marin Dubai Harbour:** Wide availability for superyachts up to 160m.`
+            };
+
+        // DEFAULT FALLBACK
+        } else {
+            mockAvailability = {
+                marinaId: marinaId,
                 date: date,
                 totalBerths: 500,
-                availableBerths: Math.floor(Math.random() * 100),
-                occupancyRate: Math.floor(Math.random() * 30) + 70, // 70-100%
-                message: `Partner marina '${partner.name}' has **${Math.floor(Math.random() * 100)} berths available** for ${date}.`
+                availableBerths: Math.floor(Math.random() * 50),
+                occupancyRate: 85,
+                message: `Federated Partner '${marinaId}' reports limited availability for ${date}.`
             };
         }
         
-        addTrace(createLog('ada.federation', 'OUTPUT', `Received availability data from ${partner.name}.`, 'EXPERT'));
+        addTrace(createLog('ada.federation', 'OUTPUT', `Data Packet Received from ${networkName} Node.`, 'EXPERT'));
         return mockAvailability;
     }
 };

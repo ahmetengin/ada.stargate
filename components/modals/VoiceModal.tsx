@@ -2,15 +2,14 @@
 import React, { useEffect, useState } from 'react';
 import { X, Mic, Radio, AlertTriangle, Power, RefreshCw, Activity, Signal } from 'lucide-react';
 import { LiveSession } from '../../services/liveService';
-import { LiveConnectionState, UserProfile } from '../../types';
-import { wimMasterData } from '../../services/wimMasterData';
+import { LiveConnectionState, UserProfile, TenantConfig } from '../../types';
 import { formatCoordinate } from '../../services/utils';
-// import vhfinfo from 'vhfinfo'; // Assuming dynamic import or mock for browser environment if package issues arise
 
 interface VoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   userProfile: UserProfile;
+  activeTenantConfig: TenantConfig;
   onTranscriptReceived: (userText: string, modelText: string) => void;
   channel: string;
 }
@@ -29,14 +28,15 @@ const getVhfDetails = (channel: string) => {
     return db[channel] || { freq: '---.---', type: 'Unknown', desc: 'Auxiliary' };
 };
 
-export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userProfile, onTranscriptReceived, channel }) => {
+export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userProfile, activeTenantConfig, onTranscriptReceived, channel }) => {
   const [status, setStatus] = useState<LiveConnectionState>(LiveConnectionState.Disconnected);
   const [audioLevel, setAudioLevel] = useState(0);
   const [session, setSession] = useState<LiveSession | null>(null);
   const [showProtocol, setShowProtocol] = useState(false);
 
-  // Get coordinates from wimMasterData
-  const { lat, lng } = wimMasterData.identity.location.coordinates;
+  // Get coordinates dynamically from activeTenantConfig
+  const lat = activeTenantConfig.masterData?.identity?.location?.coordinates?.lat || 0;
+  const lng = activeTenantConfig.masterData?.identity?.location?.coordinates?.lng || 0;
 
   const formattedLat = formatCoordinate(lat, 'lat');
   const formattedLng = formatCoordinate(lng, 'lng');
@@ -71,8 +71,8 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
       };
 
       setSession(newSession);
-      // Pass userProfile to connect for RBAC
-      newSession.connect(userProfile);
+      // Pass userProfile AND tenantConfig to connect
+      newSession.connect(userProfile, activeTenantConfig);
   };
 
   const handleDisconnect = async () => {
@@ -124,8 +124,8 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
            <div className="mb-6 text-center w-full">
              <div className="flex justify-between items-end border-b border-zinc-700 pb-2 mb-4">
                  <div className="text-left">
-                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Priority</span>
-                     <span className="text-xs font-mono text-zinc-300">{channel === 'SCAN' ? 'SCANNING' : 'PRIMARY'}</span>
+                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Network</span>
+                     <span className="text-xs font-mono text-zinc-300 uppercase">{activeTenantConfig.code || 'UNKNOWN'}</span>
                  </div>
                  <div className="text-right">
                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Frequency</span>

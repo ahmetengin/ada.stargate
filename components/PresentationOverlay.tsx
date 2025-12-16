@@ -1,7 +1,8 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { Mic, Activity, X, FileText, Terminal, Volume2, VolumeX, CheckCircle2, Download, Mail, PieChart, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { PresentationState, UserProfile, AgentTraceLog } from '../types';
+import { PresentationState, UserProfile, AgentTraceLog, TenantConfig } from '../types';
 import { generateSpeech } from '../services/geminiService';
 import { LiveSession } from '../services/liveService';
 import { executiveExpert } from '../services/agents/executiveExpert'; 
@@ -17,6 +18,7 @@ interface PresentationOverlayProps {
     onStateChange: React.Dispatch<React.SetStateAction<PresentationState>>;
     agentTraces: AgentTraceLog[];
     onArchive?: (results: { minutes: string, proposal: string }) => void;
+    activeTenantConfig: TenantConfig;
 }
 
 // --- AUDIO DECODING HELPERS ---
@@ -49,7 +51,7 @@ async function decodeAudioData(
   return buffer;
 }
 
-export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange, agentTraces, onArchive }) => {
+export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state, userProfile, onClose, onStartMeeting, onEndMeeting, onScribeInput, onStateChange, agentTraces, onArchive, activeTenantConfig }) => {
     const [subtitles, setSubtitles] = useState<string>("");
     const [audioVis, setAudioVis] = useState<number[]>(new Array(30).fill(5));
     const [isMuted, setIsMuted] = useState(false);
@@ -111,13 +113,13 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
             newSession.onTurnComplete = (userText, modelText) => {
                  onStateChange(prev => ({...prev, transcript: prev.transcript + `\n[MİSAFİR]: ${userText}\n[ADA]: ${modelText}`}));
             };
-            newSession.connect(userProfile).catch(console.error);
+            newSession.connect(userProfile, activeTenantConfig).catch(console.error);
             sessionRef.current = newSession;
         } else if (state.slide !== 'scribe' && sessionRef.current) {
             sessionRef.current.disconnect();
             sessionRef.current = null;
         }
-    }, [state.slide, userProfile, onStateChange]);
+    }, [state.slide, userProfile, activeTenantConfig, onStateChange]);
 
     // Reset narrative step when switching modes
     useEffect(() => {

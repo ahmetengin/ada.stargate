@@ -26,6 +26,7 @@ graph LR
     L[WeatherFlow Tempest] -->|UDP| C
     M[CanboatJS] -->|Raw PGN Decode| C
     N[SignalK Racer] -->|Tactical Calc| C
+    O[PostgSail] -->|Cloud Logbook| C
 ```
 
 ## 3. Available Tools & Plugins
@@ -39,11 +40,11 @@ The system is configured with the following plugins to maximize data reach:
 *   **`signalk-windy-plugin`**: Provides a Windy.com weather map overlay.
 *   **`signalk-weatherflow`**: Integrates the Tempest weather station (Haptic Rain, Lightning).
 *   **`@canboat/canboatjs`**: Pure NMEA 2000 Decoder/Encoder.
-*   **`signalk-racer`**: **(New)** Tactical Sailing Computer. Calculates racing performance data:
-    *   Target Wind Angle (TWA) & Speed.
-    *   Velocity Made Good (VMG).
-    *   Polar Performance %.
-    *   Tack/Gybe Angles.
+*   **`signalk-racer`**: Tactical Sailing Computer (VMG, Polar).
+*   **`signalk-postgsail` / `@xbgmsharp/postgsail-mcp-server`**: **(New)** Automated Logbook & Cloud Analytics.
+    *   Trip History & Replay.
+    *   Performance Metrics over Time.
+    *   Digital Logbook Generation.
 
 ## 4. Usage Scenarios
 
@@ -73,6 +74,12 @@ The system is configured with the following plugins to maximize data reach:
 3.  **SignalK MCP:** Returns `{ polarSpeed: 8.2, speedOverGround: 7.1, targetAngle: 45 }`.
 4.  **Response:** "We are at 86% efficiency. To reach max VMG, harden up to 45° True Wind Angle."
 
+### Scenario E: "Logbook Lookup" (PostgSail)
+**The Historian:** Accessing past trip data.
+1.  **User:** "How long did it take to get from Göcek to Bodrum last week?"
+2.  **Ada Sea Agent:** Uses `postgsail` tool to query trip history.
+3.  **Result:** "Trip ID: 294. Duration: 14h 20m. Max Wind: 22kts. Avg Speed: 7.4kts."
+
 ## 5. Configuration
 The integration is defined in `docker-compose.hyperscale.yml`.
 *   **Ada Core** environment: `MCP_SIGNALK_URL=http://ada-signalk-mcp:3002/sse`, `MQTT_BROKER=ada-mqtt`
@@ -84,3 +91,4 @@ The integration is defined in `docker-compose.hyperscale.yml`.
     *   `signalk-windy-plugin`
     *   `signalk-weatherflow`
     *   `signalk-racer`
+    *   `signalk-postgsail`

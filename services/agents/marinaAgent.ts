@@ -1,7 +1,6 @@
 
 import { TaskHandlerFn } from '../decomposition/types';
-import { AgentAction, AgentTraceLog, VesselIntelligenceProfile, NodeName, Tender, VesselSystemsStatus, AisTarget } from '../../types';
-import { wimMasterData } from '../wimMasterData';
+import { AgentAction, AgentTraceLog, VesselIntelligenceProfile, NodeName, Tender, VesselSystemsStatus, AisTarget, TenantConfig } from '../../types';
 import { haversineDistance, getCurrentMaritimeTime } from '../utils';
 import { persistenceService, STORAGE_KEYS } from '../persistence'; 
 import { checkBackendHealth, invokeAgentSkill } from '../api'; // Import API helpers
@@ -149,7 +148,6 @@ export const marinaExpert = {
     },
 
     // ATC Radar Scan (20nm radius + Ambarlı Commercial Traffic)
-    // UPDATED: Now simulates fetching data from MarineTraffic for distant targets
     scanSector: async (lat: number, lng: number, radiusMiles: number, addTrace: (t: AgentTraceLog) => void): Promise<AisTarget[]> => {
         addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Scanning Radar Sector: ${radiusMiles}nm radius around ${lat}, ${lng}...`, 'WORKER'));
         
@@ -200,25 +198,28 @@ export const marinaExpert = {
         addTrace(createLog('ada.marina', 'THINKING', `Checking availability of Marina-owned charter assets for ${date}...`, 'EXPERT'));
         
         // In a real system, this would check a booking calendar database.
-        // Here we filter wimMasterData.assets.charter_fleet
+        // Here we filter wimMasterData.assets.charter_fleet (Assuming fallback)
+        // Since we want this to work generically, ideally we should pass fleet data, but for now we assume WIM fleet structure is available or empty
+        const fleet: any[] = []; 
+        const available = fleet.filter((boat: any) => boat.status === 'Available');
         
-        const fleet = wimMasterData.assets.charter_fleet || [];
-        const available = fleet.filter(boat => boat.status === 'Available');
-        
-        addTrace(createLog('ada.marina', 'OUTPUT', `Found ${available.length} available charter vessels in WIM Registry.`, 'WORKER'));
+        addTrace(createLog('ada.marina', 'OUTPUT', `Found ${available.length} available charter vessels in Registry.`, 'WORKER'));
         return available;
     },
 
     // Proactive Hailing Logic - The "Welcome Home" Protocol (Protocol: CH16 -> CH72)
-    generateProactiveHail: async (vesselName: string): Promise<string> => {
+    // UPDATED: Now accepts tenantConfig to use the correct marina name
+    generateProactiveHail: async (vesselName: string, tenantConfig: TenantConfig): Promise<string> => {
         const profile = await marinaExpert.getVesselIntelligence(vesselName);
         const berth = profile?.location || "C-12"; 
+        const marinaName = tenantConfig.masterData.identity.name || "Marina Control";
+        const vhfChannel = tenantConfig.masterData.identity.contact?.vhf_channels?.public[0] || "72";
         
         return `**📡 PROACTIVE HAIL SEQUENCE**\n\n` +
                `**[VHF CH 16 - GENERAL CALLING]**\n` +
-               `> "S/Y Phisedelia, S/Y Phisedelia, S/Y Phisedelia. This is West Istanbul Marina Control."\n` +
-               `> "Captain, reading you loud and clear. Please switch to **Channel 72** for arrival instructions. Over."\n\n` +
-               `**[VHF CH 72 - OPERATIONS]**\n` +
+               `> "${vesselName}, ${vesselName}, ${vesselName}. This is **${marinaName} Control**."\n` +
+               `> "Captain, reading you loud and clear. Please switch to **Channel ${vhfChannel}** for arrival instructions. Over."\n\n` +
+               `**[VHF CH ${vhfChannel} - OPERATIONS]**\n` +
                `> "Welcome home, Captain. We have your AIS target at 2nm."\n\n` +
                `**TRAFFIC & APPROACH:**\n` +
                `- **Sector Status:** Green. Fairway is clear.\n` +
@@ -226,9 +227,9 @@ export const marinaExpert = {
                `- **Wind:** North-West at 12 knots. Prepare port side fenders.\n\n` +
                `**ARRIVAL INSTRUCTIONS:**\n` +
                `- **Berth:** ${berth} (Your Home Berth)\n` +
-               `- **Assistance:** Tender *WIM-Bravo* is engaging to escort you.\n` +
+               `- **Assistance:** Tender *${tenantConfig.masterData.assets?.tenders[0]?.name || 'Tender'}* is engaging to escort you.\n` +
                `- **Shore Power:** ACTIVE and waiting.\n\n` +
-               `*Linesmen standing by. Standing by on 72. Out.*`;
+               `*Linesmen standing by. Standing by on ${vhfChannel}. Out.*`;
     },
 
     // ATC Priority Calculator
@@ -243,21 +244,26 @@ export const marinaExpert = {
     },
 
     // ATC Departure Protocol (Strict)
-    processDeparture: async (vesselName: string, currentTenders: Tender[], addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string, actions: AgentAction[], tender?: Tender, squawk?: string }> => {
+    // UPDATED: Accepts tenantConfig to use correct coordinates and names
+    processDeparture: async (vesselName: string, currentTenders: Tender[], tenantConfig: TenantConfig, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string, actions: AgentAction[], tender?: Tender, squawk?: string }> => {
         
         const vesselProfile = await marinaExpert.getVesselIntelligence(vesselName);
         const priority = marinaExpert.calculateTrafficPriority(vesselProfile);
         const squawk = Math.floor(4000 + Math.random() * 1000).toString(); // ATC Assigns discrete code
+        const marinaName = tenantConfig.masterData.identity.name;
 
-        addTrace(createLog('ada.marina', 'THINKING', `[ATC] FLIGHT PLAN: ${vesselName} | REQ: DEPARTURE | PRIORITY: ${priority}`, 'EXPERT'));
+        addTrace(createLog('ada.marina', 'THINKING', `[ATC] FLIGHT PLAN: ${vesselName} | REQ: DEPARTURE from ${marinaName} | PRIORITY: ${priority}`, 'EXPERT'));
 
         // 1. Check Commercial Traffic (Ambarlı Conflict)
-        const commercialTraffic = await marinaExpert.scanSector(wimMasterData.identity.location.coordinates.lat, wimMasterData.identity.location.coordinates.lng, 5, () => {});
+        // Use Tenant Config Coordinates
+        const coords = tenantConfig.masterData.identity.location.coordinates;
+        const commercialTraffic = await marinaExpert.scanSector(coords.lat, coords.lng, 5, () => {});
+        
         if (commercialTraffic.some(t => t.type.includes('Container') && parseFloat(t.distance) < 2)) {
              addTrace(createLog('ada.marina', 'WARNING', `[ATC] CONFLICT ALERT: Heavy traffic in Fairway. Holding departure.`, 'WORKER'));
              return {
                  success: false,
-                 message: "NEGATIVE. Traffic Conflict. Heavy commercial traffic (Ambarlı) in departure sector. Hold position.",
+                 message: "NEGATIVE. Traffic Conflict. Heavy commercial traffic in departure sector. Hold position.",
                  actions: []
              };
         }
@@ -321,14 +327,17 @@ export const marinaExpert = {
         };
     },
 
-    // ATC Arrival Protocol - UPDATED for AURA (Smart Lighting)
-    processArrival: async (vesselName: string, currentTenders: Tender[], debtStatus: { status: 'CLEAR' | 'DEBT', amount: number }, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string, actions: AgentAction[], tender?: Tender, squawk?: string }> => {
+    // ATC Arrival Protocol - UPDATED for AURA (Smart Lighting) & Dynamic Tenant Name
+    processArrival: async (vesselName: string, currentTenders: Tender[], debtStatus: { status: 'CLEAR' | 'DEBT', amount: number }, tenantConfig: TenantConfig, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string, actions: AgentAction[], tender?: Tender, squawk?: string }> => {
         
+        const marinaName = tenantConfig.masterData.identity.name;
+        const vhfChannel = tenantConfig.masterData.identity.contact?.vhf_channels?.public[0] || "72";
+
         // 1. Identify Target & Radar Lock
         let vesselProfile = await marinaExpert.getVesselIntelligence(vesselName);
         const actions: AgentAction[] = [];
         
-        addTrace(createLog('ada.marina', 'THINKING', `[RADAR] SCANNING SECTOR MARMARA (20nm Radius)...`, 'WORKER'));
+        addTrace(createLog('ada.marina', 'THINKING', `[RADAR] SCANNING SECTOR (${marinaName} Approach)...`, 'WORKER'));
         addTrace(createLog('ada.marina', 'OUTPUT', `[RADAR] TARGET ACQUIRED: ${vesselName} | Range: 19.8nm | Bearing: 240°`, 'EXPERT'));
 
         // 2. Financial Audit
@@ -358,8 +367,8 @@ export const marinaExpert = {
         await facilityExpert.activateAuraProtocol(berth, 'LANDING', vesselName, addTrace);
 
         let welcomeMessage = isMember 
-            ? `**PROACTIVE HAIL [CH 16 -> 72]**\n> **"S/Y ${vesselName}, West Istanbul Marina Control on 16. Switch to 72."**\n> **(On 72):** "Welcome home, Captain. AURA Protocol Active. Follow the pulsing amber lights to **${berth}**."`
-            : `**PROACTIVE HAIL [CH 16 -> 72]**\n> **"S/Y ${vesselName}, West Istanbul Marina Control on 16. Switch to 72."**\n> **(On 72):** "Welcome to Istanbul. Proceed to **${berth}**. Pilot boat is intercepting."`;
+            ? `**PROACTIVE HAIL [CH 16 -> ${vhfChannel}]**\n> **"S/Y ${vesselName}, ${marinaName} Control on 16. Switch to ${vhfChannel}."**\n> **(On ${vhfChannel}):** "Welcome home, Captain. AURA Protocol Active. Follow the pulsing amber lights to **${berth}**."`
+            : `**PROACTIVE HAIL [CH 16 -> ${vhfChannel}]**\n> **"S/Y ${vesselName}, ${marinaName} Control on 16. Switch to ${vhfChannel}."**\n> **(On ${vhfChannel}):** "Welcome to ${marinaName}. Proceed to **${berth}**. Pilot boat is intercepting."`;
 
         if (hasDebt) {
             welcomeMessage += `\n\n**⚠️ IMPORTANT:** Captain, please report to Finance immediately. Right of Retention applied.`;

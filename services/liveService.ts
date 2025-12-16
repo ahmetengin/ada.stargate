@@ -1,8 +1,7 @@
 
 import { GoogleGenAI, LiveServerMessage, Modality, Blob, Tool } from "@google/genai";
-import { UserProfile } from '../types';
+import { UserProfile, TenantConfig } from '../types';
 import { getVoiceSystemInstruction } from './voicePrompts';
-import { TENANT_CONFIG } from './config';
 
 export class LiveSession {
     private ai: GoogleGenAI;
@@ -37,7 +36,7 @@ export class LiveSession {
         if (this.onStatusChange) this.onStatusChange(state);
     }
     
-    public async connect(userProfile: UserProfile, tools?: Tool[]) {
+    public async connect(userProfile: UserProfile, tenantConfig: TenantConfig, tools?: Tool[]) {
         if (this.sessionPromise) return;
         this.setStatus('connecting');
 
@@ -51,10 +50,10 @@ export class LiveSession {
 
             this.microphoneStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-            const systemInstruction = getVoiceSystemInstruction(userProfile, TENANT_CONFIG);
+            const systemInstruction = getVoiceSystemInstruction(userProfile, tenantConfig);
 
             this.sessionPromise = this.ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
                 config: {
                     responseModalities: [Modality.AUDIO],
                     speechConfig: { 

@@ -127,7 +127,7 @@ const App: React.FC = () => {
   useEffect(() => {
       if (userProfile.role === 'CAPTAIN' && userProfile.name.includes('Barbaros') && !hasAnnouncedArrival) {
           const timer = setTimeout(async () => {
-              const hail = await marinaExpert.generateProactiveHail("S/Y Phisedelia");
+              const hail = await marinaExpert.generateProactiveHail("S/Y Phisedelia", activeTenantConfig);
               setMessages(prev => [...prev, {
                   id: `proactive_hail_${Date.now()}`,
                   role: MessageRole.Model,
@@ -138,7 +138,7 @@ const App: React.FC = () => {
           }, 1500); 
           return () => clearTimeout(timer);
       }
-  }, [userProfile, hasAnnouncedArrival]);
+  }, [userProfile, hasAnnouncedArrival, activeTenantConfig]);
 
   useEffect(() => {
     const unsubscribe = telemetryStream.subscribe(data => {
@@ -313,7 +313,7 @@ const App: React.FC = () => {
               onScribeInput={handleScribeInput}
               onStateChange={setPresentationState}
               agentTraces={agentTraces}
-              
+              activeTenantConfig={activeTenantConfig}
           />
       )}
 
@@ -391,7 +391,7 @@ const App: React.FC = () => {
           isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}
           registry={registry} logs={agentTraces} vesselsInPort={vesselsInPort}
           userProfile={userProfile} 
-          weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }} activeTenantConfig={activeTenantConfig}
+          weatherData={weatherData ? [weatherData] : [{ temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' } as any]} activeTenantConfig={activeTenantConfig}
           tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
           onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
       />
@@ -401,6 +401,7 @@ const App: React.FC = () => {
           userProfile={userProfile}
           onTranscriptReceived={handleTranscriptReceived}
           channel="72"
+          activeTenantConfig={activeTenantConfig}
       />
     </div>
   );

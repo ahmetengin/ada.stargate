@@ -36,11 +36,14 @@ export const systemExpert = {
         } else if (lowerPrompt.includes('currency')) {
             key = 'currency';
             humanReadableKey = 'Currency';
+        } else if (lowerPrompt.includes('guest') || lowerPrompt.includes('visitor') || lowerPrompt.includes('access') || lowerPrompt.includes('entry')) {
+            key = 'guest_policy';
+            humanReadableKey = 'Guest Access Policy';
         } else {
             addTrace(createLog('ada.stargate', 'ERROR', `Could not identify a valid configuration key in prompt.`, 'WORKER'));
             return {
                 success: false,
-                message: "I couldn't identify which rule you want to update. I support: Speed Limit, Max LOA, Max Draft.",
+                message: "I couldn't identify which rule you want to update. I support: Speed Limit, Max LOA, Max Draft, Currency, Guest Access.",
                 actions: []
             };
         }
@@ -50,6 +53,12 @@ export const systemExpert = {
             if (lowerPrompt.includes('eur')) value = 'EUR';
             else if (lowerPrompt.includes('usd')) value = 'USD';
             else if (lowerPrompt.includes('try') || lowerPrompt.includes('lira')) value = 'TRY';
+        } else if (key === 'guest_policy') {
+            if (lowerPrompt.includes('member') || lowerPrompt.includes('private')) value = 'MEMBERS_ONLY';
+            else if (lowerPrompt.includes('open') || lowerPrompt.includes('public') || lowerPrompt.includes('free')) value = 'OPEN_ACCESS';
+            else if (lowerPrompt.includes('invite') || lowerPrompt.includes('appointment')) value = 'BY_APPOINTMENT';
+            else if (lowerPrompt.includes('closed') || lowerPrompt.includes('lock')) value = 'LOCKED';
+            else value = 'RESTRICTED';
         } else {
             // Extract number
             const matches = prompt.match(/(\d+(\.\d+)?)/);
