@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast, VhfLog } from './types';
 import { Sidebar, SidebarTabId } from './components/layout/Sidebar';
@@ -401,7 +400,7 @@ const App: React.FC = () => {
           isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}
           registry={registry} logs={agentTraces} vesselsInPort={vesselsInPort}
           userProfile={userProfile} 
-          weatherData={weatherData ? [weatherData] : [{ temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' } as any]} activeTenantConfig={activeTenantConfig}
+          weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' } as WeatherForecast} activeTenantConfig={activeTenantConfig}
           tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
           onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
       />

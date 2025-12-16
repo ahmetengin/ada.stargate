@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { X, Mic, Radio, AlertTriangle, Power, RefreshCw, Activity, Signal } from 'lucide-react';
 import { LiveSession } from '../../services/liveService';
@@ -125,7 +124,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
              <div className="flex justify-between items-end border-b border-zinc-700 pb-2 mb-4">
                  <div className="text-left">
                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Network</span>
-                     <span className="text-xs font-mono text-zinc-300 uppercase">{activeTenantConfig.code || 'UNKNOWN'}</span>
+                     <span className="text-xs font-mono text-zinc-300 uppercase">{activeTenantConfig.masterData?.identity?.code || 'UNKNOWN'}</span>
                  </div>
                  <div className="text-right">
                      <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Frequency</span>

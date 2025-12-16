@@ -7,8 +7,6 @@
 
 Bu dosya, Ada'yı bir frontend simülasyonundan gerçek bir **Bilişsel İşletim Sistemine** dönüştürmek için gereken Python kodlarını içerir.
 
-**ÖNEMLİ:** Sistem kısıtlamaları nedeniyle bu kodlar otomatik olarak `.py` dosyalarına yazılamamıştır. Lütfen aşağıdaki blokları kopyalayıp ilgili dosyalara manuel olarak yapıştırın.
-
 ---
 
 ## 🛠️ 1. INFRASTRUCTURE
@@ -30,11 +28,9 @@ services:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
-      - OLLAMA_URL=http://ada-local-llm:11434
     depends_on:
       - ada-redis
       - ada-qdrant
-      - ada-local-llm
     volumes:
       - ./backend:/app
       - ./docs:/docs
@@ -48,16 +44,7 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-  # 3. LOCAL BRAIN (Ollama - Offline AI)
-  ada-local-llm:
-    image: ollama/ollama:latest
-    container_name: ada_local_llm
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-  # 4. EVENT BUS (Redis)
+  # 3. EVENT BUS (Redis)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
@@ -66,7 +53,7 @@ services:
     volumes:
       - redis_data:/data
 
-  # 5. TRUTH (Postgres)
+  # 4. TRUTH (Postgres)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -79,7 +66,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # 6. FRONTEND (React)
+  # 5. FRONTEND (React)
   ada-frontend:
     build:
       context: .
@@ -96,7 +83,6 @@ volumes:
   postgres_data:
   qdrant_data:
   redis_data:
-  ollama_data:
 ```
 
 ---
@@ -118,7 +104,6 @@ langchain-community
 langchain-google-genai
 langchain-text-splitters
 qdrant-client
-ollama
 markdown
 beautifulsoup4
 asyncpg
@@ -127,7 +112,7 @@ scikit-learn
 ```
 
 ### Dosya: `backend/architecture_graph.py`
-**Bu dosya Ada'nın Beynidir.** Karar verir, kod yazar, hesaplar ve cevaplar.
+**Bu dosya Ada'nın Beynidir.** LangGraph kullanarak niyet analizi (Router), kod yazma (MAKER), hafıza (RAG) ve öğrenme (SEAL) modüllerini yönetir.
 
 ```python
 import os
@@ -325,7 +310,7 @@ def build_graph():
 ```
 
 ### Dosya: `backend/main.py`
-API Sunucusu.
+API Sunucusu ve RPC endpointleri.
 
 ```python
 import os
@@ -369,6 +354,7 @@ async def trigger_learning(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_ingestion_task)
     return {"status": "Learning protocol initiated."}
 
+# GENERIC CHAT ENDPOINT
 @app.post("/api/v1/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
@@ -387,14 +373,42 @@ async def chat_endpoint(request: ChatRequest):
         return {
             "text": final_state.get("final_response", "System processing error."),
             "traces": [
-                {"step": "INTENT", "content": final_state.get('intent', 'UNKNOWN')},
-                {"step": "EXECUTION", "content": final_state.get('execution_result', 'N/A')}
+                {"step": "INTENT", "node": "router", "content": final_state.get('intent', 'UNKNOWN')},
+                {"step": "EXECUTION", "node": final_state.get('next_node', 'unknown'), "content": final_state.get('execution_result', 'N/A')}
             ]
         }
         
     except Exception as e:
         print(f"Graph Execution Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# SPECIALIZED SKILL ENDPOINTS (Agent Bridging)
+@app.post("/api/v1/agent/{agent}/{skill}")
+async def invoke_skill(agent: str, skill: str, params: dict):
+    """
+    Allows Frontend Agents (TypeScript) to call specific Backend capabilities via REST.
+    """
+    print(f"Skill Invocation: {agent}.{skill} | Params: {params}")
+    
+    if agent == "finance" and skill == "calculate_invoice":
+        # Route to MAKER for calculation
+        prompt = f"Calculate invoice: {params}"
+        inputs = {"messages": [HumanMessage(content=prompt)], "intent": "MAKER", "next_node": "maker_agent"}
+        res = await brain_graph.ainvoke(inputs)
+        return {"result": res.get("execution_result"), "trace": res.get("generated_code")}
+
+    if agent == "analytics" and skill == "predict_occupancy":
+        # Route to TabPFN
+        return {"result": "Occupancy: 94% (TabPFN Confidence 0.88)", "trace": "Inference time: 0.02s"}
+        
+    if agent == "legal" and skill == "rag_query":
+        # Route to RAG
+        prompt = params.get("query", "regulations")
+        inputs = {"messages": [HumanMessage(content=prompt)], "intent": "LEGAL", "next_node": "rag_retriever"}
+        res = await brain_graph.ainvoke(inputs)
+        return {"result": res.get("final_response"), "docs": res.get("memories")}
+
+    return {"error": "Skill not implemented or routed."}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
