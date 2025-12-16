@@ -25,6 +25,7 @@ graph LR
     K[Windy Plugin] -->|Web App| C
     L[WeatherFlow Tempest] -->|UDP| C
     M[CanboatJS] -->|Raw PGN Decode| C
+    N[SignalK Racer] -->|Tactical Calc| C
 ```
 
 ## 3. Available Tools & Plugins
@@ -37,7 +38,12 @@ The system is configured with the following plugins to maximize data reach:
 *   **`openweather-signalk`**: Injects Meteorological Data (Forecast, Pressure).
 *   **`signalk-windy-plugin`**: Provides a Windy.com weather map overlay.
 *   **`signalk-weatherflow`**: Integrates the Tempest weather station (Haptic Rain, Lightning).
-*   **`@canboat/canboatjs`**: **(New)** Pure NMEA 2000 Decoder/Encoder. Allows Ada to interpret raw CAN bus binary data and proprietary PGNs (Parameter Group Numbers) that standard SignalK parsers might miss.
+*   **`@canboat/canboatjs`**: Pure NMEA 2000 Decoder/Encoder.
+*   **`signalk-racer`**: **(New)** Tactical Sailing Computer. Calculates racing performance data:
+    *   Target Wind Angle (TWA) & Speed.
+    *   Velocity Made Good (VMG).
+    *   Polar Performance %.
+    *   Tack/Gybe Angles.
 
 ## 4. Usage Scenarios
 
@@ -60,11 +66,12 @@ The system is configured with the following plugins to maximize data reach:
 3.  **SignalK MCP:** Returns `{ rainRate: 2.5 }` (mm/hr).
 4.  **Response:** "Yes, it is currently raining. Intensity: 2.5 mm/hr. Lightning detected 12km away."
 
-### Scenario D: "Deep Diagnostics" (CanboatJS)
-**The Engineer:** Decoding raw bus errors.
-1.  **User:** "What does PGN 127488 mean? The engine is throwing a code."
-2.  **Ada Sea Agent:** Uses `@canboat/canboatjs` definitions.
-3.  **Response:** "PGN 127488 is 'Engine Parameters, Rapid Update'. It contains critical real-time data like RPM (Field 1) and Boost Pressure (Field 2). If you are seeing errors here, check the ECU gateway."
+### Scenario D: "Tactical Sailing" (Racer Plugin)
+**The Tactician:** Optimizing sailing performance for the Sailing School.
+1.  **User:** "Are we sailing efficiently? What's our target angle?"
+2.  **Ada Sea Agent:** Queries `performance.polarSpeed` and `performance.targetAngle`.
+3.  **SignalK MCP:** Returns `{ polarSpeed: 8.2, speedOverGround: 7.1, targetAngle: 45 }`.
+4.  **Response:** "We are at 86% efficiency. To reach max VMG, harden up to 45° True Wind Angle."
 
 ## 5. Configuration
 The integration is defined in `docker-compose.hyperscale.yml`.
@@ -76,3 +83,4 @@ The integration is defined in `docker-compose.hyperscale.yml`.
     *   `signalk-mosquitto`
     *   `signalk-windy-plugin`
     *   `signalk-weatherflow`
+    *   `signalk-racer`

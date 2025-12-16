@@ -13,14 +13,17 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
 });
 
 // Mock SignalK Data Paths
-// UPDATED: Now includes derived data from @signalk/course-provider AND openweather-signalk AND signalk-weatherflow
+// UPDATED: Now includes derived data from @signalk/course-provider AND openweather-signalk AND signalk-weatherflow AND signalk-racer
 const SIGNALK_PATHS: Record<string, any> = {
     // Local Sensors (NMEA)
-    'environment.wind.speedApparent': { value: 12.5, unit: 'knots' },
-    'environment.wind.angleApparent': { value: 310, unit: 'deg' },
+    'environment.wind.speedApparent': { value: 14.5, unit: 'knots' },
+    'environment.wind.angleApparent': { value: 35, unit: 'deg' }, // Close hauled
+    'environment.wind.speedTrue': { value: 12.0, unit: 'knots' },
+    'environment.wind.angleTrueWater': { value: 48, unit: 'deg' },
     'environment.depth.belowTransducer': { value: 4.2, unit: 'meters' },
-    'navigation.speedOverGround': { value: 7.8, unit: 'knots' },
+    'navigation.speedOverGround': { value: 7.2, unit: 'knots' },
     'navigation.courseOverGroundTrue': { value: 185, unit: 'deg' },
+    'navigation.speedThroughWater': { value: 7.4, unit: 'knots' },
     
     // Course Provider Data (Navigation Computer)
     'navigation.courseRhumbline.nextPoint.eta': { value: '14:30 UTC', unit: 'timestamp' },
@@ -38,7 +41,14 @@ const SIGNALK_PATHS: Record<string, any> = {
     'environment.outside.uvIndex': { value: 6, unit: 'index' },
     'environment.outside.rainRate': { value: 0.0, unit: 'mm/h' },
     'environment.outside.lightning.distance': { value: 0, unit: 'km' }, 
-    'environment.outside.lightning.strikes': { value: 0, unit: 'count' }
+    'environment.outside.lightning.strikes': { value: 0, unit: 'count' },
+
+    // SignalK Racer (Tactical Data)
+    'performance.velocityMadeGood': { value: 5.1, unit: 'knots' },
+    'performance.polarSpeed': { value: 7.8, unit: 'knots' }, // Theoretical max at this wind
+    'performance.polarSpeedRatio': { value: 0.92, unit: 'ratio' }, // 92% efficiency
+    'performance.targetAngle': { value: 45, unit: 'deg' }, // Optimal TWA
+    'performance.tackMagnetic': { value: 275, unit: 'deg' } // Heading after tack
 };
 
 // NMEA 2000 PGN Database (Simulated capability from CanboatJS)
@@ -127,6 +137,28 @@ export const seaExpert = {
       let path = '';
       let result = null;
 
+      // Sailing Tactics (SignalK Racer)
+      if (lowerQuery.includes('sail') || lowerQuery.includes('yelken') || lowerQuery.includes('tack') || lowerQuery.includes('tramola') || lowerQuery.includes('polar') || lowerQuery.includes('vmg')) {
+          const vmg = SIGNALK_PATHS['performance.velocityMadeGood'];
+          const polarSpeed = SIGNALK_PATHS['performance.polarSpeed'];
+          const efficiency = SIGNALK_PATHS['performance.polarSpeedRatio'];
+          const targetAngle = SIGNALK_PATHS['performance.targetAngle'];
+          const nextTack = SIGNALK_PATHS['performance.tackMagnetic'];
+          const windTrue = SIGNALK_PATHS['environment.wind.angleTrueWater'];
+
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('performance')`, 'WORKER'));
+
+          return {
+              message: `**TACTICAL SAILING ANALYSIS**\n\n` +
+                       `> **Efficiency:** ${(efficiency.value * 100).toFixed(0)}% of Polar\n` +
+                       `> **VMG:** ${vmg.value} kn\n` +
+                       `> **Target Angle:** ${targetAngle.value}° (Current: ${windTrue.value}°)\n` +
+                       `> **Next Tack Heading:** ${nextTack.value}°\n\n` +
+                       `*Suggestion: Harden up 3 degrees to optimize VMG.*`,
+              data: { vmg, polarSpeed, efficiency, targetAngle, nextTack }
+          };
+      }
+
       // NMEA PGN Lookup (Engineering Mode)
       if (lowerQuery.includes('pgn') || lowerQuery.includes('code') || lowerQuery.includes('protocol')) {
           const pgnMatch = query.match(/\d{5,6}/);
@@ -159,7 +191,7 @@ export const seaExpert = {
           result = SIGNALK_PATHS[path];
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
           return {
-              message: `**LIVE WIND DATA**\n\nSpeed: **${result.value} ${result.unit}**\nDirection: **NW (310°)**\n\n*Source: Masthead Sensor (NMEA 2000)*`,
+              message: `**LIVE WIND DATA**\n\nSpeed: **${result.value} ${result.unit}**\nDirection: **NW (35° Apparent)**\n\n*Source: Masthead Sensor (NMEA 2000)*`,
               data: result
           };
       } 
