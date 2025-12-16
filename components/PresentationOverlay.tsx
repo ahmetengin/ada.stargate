@@ -79,17 +79,23 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
 
     useEffect(() => {
         if (state.isActive) {
-            if (!audioContextRef.current) {
-                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                audioContextRef.current = new AudioContextClass({ sampleRate: 24000 });
-                analyserRef.current = (audioContextRef.current as any).createAnalyser();
-                analyserRef.current.fftSize = 64;
-                gainNodeRef.current = (audioContextRef.current as any).createGain();
-                gainNodeRef.current.connect(analyserRef.current);
-                analyserRef.current.connect(audioContextRef.current.destination);
+            try {
+                if (!audioContextRef.current) {
+                    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                    audioContextRef.current = new AudioContextClass({ sampleRate: 24000 });
+                    analyserRef.current = (audioContextRef.current as any).createAnalyser();
+                    analyserRef.current.fftSize = 64;
+                    gainNodeRef.current = (audioContextRef.current as any).createGain();
+                    gainNodeRef.current.connect(analyserRef.current);
+                    analyserRef.current.connect(audioContextRef.current.destination);
+                }
+                setStatus("CONNECTED");
+                startVisualizer();
+            } catch (err) {
+                console.error("Audio Context Init Failed (likely browser block):", err);
+                setStatus("AUDIO_BLOCKED");
+                // Don't block the visual, just the audio
             }
-            setStatus("CONNECTED");
-            startVisualizer();
         } else {
             setStatus("OFFLINE");
             sessionRef.current?.disconnect();
@@ -131,16 +137,18 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
         if (!analyserRef.current) return;
         const dataArray = new Uint8Array(analyserRef.current!.frequencyBinCount);
         const draw = () => {
-            analyserRef.current!.getByteFrequencyData(dataArray);
-            const visData = Array.from(dataArray).slice(0, 30).map(v => (v / 255) * 80 + 5);
-            setAudioVis(visData);
+            if(analyserRef.current) {
+                analyserRef.current.getByteFrequencyData(dataArray);
+                const visData = Array.from(dataArray).slice(0, 30).map(v => (v / 255) * 80 + 5);
+                setAudioVis(visData);
+            }
             animationFrameRef.current = requestAnimationFrame(draw);
         };
         draw();
     };
 
     useEffect(() => {
-        if (state.slide !== 'intro' || isSpeaking || narrativeStep >= activeNarrative.length || status !== 'CONNECTED') return;
+        if (state.slide !== 'intro' || isSpeaking || narrativeStep >= activeNarrative.length || status === 'OFFLINE') return;
 
         const speakNext = async () => {
             if (narrativeStep < activeNarrative.length) {
@@ -149,28 +157,37 @@ export const PresentationOverlay: React.FC<PresentationOverlayProps> = ({ state,
                 const textToSpeak = narrativeLine.text;
                 setSubtitles(textToSpeak);
                 
-                const base64Audio = await generateSpeech(textToSpeak);
-                if (base64Audio && audioContextRef.current && gainNodeRef.current) {
-                    try {
-                        const audioBuffer = await decodeAudioData(decode(base64Audio), audioContextRef.current, 24000, 1);
-                        const source = audioContextRef.current.createBufferSource();
-                        source.buffer = audioBuffer;
-                        source.connect(gainNodeRef.current);
-                        source.start(0);
-                        source.onended = () => {
+                try {
+                    const base64Audio = await generateSpeech(textToSpeak);
+                    if (base64Audio && audioContextRef.current && gainNodeRef.current) {
+                        try {
+                            const audioBuffer = await decodeAudioData(decode(base64Audio), audioContextRef.current, 24000, 1);
+                            const source = audioContextRef.current.createBufferSource();
+                            source.buffer = audioBuffer;
+                            source.connect(gainNodeRef.current);
+                            source.start(0);
+                            source.onended = () => {
+                                setIsSpeaking(false);
+                                setNarrativeStep(prev => prev + 1);
+                            };
+                        } catch (e) {
+                            console.error("Audio playback failed:", e);
                             setIsSpeaking(false);
                             setNarrativeStep(prev => prev + 1);
-                        };
-                    } catch (e) {
-                        console.error("Audio playback failed:", e);
-                        setIsSpeaking(false);
-                        setNarrativeStep(prev => prev + 1);
+                        }
+                    } else { 
+                         // Fallback for silence or error: wait based on text length
+                        setTimeout(() => {
+                             setIsSpeaking(false);
+                             setNarrativeStep(prev => prev + 1);
+                        }, textToSpeak.length * 80); 
                     }
-                } else { 
-                    setTimeout(() => {
+                } catch (e) {
+                     console.error("Speech Gen Error:", e);
+                     setTimeout(() => {
                          setIsSpeaking(false);
                          setNarrativeStep(prev => prev + 1);
-                    }, textToSpeak.length * 80); 
+                    }, 2000); 
                 }
             }
         };

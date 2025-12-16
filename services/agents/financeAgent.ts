@@ -1,5 +1,4 @@
 
-
 // services/agents/financeAgent.ts
 
 import { AgentAction, UserProfile, AgentTraceLog, VesselIntelligenceProfile, NodeName } from '../../types';
@@ -7,6 +6,7 @@ import { wimMasterData } from '../wimMasterData';
 import { persistenceService, STORAGE_KEYS } from '../persistence'; // Enterprise Persistence
 import { getCurrentMaritimeTime } from '../utils';
 import { checkBackendHealth, invokeAgentSkill } from '../api'; // Import API helpers
+import { passkitExpert } from './passkitAgent'; // Import PassKit for updates
 
 // Helper to create a log
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
@@ -161,6 +161,64 @@ export const financeExpert = {
       };
   },
 
+  // NEW SKILL: Cost of Capital Based Financing (Pre-paid Sales Financing)
+  // Instead of static rules, we compare the discount against the cost of a bank loan.
+  calculateEarlyBookingOffer: async (basePrice: number, targetDateStr: string, addTrace: (t: AgentTraceLog) => void): Promise<{ finalPrice: number, discountRate: number, discountAmount: number, strategy: string, marketRate: number }> => {
+      addTrace(createLog('ada.finance', 'THINKING', `Evaluating Cost of Capital vs. Early Payment for Target Date: ${targetDateStr}...`, 'EXPERT'));
+      
+      const today = new Date();
+      const targetDate = new Date(targetDateStr);
+      
+      // Calculate lead time in years (fractional)
+      const diffTime = targetDate.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      const diffYears = diffDays / 365;
+
+      if (diffDays < 30) {
+          // Too close for financing logic
+           addTrace(createLog('ada.finance', 'OUTPUT', `Lead time too short (${diffDays} days). No financing advantage via banking alternatives.`, 'WORKER'));
+           return { finalPrice: basePrice, discountRate: 0, discountAmount: 0, strategy: 'STANDARD_RATE', marketRate: 0 };
+      }
+
+      // 1. Get Live Market Rates (Simulated Bloomberg/Central Bank Feed)
+      // High volatility simulation for EUR commercial loans in TR context
+      // Base: 3.8% (Euribor) + Risk Spread (4.5%) = ~8.3%
+      const baseEuribor = 0.038; 
+      const bankSpread = 0.045;  
+      const currentCommercialLoanRate = baseEuribor + bankSpread; 
+      
+      addTrace(createLog('ada.finance', 'TOOL_EXECUTION', `Fetching Market Rates: EURIBOR 3.8% + Bank Spread 4.5% = **${(currentCommercialLoanRate*100).toFixed(2)}% Annual Cost of Capital**`, 'WORKER'));
+
+      // 2. Calculate Cost of Borrowing this amount from Bank
+      // If we don't get this money from the customer now, we have to borrow it to maintain liquidity.
+      // Simple Interest Formula: Cost = Principal * Rate * Time
+      const costOfBankCapital = basePrice * currentCommercialLoanRate * diffYears;
+
+      // 3. Determine "Win-Win" Discount
+      // We give the customer a discount that is slightly LESS than our bank cost, but enough to be attractive.
+      // Strategy: Split the bank interest saving. 80% to customer (Discount), 20% to Marina (Net Profit Increase).
+      // This ensures the company is MORE profitable than taking a loan.
+      const maxViableDiscount = costOfBankCapital;
+      const proposedDiscountAmount = maxViableDiscount * 0.90; // Passing 90% of the saving to secure the cash.
+      
+      let discountRate = proposedDiscountAmount / basePrice;
+      const finalPrice = basePrice - proposedDiscountAmount;
+
+      // Cap discount reasonably (e.g. don't give 50% even if rates are crazy high, unless explicitly authorized)
+      if (discountRate > 0.40) {
+          addTrace(createLog('ada.finance', 'WARNING', `Calculated discount ${(discountRate*100).toFixed(1)}% exceeds safety cap. Clamping to 40%.`, 'WORKER'));
+          discountRate = 0.40;
+      }
+
+      const strategy = `PREPAID_FINANCING_EUR_${(currentCommercialLoanRate*100).toFixed(1)}%`;
+
+      addTrace(createLog('ada.finance', 'PLANNING', `Logic: Borrowing €${basePrice.toFixed(0)} for ${diffDays} days costs us €${costOfBankCapital.toFixed(0)}. Offering €${proposedDiscountAmount.toFixed(0)} discount allows us to bypass the bank and increase net liquidity.`, 'EXPERT'));
+      
+      addTrace(createLog('ada.finance', 'OUTPUT', `**FINANCING PROPOSAL GENERATED:**\nMarket Rate: ${(currentCommercialLoanRate*100).toFixed(2)}%\nDiscount: ${(discountRate*100).toFixed(2)}%\nSaving: €${proposedDiscountAmount.toFixed(2)}`, 'WORKER'));
+
+      return { finalPrice, discountRate, discountAmount: proposedDiscountAmount, strategy, marketRate: currentCommercialLoanRate };
+  },
+
   // Helper to get all partner commissions for GM Dashboard
   getPartnerCommissions: async (): Promise<{partner: string, amount: number}[]> => {
       const commissions: {partner: string, amount: number}[] = [];
@@ -204,14 +262,18 @@ export const financeExpert = {
           }
       });
 
-      // TRIGGER PASSKIT: Issue new gates passes now that debt is cleared
+      // UPDATED: TRIGGER PASSKIT UPDATE
+      // Instead of issuing a new pass, we "update" the status of the reservation/pass associated with this vessel.
+      // In a real system, we'd look up the exact PNR. Here we assume the most recent one.
+      await passkitExpert.updatePassStatus("PENDING_PNR", "CONFIRMED", addTrace);
+      
       actions.push({
-          id: `passkit_issue_${Date.now()}`,
+          id: `passkit_update_${Date.now()}`,
           kind: 'external',
-          name: 'ada.passkit.issuePass',
+          name: 'ada.passkit.generated', // Reuse existing UI hook but with updated status
           params: {
-              vesselName,
-              type: 'OWNER'
+              passUrl: `https://wallet.kites.travel/pass/UPDATED?status=CONFIRMED`, // Simulation
+              status: 'CONFIRMED'
           }
       });
 

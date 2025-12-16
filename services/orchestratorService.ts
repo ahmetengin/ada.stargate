@@ -56,10 +56,20 @@ export const orchestratorService = {
 
         const lowerPrompt = prompt.toLowerCase();
 
-        // 2. DISPATCH TO EXPERTS (Using activeTenantConfig where applicable)
+        // --- SPECIAL UI TRIGGERS (PRESENTER MODE) ---
+        if (lowerPrompt.includes('sunum') || lowerPrompt.includes('present') || lowerPrompt.includes('toplantı') || lowerPrompt.includes('meeting')) {
+            addTrace(createLog('ada.stargate', 'PLANNING', `Activating Executive Presentation Protocol...`, 'EXPERT'));
+            actions.push({
+                id: `ui_present_${Date.now()}`,
+                kind: 'internal',
+                name: 'ada.mission_control.start_presentation',
+                params: {}
+            });
+            responseText = "**PRESENTATION MODE INITIATED**\n\nStand by. Taking over main screen.";
+        }
 
         // --- FEDERATION (Setur/D-Marin Cross Check) ---
-        if (lowerPrompt.includes('availability') && (lowerPrompt.includes('other marina') || lowerPrompt.includes('partner'))) {
+        else if (lowerPrompt.includes('availability') && (lowerPrompt.includes('other marina') || lowerPrompt.includes('partner'))) {
              // Example extraction logic
              const target = lowerPrompt.includes('kalamis') ? 'TR_KAL' : 'TR_GOC'; 
              const fedResult = await federationExpert.getRemoteBerthAvailability(target, 'TODAY', addTrace);

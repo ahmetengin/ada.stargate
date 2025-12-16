@@ -176,6 +176,12 @@ const App: React.FC = () => {
     persistenceService.save(STORAGE_KEYS.THEME, newTheme);
   };
 
+  // --- PRESENTER LOGIC ---
+  const activatePresenterMode = () => {
+      setPresentationState({ isActive: true, slide: 'intro', transcript: '', analysisResults: null });
+      setAppMode('presentation');
+  };
+
   const handleSend = async (text: string, attachments: File[]) => {
     setIsLoading(true);
     const newUserMessage: Message = {
@@ -189,6 +195,16 @@ const App: React.FC = () => {
     );
     
     setAgentTraces(prev => [...res.traces, ...prev].sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
+
+    // --- EXECUTE UI ACTIONS FROM ORCHESTRATOR ---
+    // This allows the AI to control the UI (e.g. Start Presentation)
+    if (res.actions && res.actions.length > 0) {
+        res.actions.forEach(action => {
+            if (action.name === 'ada.mission_control.start_presentation') {
+                activatePresenterMode();
+            }
+        });
+    }
 
     if(res.text === "") {
         let fullResponse = '';
@@ -234,8 +250,7 @@ const App: React.FC = () => {
         return;
     }
     if (tabId === 'presenter') {
-        setPresentationState({ isActive: true, slide: 'intro', transcript: '', analysisResults: null });
-        setAppMode('presentation');
+        activatePresenterMode();
         return;
     }
     if (tabId === 'vhf') {
@@ -266,11 +281,6 @@ const App: React.FC = () => {
       if (gmDashboardTab === 'commercial') return 'tech'; // Approximate map
       if (gmDashboardTab === 'hr') return 'hr';
       return 'none';
-  };
-
-  const handleEnterScribeMode = () => {
-    setPresentationState({ isActive: true, slide: 'intro', transcript: '', analysisResults: null });
-    setAppMode('presentation');
   };
 
   const handleClosePresentation = () => {

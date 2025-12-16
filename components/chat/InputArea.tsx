@@ -35,17 +35,17 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
+      recognitionRef.current.continuous = false; // Changed to false to prevent infinite loops/repeats
+      recognitionRef.current.interimResults = false; // Disabled interim to fix "yarınyarınyarın" glitch
       recognitionRef.current.lang = 'tr-TR'; 
 
       recognitionRef.current.onresult = (event: any) => {
-        let currentSessionTranscript = '';
-        for (let i = 0; i < event.results.length; i++) {
-            currentSessionTranscript += event.results[i][0].transcript;
-        }
-        const combinedText = (textBeforeDictationRef.current + ' ' + currentSessionTranscript).trim();
-        setText(combinedText);
+        const transcript = event.results[0][0].transcript;
+        // Append cleanly instead of cumulative rebuild
+        const newText = (textBeforeDictationRef.current + ' ' + transcript).trim();
+        setText(newText);
+        // Automatically stop after one sentence/phrase to prevent glitches
+        setIsDictating(false);
       };
 
       recognitionRef.current.onerror = (event: any) => {

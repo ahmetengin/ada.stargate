@@ -53,33 +53,70 @@ export const passkitExpert = {
     },
 
     // NEW SKILL: Issue Travel Confirmation Pass (Kites Travel Integration)
-    issueTravelPass: async (details: { passenger: string, type: 'FLIGHT' | 'HOTEL' | 'TRANSFER', summary: string, date: string }, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, passUrl: string }> => {
-        addTrace(createLog('ada.passkit', 'THINKING', `Generating Digital Travel Document for KITES TRAVEL...`, 'EXPERT'));
+    // UPDATED: Now supports 'status' and 'expiration' for Pending/Discounted offers
+    issueTravelPass: async (details: { passenger: string, type: 'FLIGHT' | 'HOTEL' | 'TRANSFER', summary: string, date: string, status?: 'PENDING' | 'CONFIRMED', expiration?: string }, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, passUrl: string, pnr: string }> => {
+        const status = details.status || 'CONFIRMED';
+        
+        addTrace(createLog('ada.passkit', 'THINKING', `Generating Digital Travel Document (${status}) for KITES TRAVEL...`, 'EXPERT'));
 
+        // Generate PNR if not provided in details, but usually reservation agent sends it. 
+        // Here we simulate generating the Serial Number for the pass.
         const passId = `KITES-${Math.floor(Math.random() * 100000)}`;
         
+        // Dynamic Styling based on Status
+        const colorConfig = status === 'CONFIRMED' 
+            ? { bg: "rgb(79, 70, 229)", label: "CONFIRMED" } // Indigo
+            : { bg: "rgb(107, 114, 128)", label: "PAYMENT DUE" }; // Grey
+
+        // Extra fields for pending offers
+        const auxFields = [];
+        if (status === 'PENDING' && details.expiration) {
+            auxFields.push({
+                key: "expires",
+                label: "OFFER EXPIRES",
+                value: details.expiration,
+                textAlignment: "PKTextAlignmentRight"
+            });
+        }
+
         // Simulate PKPass generation structure
         const pkPass = {
-            organizationName: "Ada Digital Identity", // UPDATED: More prestigious, tech-oriented name
+            organizationName: "Ada Digital Identity", 
             description: details.summary,
-            logoText: "WIM | Kites", // THE CLIENT BRAND
+            logoText: "WIM | Kites", 
             foregroundColor: "rgb(255, 255, 255)",
-            backgroundColor: "rgb(79, 70, 229)", // Indigo
+            backgroundColor: colorConfig.bg, 
             serialNumber: passId,
+            headerFields: [
+                { key: "status", label: "STATUS", value: colorConfig.label }
+            ],
+            auxiliaryFields: auxFields,
             barcode: {
                 message: passId,
                 format: "PKBarcodeFormatQR",
-                messageEncoding: "iso-8859-1"
+                messageEncoding: "iso-8859-1",
+                altText: status === 'PENDING' ? "Complete Payment to Activate" : passId
             }
         };
 
-        addTrace(createLog('ada.passkit', 'TOOL_EXECUTION', `Signing PKPass bundle (${pkPass.serialNumber}) with Ada Root Certificate...`, 'WORKER'));
+        addTrace(createLog('ada.passkit', 'TOOL_EXECUTION', `Signing PKPass bundle (${pkPass.serialNumber}) with Ada Root Certificate... Status: ${status}`, 'WORKER'));
         
-        const passUrl = `https://wallet.kites.travel/pass/${passId}`;
+        // Append expiration param to URL for frontend simulation visual
+        let passUrl = `https://wallet.kites.travel/pass/${passId}?status=${status}`;
+        if(details.expiration) {
+            passUrl += `&expires=${encodeURIComponent(details.expiration)}`;
+        }
         
         addTrace(createLog('ada.passkit', 'OUTPUT', `Travel Pass ready. Delivered to client wallet.`, 'EXPERT'));
 
-        return { success: true, passUrl };
+        return { success: true, passUrl, pnr: passId };
+    },
+
+    // Skill: Update Existing Pass (e.g., after payment)
+    updatePassStatus: async (passId: string, newStatus: 'CONFIRMED', addTrace: (t: AgentTraceLog) => void) => {
+        addTrace(createLog('ada.passkit', 'THINKING', `Pushing Over-The-Air (OTA) update to Pass ${passId}...`, 'EXPERT'));
+        addTrace(createLog('ada.passkit', 'TOOL_EXECUTION', `Updating background color to Indigo. Enabling QR Code. Removing Expiration Field.`, 'WORKER'));
+        return true;
     },
 
     // NEW SKILL: Send Registration Link (Pre-Arrival)
