@@ -78,7 +78,7 @@ services:
     depends_on:
       - ada-core
 
-  # 7. SIGNALK SERVER (NMEA Hub + MarineTraffic Bridge)
+  # 7. SIGNALK SERVER (NMEA Hub + MarineTraffic + Course Provider + OpenWeather + MQTT + Windy + WeatherFlow)
   ada-signalk:
     image: signalk/signalk-server
     container_name: ada_signalk
@@ -86,8 +86,8 @@ services:
       - "3001:3000" # Expose Admin UI on 3001
     environment:
       - SECURITYSTRATEGY=./node_modules/@signalk/server-admin/lib/security/never
-    # Hybrid Command: Install MarineTraffic plugin then start server
-    entrypoint: sh -c "cd /home/node/.signalk && npm install signalk-marinetraffic-public && cd /home/node/signalk && ./startup.sh"
+    # Hybrid Command: Install all plugins including signalk-weatherflow
+    entrypoint: sh -c "cd /home/node/.signalk && npm install signalk-marinetraffic-public @signalk/course-provider openweather-signalk signalk-mosquitto signalk-windy-plugin signalk-weatherflow && cd /home/node/signalk && ./startup.sh"
     volumes:
       - signalk_data:/home/node/.signalk
     restart: always
@@ -105,9 +105,22 @@ services:
       - "3002:3002"
     restart: always
 
+  # 9. IOT SENSORY SYSTEM (MQTT Broker)
+  ada-mqtt:
+    image: eclipse-mosquitto:2
+    container_name: ada_mqtt_broker
+    ports:
+      - "1883:1883" # MQTT Port
+      - "9001:9001" # Websocket Port
+    volumes:
+      - mqtt_data:/mosquitto/data
+      - mqtt_log:/mosquitto/log
+
 volumes:
   postgres_data:
   qdrant_data:
   redis_data:
   ollama_data:
   signalk_data:
+  mqtt_data:
+  mqtt_log:

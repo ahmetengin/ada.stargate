@@ -2,6 +2,7 @@
 import { AgentTraceLog, NodeName, AgentAction } from '../../types';
 import { generateSimpleResponse } from '../geminiService'; // Reusing the Gemini connection
 import { MOCK_USER_DATABASE } from '../mockData'; 
+import { wimMasterData } from '../wimMasterData';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_exec_${Date.now()}_${Math.random()}`,
@@ -48,7 +49,19 @@ export const executiveExpert = {
                     prompt, 
                     MOCK_USER_DATABASE['GENERAL_MANAGER'],
                     [], [], 0, [], 
-                    { id: 'wim', name: 'West Istanbul Marina', fullName: 'ADA.MARINA.WIM', network: 'wim.ada.network', node_address: 'ada.marina.wim', status: 'ONLINE', mission: '', contextSources: [], rules: {}, doctrine: '', masterData: {} }
+                    { 
+                        id: 'wim', 
+                        name: 'West Istanbul Marina', 
+                        fullName: 'ADA.MARINA.WIM', 
+                        network: 'wim.ada.network', 
+                        node_address: 'ada.marina.wim', 
+                        status: 'ONLINE', 
+                        mission: '', 
+                        contextSources: [], 
+                        rules: {}, 
+                        doctrine: '', 
+                        masterData: wimMasterData 
+                    }
                 );
                 
                 const jsonMatch = llmResponse.match(/```json\n(.*)\n```/s);

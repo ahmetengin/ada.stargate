@@ -1,6 +1,7 @@
 
 import { AgentAction, AgentTraceLog, NodeName } from '../../types';
 import { getCurrentMaritimeTime } from '../utils';
+// import { FromPgn } from '@canboat/canboatjs'; // In a real node env, we import this. Here we simulate the capability.
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_sea_${Date.now()}_${Math.random()}`,
@@ -12,12 +13,47 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
 });
 
 // Mock SignalK Data Paths
+// UPDATED: Now includes derived data from @signalk/course-provider AND openweather-signalk AND signalk-weatherflow
 const SIGNALK_PATHS: Record<string, any> = {
+    // Local Sensors (NMEA)
     'environment.wind.speedApparent': { value: 12.5, unit: 'knots' },
     'environment.wind.angleApparent': { value: 310, unit: 'deg' },
     'environment.depth.belowTransducer': { value: 4.2, unit: 'meters' },
     'navigation.speedOverGround': { value: 7.8, unit: 'knots' },
-    'navigation.courseOverGroundTrue': { value: 185, unit: 'deg' }
+    'navigation.courseOverGroundTrue': { value: 185, unit: 'deg' },
+    
+    // Course Provider Data (Navigation Computer)
+    'navigation.courseRhumbline.nextPoint.eta': { value: '14:30 UTC', unit: 'timestamp' },
+    'navigation.courseRhumbline.nextPoint.distance': { value: 12.4, unit: 'nm' },
+    'navigation.courseRhumbline.crossTrackError': { value: 0.02, unit: 'nm' },
+    'navigation.courseRhumbline.nextPoint.bearingTrue': { value: 185, unit: 'deg' },
+
+    // OpenWeather Data (Forecast/Regional)
+    'environment.outside.temperature': { value: 24.5, unit: 'C' },
+    'environment.outside.pressure': { value: 1012, unit: 'hPa' },
+    'environment.outside.humidity': { value: 65, unit: '%' },
+
+    // WeatherFlow Tempest (Hyper-Local)
+    'environment.outside.illuminance': { value: 85000, unit: 'lux' },
+    'environment.outside.uvIndex': { value: 6, unit: 'index' },
+    'environment.outside.rainRate': { value: 0.0, unit: 'mm/h' },
+    'environment.outside.lightning.distance': { value: 0, unit: 'km' }, 
+    'environment.outside.lightning.strikes': { value: 0, unit: 'count' }
+};
+
+// NMEA 2000 PGN Database (Simulated capability from CanboatJS)
+const N2K_PGNS: Record<string, string> = {
+    '127250': 'Vessel Heading',
+    '127258': 'Magnetic Variation',
+    '127488': 'Engine Parameters, Rapid Update',
+    '127489': 'Engine Parameters, Dynamic',
+    '127508': 'Battery Status',
+    '128259': 'Speed: Water Referenced',
+    '128267': 'Water Depth',
+    '129025': 'Position, Rapid Update',
+    '129026': 'COG & SOG, Rapid Update',
+    '129029': 'GNSS Position Data',
+    '130306': 'Wind Data'
 };
 
 export const seaExpert = {
@@ -60,6 +96,26 @@ export const seaExpert = {
     return { action, rule, status };
   },
 
+  // Skill: Analyze Raw NMEA 2000 Protocol (CanboatJS)
+  analyzeRawProtocol: async (pgn: string, addTrace: (t: AgentTraceLog) => void): Promise<{ pgn: string, description: string, fields: string[] }> => {
+      addTrace(createLog('ada.sea', 'THINKING', `Decoding raw NMEA 2000 stream using CanboatJS logic for PGN: ${pgn}...`, 'EXPERT'));
+      
+      const description = N2K_PGNS[pgn] || 'Unknown PGN / Proprietary';
+      let fields: string[] = [];
+
+      if (pgn === '127488') {
+          fields = ['Engine Speed (RPM)', 'Boost Pressure', 'Tilt/Trim'];
+      } else if (pgn === '127508') {
+          fields = ['Voltage', 'Current', 'Temperature', 'SID'];
+      } else if (pgn === '130306') {
+          fields = ['Wind Speed', 'Wind Angle', 'Reference (True/Apparent)'];
+      }
+
+      addTrace(createLog('ada.sea', 'CODE_OUTPUT', `DECODED: ${description} [${fields.join(', ')}]`, 'WORKER'));
+
+      return { pgn, description, fields };
+  },
+
   // Skill: Get Real-Time Telemetry (Simulating SignalK MCP)
   getSignalKData: async (query: string, addTrace: (t: AgentTraceLog) => void): Promise<{ message: string, data: any }> => {
       addTrace(createLog('ada.sea', 'THINKING', `Connecting to SignalK MCP Server for live telemetry: "${query}"...`, 'EXPERT'));
@@ -67,10 +123,38 @@ export const seaExpert = {
       // Simulate network delay for MCP
       await new Promise(resolve => setTimeout(resolve, 600));
 
+      const lowerQuery = query.toLowerCase();
       let path = '';
       let result = null;
 
-      if (query.includes('wind') || query.includes('rüzgar')) {
+      // NMEA PGN Lookup (Engineering Mode)
+      if (lowerQuery.includes('pgn') || lowerQuery.includes('code') || lowerQuery.includes('protocol')) {
+          const pgnMatch = query.match(/\d{5,6}/);
+          if (pgnMatch) {
+              const protocolAnalysis = await seaExpert.analyzeRawProtocol(pgnMatch[0], addTrace);
+              return {
+                  message: `**NMEA 2000 DIAGNOSTICS (@canboat/canboatjs)**\n\n` +
+                           `> **PGN:** ${protocolAnalysis.pgn}\n` +
+                           `> **Definition:** ${protocolAnalysis.description}\n` +
+                           `> **Data Fields:** ${protocolAnalysis.fields.join(', ') || 'N/A'}\n\n` +
+                           `*Status: Raw stream available for debugging.*`,
+                  data: protocolAnalysis
+              };
+          }
+      }
+
+      // Windy Visual Map
+      if (lowerQuery.includes('windy') || lowerQuery.includes('map') || lowerQuery.includes('harita') || lowerQuery.includes('görsel')) {
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_plugin_url('signalk-windy-plugin')`, 'WORKER'));
+          const windyUrl = "http://localhost:3001/signalk-windy-plugin/";
+          return {
+              message: `**VISUAL WEATHER MAP (WINDY)**\n\nI have generated a live weather overlay for the current sector.\n\n[Open Windy Map](${windyUrl})\n\n*Source: signalk-windy-plugin*`,
+              data: { url: windyUrl }
+          };
+      }
+
+      // Wind & Environmental
+      if (lowerQuery.includes('wind') || lowerQuery.includes('rüzgar')) {
           path = 'environment.wind.speedApparent';
           result = SIGNALK_PATHS[path];
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
@@ -80,7 +164,8 @@ export const seaExpert = {
           };
       } 
       
-      if (query.includes('depth') || query.includes('derinlik')) {
+      // Depth
+      if (lowerQuery.includes('depth') || lowerQuery.includes('derinlik')) {
           path = 'environment.depth.belowTransducer';
           result = SIGNALK_PATHS[path];
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
@@ -90,7 +175,8 @@ export const seaExpert = {
           };
       }
 
-      if (query.includes('speed') || query.includes('hız') || query.includes('sog')) {
+      // Speed / Nav
+      if (lowerQuery.includes('speed') || lowerQuery.includes('hız') || lowerQuery.includes('sog')) {
           path = 'navigation.speedOverGround';
           result = SIGNALK_PATHS[path];
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
@@ -100,22 +186,61 @@ export const seaExpert = {
           };
       }
 
-      return {
-          message: "SignalK data not available for this parameter.",
-          data: null
-      };
-  },
+      // Route / ETA (Course Provider)
+      if (lowerQuery.includes('eta') || lowerQuery.includes('route') || lowerQuery.includes('waypoint') || lowerQuery.includes('kalan')) {
+          const eta = SIGNALK_PATHS['navigation.courseRhumbline.nextPoint.eta'];
+          const dist = SIGNALK_PATHS['navigation.courseRhumbline.nextPoint.distance'];
+          const bearing = SIGNALK_PATHS['navigation.courseRhumbline.nextPoint.bearingTrue'];
+          const xte = SIGNALK_PATHS['navigation.courseRhumbline.crossTrackError'];
 
-  // Skill: Telemetry Logging
-  logTelemetry: async (data: any, addTrace: (t: AgentTraceLog) => void): Promise<AgentAction> => {
-      // In reality, this pushes to TimescaleDB
-      // Here we just log for the trace
-      // addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `NMEA Packet: ${JSON.stringify(data)}`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('navigation.courseRhumbline')`, 'WORKER'));
+          
+          return {
+              message: `**NAVIGATION COMPUTER**\n\n` +
+                       `> **Next Waypoint:** ${dist.value} nm (Bearing ${bearing.value}°)\n` +
+                       `> **ETA:** ${eta.value}\n` +
+                       `> **XTE:** ${xte.value} nm (On Track)\n\n` +
+                       `*Data Source: @signalk/course-provider*`,
+              data: { eta, dist, bearing, xte }
+          };
+      }
+
+      // Meteorology (OpenWeather & WeatherFlow)
+      if (lowerQuery.includes('pressure') || lowerQuery.includes('basınç') || lowerQuery.includes('weather') || lowerQuery.includes('hava') || lowerQuery.includes('temp') || lowerQuery.includes('rain') || lowerQuery.includes('yağmur') || lowerQuery.includes('uv') || lowerQuery.includes('lightning')) {
+          const temp = SIGNALK_PATHS['environment.outside.temperature'];
+          const press = SIGNALK_PATHS['environment.outside.pressure'];
+          const hum = SIGNALK_PATHS['environment.outside.humidity'];
+          
+          // WeatherFlow Data
+          const uv = SIGNALK_PATHS['environment.outside.uvIndex'];
+          const rain = SIGNALK_PATHS['environment.outside.rainRate'];
+          const lightning = SIGNALK_PATHS['environment.outside.lightning.distance'];
+
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.outside')`, 'WORKER'));
+
+          let stormAlert = "";
+          if (lightning && lightning.value > 0 && lightning.value < 15) {
+              stormAlert = `\n\n⚠️ **STORM ALERT:** Lightning detected ${lightning.value}km away.`;
+          }
+
+          let rainStatus = rain.value > 0 ? `Raining (${rain.value} mm/h)` : "None";
+
+          return {
+              message: `**METEOROLOGICAL STATION**\n\n` +
+                       `> **Temperature:** ${temp.value} °C\n` +
+                       `> **Pressure:** ${press.value} hPa (Steady)\n` +
+                       `> **Humidity:** ${hum.value}%\n` +
+                       `> **UV Index:** ${uv.value}\n` +
+                       `> **Rain:** ${rainStatus}` + 
+                       stormAlert + 
+                       `\n\n*Data Source: openweather-signalk & WeatherFlow Tempest*`,
+              data: { temp, press, hum, uv, rain, lightning }
+          };
+      }
+
       return {
-          id: `sea_log_${Date.now()}`,
-          kind: 'internal',
-          name: 'sea.telemetryLogged',
-          params: data
+          message: "Data point not found in SignalK stream.",
+          data: null
       };
   }
 };

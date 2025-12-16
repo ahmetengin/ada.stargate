@@ -1,0 +1,71 @@
+
+{
+  "title": "Maritime VHF Channel Frequency Database",
+  "source": "vhfinfo package / ITU Standards",
+  "scope": "Global & WIM Operational Area",
+  "channels": [
+    {
+      "id": "16",
+      "frequency_mhz": "156.800",
+      "type": "Simplex",
+      "usage": "DISTRESS, SAFETY AND CALLING",
+      "notes": "Must be monitored at all times. Do not use for general chatter."
+    },
+    {
+      "id": "06",
+      "frequency_mhz": "156.300",
+      "type": "Simplex",
+      "usage": "SEARCH AND RESCUE (SAR)",
+      "notes": "Primary channel for coordinating rescue operations with Coast Guard."
+    },
+    {
+      "id": "72",
+      "frequency_mhz": "156.625",
+      "type": "Simplex",
+      "usage": "INTER-SHIP / MARINA OPERATIONS",
+      "notes": "West Istanbul Marina (WIM) Primary Operational Channel."
+    },
+    {
+      "id": "73",
+      "frequency_mhz": "156.675",
+      "type": "Simplex",
+      "usage": "INTER-SHIP (Yachting)",
+      "notes": "Secondary channel for WIM if 72 is busy. Also D-Marin Gocek."
+    },
+    {
+      "id": "12",
+      "frequency_mhz": "156.600",
+      "type": "Simplex",
+      "usage": "PORT OPERATIONS / VTS",
+      "notes": "Istanbul VTS Sector Kadikoy/Marmara. Pilotage."
+    },
+    {
+      "id": "13",
+      "frequency_mhz": "156.650",
+      "type": "Simplex",
+      "usage": "BRIDGE-TO-BRIDGE",
+      "notes": "Navigation safety comms between vessels."
+    },
+    {
+      "id": "67",
+      "frequency_mhz": "156.375",
+      "type": "Simplex",
+      "usage": "METEOROLOGY",
+      "notes": "Turk Radio weather broadcasts."
+    },
+    {
+      "id": "70",
+      "frequency_mhz": "156.525",
+      "type": "Digital (DSC)",
+      "usage": "DIGITAL SELECTIVE CALLING",
+      "notes": "NO VOICE. Data only."
+    },
+    {
+      "id": "08",
+      "frequency_mhz": "156.400",
+      "type": "Simplex",
+      "usage": "COMMERCIAL / COAST GUARD",
+      "notes": "Often used by Coast Guard for tactical comms."
+    }
+  ]
+}

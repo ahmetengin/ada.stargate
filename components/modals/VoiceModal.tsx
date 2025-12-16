@@ -1,10 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Mic, Radio, AlertTriangle, Power, RefreshCw, Activity } from 'lucide-react';
+import { X, Mic, Radio, AlertTriangle, Power, RefreshCw, Activity, Signal } from 'lucide-react';
 import { LiveSession } from '../../services/liveService';
 import { LiveConnectionState, UserProfile } from '../../types';
 import { wimMasterData } from '../../services/wimMasterData';
 import { formatCoordinate } from '../../services/utils';
+// import vhfinfo from 'vhfinfo'; // Assuming dynamic import or mock for browser environment if package issues arise
 
 interface VoiceModalProps {
   isOpen: boolean;
@@ -13,6 +14,20 @@ interface VoiceModalProps {
   onTranscriptReceived: (userText: string, modelText: string) => void;
   channel: string;
 }
+
+// Mocking the vhfinfo library logic for immediate UI rendering without build dependency issues in preview
+const getVhfDetails = (channel: string) => {
+    const db: Record<string, any> = {
+        '16': { freq: '156.800', type: 'Simplex', desc: 'Distress, Safety & Calling' },
+        '72': { freq: '156.625', type: 'Simplex', desc: 'Inter-ship & Marina Ops' },
+        '73': { freq: '156.675', type: 'Simplex', desc: 'Inter-ship (Yachting)' },
+        '06': { freq: '156.300', type: 'Simplex', desc: 'Search and Rescue (SAR)' },
+        '12': { freq: '156.600', type: 'Simplex', desc: 'Port Operations / VTS' },
+        '13': { freq: '156.650', type: 'Simplex', desc: 'Bridge-to-Bridge (Nav Safety)' },
+        '67': { freq: '156.375', type: 'Simplex', desc: 'Meteorology / Weather' },
+    };
+    return db[channel] || { freq: '---.---', type: 'Unknown', desc: 'Auxiliary' };
+};
 
 export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userProfile, onTranscriptReceived, channel }) => {
   const [status, setStatus] = useState<LiveConnectionState>(LiveConnectionState.Disconnected);
@@ -26,6 +41,8 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
   const formattedLat = formatCoordinate(lat, 'lat');
   const formattedLng = formatCoordinate(lng, 'lng');
   const displayCoordinates = `${formattedLat} / ${formattedLng}`;
+  
+  const vhfInfo = getVhfDetails(channel);
 
   useEffect(() => {
     if (isOpen && status === LiveConnectionState.Disconnected) {
@@ -73,14 +90,6 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
       setTimeout(() => connect(), 500);
   };
 
-  const getChannelLabel = (ch: string) => {
-      if (ch === '16') return 'DISTRESS';
-      if (ch === '72') return 'MARINA';
-      if (ch === 'SCAN') return 'SCANNING';
-      if (['12', '13', '14'].includes(ch)) return 'VTS / OPS';
-      return 'AUX';
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -109,23 +118,36 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
         </div>
 
         {/* Main Display Area */}
-        <div className="p-8 flex flex-col items-center justify-center min-h-[300px] relative z-10">
+        <div className="p-8 flex flex-col items-center justify-center min-h-[320px] relative z-10">
            
            {/* Channel Indicator */}
-           <div className="mb-8 text-center">
-             <span className="text-xs font-mono text-zinc-500 uppercase tracking-widest block mb-1">
-                 {channel === 'SCAN' ? 'Monitoring' : 'Priority Channel'}
-             </span>
-             {/* Prominently displayed coordinates */}
-             <div className="text-lg font-mono text-zinc-300 mb-2">{displayCoordinates}</div>
-             <div className="text-6xl font-mono font-bold text-indigo-500 tracking-tighter flex items-center justify-center gap-2 text-shadow-glow">
-               {channel === 'SCAN' ? 'SCAN' : channel} 
-               <span className="text-xl text-zinc-600">{getChannelLabel(channel)}</span>
+           <div className="mb-6 text-center w-full">
+             <div className="flex justify-between items-end border-b border-zinc-700 pb-2 mb-4">
+                 <div className="text-left">
+                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Priority</span>
+                     <span className="text-xs font-mono text-zinc-300">{channel === 'SCAN' ? 'SCANNING' : 'PRIMARY'}</span>
+                 </div>
+                 <div className="text-right">
+                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Frequency</span>
+                     <span className="text-xs font-mono text-emerald-500">{vhfInfo.freq} MHz</span>
+                 </div>
+             </div>
+             
+             {/* Coordinates */}
+             <div className="text-xs font-mono text-zinc-500 mb-4">{displayCoordinates}</div>
+             
+             {/* Big Channel Number */}
+             <div className="text-7xl font-mono font-bold text-indigo-500 tracking-tighter flex items-center justify-center gap-4 text-shadow-glow">
+               {channel === 'SCAN' ? 'SCN' : channel} 
+               <div className="flex flex-col items-start">
+                   <span className="text-base text-zinc-400 font-bold uppercase leading-none">{vhfInfo.type}</span>
+                   <span className="text-[10px] text-zinc-600 uppercase max-w-[80px] leading-tight mt-1">{vhfInfo.desc}</span>
+               </div>
              </div>
            </div>
 
            {/* Visualizer Circle / Error State */}
-           <div className="relative w-32 h-32 flex items-center justify-center">
+           <div className="relative w-32 h-32 flex items-center justify-center mb-4">
              {status === LiveConnectionState.Error ? (
                  <div className="flex flex-col items-center justify-center text-red-500 animate-pulse">
                      <AlertTriangle size={48} />
@@ -133,41 +155,45 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                  </div>
              ) : (
                  <>
-                    {/* Outer Rings */}
-                    <div className={`absolute inset-0 rounded-full border-2 border-indigo-900 transition-all duration-100`} 
-                        style={{ transform: `scale(${1 + audioLevel * 2})`, opacity: 0.5 - audioLevel }}></div>
-                    <div className={`absolute inset-0 rounded-full border border-indigo-800 transition-all duration-100 delay-75`} 
-                        style={{ transform: `scale(${1 + audioLevel * 3})`, opacity: 0.3 - audioLevel }}></div>
+                    {/* Outer Rings - Simulated RF Emission */}
+                    <div className={`absolute inset-0 rounded-full border border-indigo-500/30 transition-all duration-75`} 
+                        style={{ transform: `scale(${1 + audioLevel * 1.5})`, opacity: 0.6 - audioLevel }}></div>
+                    <div className={`absolute inset-0 rounded-full border border-indigo-400/20 transition-all duration-100 delay-75`} 
+                        style={{ transform: `scale(${1 + audioLevel * 2.5})`, opacity: 0.4 - audioLevel }}></div>
                     
                     {/* Inner Core */}
                     <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-900 flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.4)] transition-transform duration-75 ${status === LiveConnectionState.Connected ? 'scale-100' : 'scale-90 grayscale'}`}>
-                    {status === LiveConnectionState.Connected ? (
-                        <Mic className="text-white w-8 h-8" />
-                    ) : (
-                        <Activity className="text-white/50 w-8 h-8 animate-spin-slow" />
-                    )}
+                        {status === LiveConnectionState.Connected ? (
+                            <Mic className="text-white w-8 h-8" />
+                        ) : (
+                            <Activity className="text-white/50 w-8 h-8 animate-spin-slow" />
+                        )}
                     </div>
                  </>
              )}
            </div>
 
            {/* Status Text */}
-           <div className="mt-8 font-mono text-sm text-zinc-400 text-center h-6">
+           <div className="font-mono text-sm text-zinc-400 text-center h-6 flex items-center justify-center gap-2">
              {status === LiveConnectionState.Connecting && "ESTABLISHING SECURE LINK..."}
-             {status === LiveConnectionState.Connected && (audioLevel > 0.05 ? "RECEIVING / TRANSMITTING" : "MONITORING (VOX ACTIVE)...")}
-             {status === LiveConnectionState.Error && <span className="text-red-500 font-bold flex items-center justify-center gap-2"><AlertTriangle size={14}/> CONNECTION LOST</span>}
+             {status === LiveConnectionState.Connected && (
+                 <>
+                    <Signal size={14} className={audioLevel > 0.05 ? "text-emerald-500" : "text-zinc-600"} />
+                    {audioLevel > 0.05 ? "TRANSMITTING" : "SQUELCH OPEN"}
+                 </>
+             )}
+             {status === LiveConnectionState.Error && <span className="text-red-500 font-bold">SIGNAL LOST</span>}
            </div>
             
            {/* Protocol Instructions */}
            {showProtocol && (
-                <div className="mt-6 w-full max-w-sm text-left font-mono text-xs text-zinc-400 bg-zinc-800/50 p-4 rounded-lg animate-in fade-in duration-300 border border-zinc-700/50">
-                    <h4 className="font-bold text-indigo-400 mb-2 uppercase tracking-widest">VHF Comms Protocol</h4>
+                <div className="mt-4 w-full text-left font-mono text-xs text-zinc-400 bg-zinc-800/50 p-4 rounded-lg animate-in fade-in duration-300 border border-zinc-700/50">
+                    <h4 className="font-bold text-indigo-400 mb-2 uppercase tracking-widest">VHF Protocol (IMO SMCP)</h4>
                     <ul className="list-disc list-inside space-y-1 text-[11px] text-zinc-300">
-                        <li>State your call sign clearly.</li>
-                        <li>Keep transmissions brief and concise.</li>
-                        <li>Use standard phrases (Affirmative, Negative).</li>
-                        <li>End every transmission with "Over".</li>
-                        <li className="pt-2 text-zinc-500 italic">Ex: "Ada Marina, this is Phisedelia, requesting departure. Over."</li>
+                        <li><strong>Ch {channel}:</strong> {vhfInfo.desc}</li>
+                        <li><strong>Freq:</strong> {vhfInfo.freq} MHz ({vhfInfo.type})</li>
+                        <li>Identify station called 3 times.</li>
+                        <li>Use "Over" to exchange.</li>
                     </ul>
                 </div>
             )}
@@ -179,9 +205,8 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
             <button
                 onClick={() => setShowProtocol(!showProtocol)}
                 className="text-xs font-mono text-zinc-500 hover:text-indigo-400 transition-colors"
-                aria-expanded={showProtocol}
             >
-                {showProtocol ? '[ Hide Protocol ]' : '[ Show Comms Protocol ]'}
+                {showProtocol ? '[ Hide Technical Data ]' : '[ Show Technical Data ]'}
             </button>
           </div>
           
@@ -191,7 +216,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                 className="group flex items-center gap-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-500 px-8 py-3 rounded-full transition-all font-mono uppercase font-bold tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse"
               >
                 <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
-                RE-ESTABLISH LINK
+                RE-ESTABLISH
               </button>
           ) : (
               <button 
@@ -199,7 +224,7 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userPro
                 className="group flex items-center gap-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-500 px-8 py-3 rounded-full transition-all font-mono uppercase font-bold tracking-wider hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]"
               >
                 <Power size={18} className="group-hover:scale-110 transition-transform" />
-                End Transmission
+                POWER OFF
               </button>
           )}
         </div>
