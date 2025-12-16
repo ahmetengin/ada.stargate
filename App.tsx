@@ -307,7 +307,7 @@ const App: React.FC = () => {
               onScribeInput={handleScribeInput}
               onStateChange={setPresentationState}
               agentTraces={agentTraces}
-              onArchive={handleArchiveMeeting} 
+              
           />
       )}
 

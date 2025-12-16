@@ -157,6 +157,7 @@ export type NodeName =
   | 'ada.vhf'
   | 'ada.technic'
   | 'ada.customer'
+  | 'ada.concierge'
   | 'ada.security'
   | 'ada.passkit'
   | 'ada.executive'
@@ -173,7 +174,8 @@ export type NodeName =
   | 'ada.reservations'
   | 'ada.federation'
   | 'ada.it'
-  | 'ada.robotics';
+  | 'ada.robotics'
+  | 'ada.yield';
 
 export interface AgentTraceLog {
   id: string;
@@ -322,13 +324,11 @@ export interface MasterDataStructure {
   event_calendar?: any;
   concierge_services?: any;
   facility_management?: any;
-  // FIX: Add services property to support tenant-specific amenities like restaurants.
   services?: {
     amenities?: {
       restaurants?: string[];
     };
   };
-  // FIX: Add properties to support vessel-specific tenant data like for 'phisedelia'.
   vessel_id?: string;
   type?: string;
   flag?: string;

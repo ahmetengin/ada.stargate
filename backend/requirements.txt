@@ -1,9 +1,8 @@
-
 fastapi>=0.109.0
 uvicorn>=0.27.0
 pydantic>=2.6.0
 python-dotenv>=1.0.1
-google-generativeai>=0.4.0
+google-genai>=0.1.0
 httpx>=0.26.0
 redis>=5.0.0
 # Cognitive Stack
@@ -13,9 +12,11 @@ langchain-community
 langchain-google-genai
 langchain-text-splitters
 qdrant-client
-# Tools & Utils
+asyncpg
 markdown
 beautifulsoup4
-asyncpg
 pandas
 scikit-learn
+# Voice & Media
+ffmpeg-python
+numpy

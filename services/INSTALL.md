@@ -82,7 +82,7 @@ docker-compose down
 The system simulates communication between the following autonomous nodes:
 *   `ada.marina.wim` (Orchestrator)
 *   `ada.sea.<vessel>` (Autonomous Vessels - Privacy First)
-*   `ada.vhf.wim` (Voice Sentinel - Ch 73/16)
+*   `ada.vhf.wim` (Voice Sentinel - Ch 72/16)
 *   `ada.finance.wim` (Accounting & Usage)
 
 ### Key Features

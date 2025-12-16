@@ -361,7 +361,7 @@ def health():
     return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "RAG", "SEAL"]}
 
 def run_ingestion_task():
-    print("Triggering memory ingestion...")
+    print("Triggering background memory ingestion...")
     subprocess.run(["python", "ingest.py"], check=True)
 
 @app.post("/api/v1/learn")
@@ -444,4 +444,3 @@ if points:
     client.upsert(collection_name=collection_name, points=points)
     print(f"✅ {len(points)} memories implanted.")
 ```
-    

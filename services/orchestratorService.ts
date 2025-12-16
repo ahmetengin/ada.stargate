@@ -1,9 +1,8 @@
 
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
 import { getCurrentMaritimeTime } from './utils';
-// REMOVED: import { checkBackendHealth, sendToBackend } from './api';
 
-// --- THE BIG 4 EXPERTS ---
+// --- THE BIG 4 EXPERTS & SPECIALISTS ---
 import { hrExpert } from './agents/hrAgent';
 import { financeExpert } from './agents/financeAgent';
 import { marinaExpert } from './agents/marinaAgent';
@@ -20,7 +19,13 @@ import { reservationsExpert } from './agents/reservationsAgent';
 import { federationExpert } from './agents/federationAgent';
 import { kitesExpert } from './agents/travelAgent';
 import { systemExpert } from './agents/systemAgent';
-import { scienceExpert } from './agents/scienceAgent'; // NEW
+import { scienceExpert } from './agents/scienceAgent';
+// New Agents
+import { roboticsExpert } from './agents/roboticsAgent';
+import { shieldExpert } from './agents/shieldAgent';
+import { yieldExpert } from './agents/yieldAgent';
+import { seaExpert } from './agents/seaAgent';
+import { conciergeExpert } from './agents/conciergeAgent';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
@@ -47,42 +52,103 @@ export const orchestratorService = {
         
         const addTrace = (t: AgentTraceLog) => traces.push(t);
 
-        // --- 1. LOCAL LOGIC ONLY (No Python Backend) ---
         traces.push(createLog('ada.stargate', 'ROUTING', `Processing request locally. Hybrid Core disabled.`));
 
         try {
-            // A. SYSTEM ADMINISTRATION (RULES & CONFIG)
+            // A. CONCIERGE (Hospitality & Services)
+            if (['buggy', 'golf cart', 'shuttle', 'ice', 'coffee', 'latte', 'espresso', 'cleaning', 'laundry', 'wash', 'taxi', 'cab', 'transfer', 'valet'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: CONCIERGE -> Delegating to Ada.Concierge`));
+                
+                let res;
+                if (lowerPrompt.includes('buggy') || lowerPrompt.includes('golf') || lowerPrompt.includes('shuttle')) {
+                    res = await conciergeExpert.requestBuggy("Current Location (GPS)", addTrace);
+                } else if (lowerPrompt.includes('taxi') || lowerPrompt.includes('cab') || lowerPrompt.includes('transfer') || lowerPrompt.includes('valet')) {
+                    res = await conciergeExpert.callTaxi("Main Gate", "Airport", addTrace);
+                } else if (lowerPrompt.includes('cleaning') || lowerPrompt.includes('laundry') || lowerPrompt.includes('wash')) {
+                    res = await conciergeExpert.scheduleService("Interior Cleaning", "S/Y Phisedelia", "14:00", addTrace);
+                } else {
+                    // Default to provisions (Ice, Coffee, etc.)
+                    const items = lowerPrompt.replace(/order|please|bring|need/g, '').trim();
+                    res = await conciergeExpert.orderProvisions(items, "S/Y Phisedelia", addTrace);
+                }
+                
+                return { text: res.message, actions, traces };
+            }
+
+            // B. ROBOTICS (Subsea & Air)
+            if (['robot', 'drone', 'hull', 'clean', 'inspection', 'fly'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: ROBOTICS -> Delegating to Ada.Robotics`));
+                
+                if (lowerPrompt.includes('hull') || lowerPrompt.includes('clean') || lowerPrompt.includes('inspect')) {
+                    const action = lowerPrompt.includes('clean') ? 'CLEAN' : 'INSPECT';
+                    const res = await roboticsExpert.manageHullCleaner("S/Y Phisedelia", action, addTrace);
+                    return { text: res.message, actions, traces };
+                } else if (lowerPrompt.includes('drone') || lowerPrompt.includes('fly')) {
+                    const res = await roboticsExpert.dispatchAerialDrone("Emergency MedKit", "Pontoon C", addTrace);
+                    return { text: `**DRONE DISPATCHED**\nID: ${res.droneId}\nETA: ${res.eta}`, actions, traces };
+                }
+            }
+
+            // C. SHIELD (Security & EW)
+            if (['shield', 'jam', 'dome', 'sonar', 'diver', 'perimeter'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SHIELD -> Delegating to Ada.Shield`));
+                
+                if (lowerPrompt.includes('jam') || lowerPrompt.includes('dome')) {
+                    const res = await shieldExpert.activateDome('JAMMING', 10, addTrace);
+                    return { text: `**SHIELD STATUS: ${res.status}**\nCoverage: ${res.coverage}`, actions, traces };
+                } else {
+                    const threats = await shieldExpert.analyzeSubseaThreats("Alpha", addTrace);
+                    return { text: threats.length > 0 ? "**THREAT DETECTED**\nSubsea contact confirmed." : "No subsea threats in sector.", actions, traces };
+                }
+            }
+
+            // D. YIELD (Dynamic Pricing)
+            if (['yield', 'price', 'rate', 'forecast', 'revenue'].some(kw => lowerPrompt.includes(kw)) && user.role === 'GENERAL_MANAGER') {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: YIELD -> Delegating to Ada.Yield`));
+                
+                if (lowerPrompt.includes('forecast')) {
+                    const res = await yieldExpert.forecastRevenue(30, addTrace);
+                    return { text: res, actions, traces };
+                } else {
+                    const res = await yieldExpert.calculateMultiplier(92, 'HIGH', addTrace); // Mock inputs
+                    return { text: `**DYNAMIC PRICING**\nCurrent Multiplier: **${res.multiplier}x**\nReason: ${res.reasoning}`, actions, traces };
+                }
+            }
+
+            // E. SYSTEM ADMINISTRATION (RULES & CONFIG)
             if (['update', 'change', 'set'].some(kw => lowerPrompt.includes(kw)) && ['rule', 'limit', 'config', 'parameter', 'policy'].some(kw => lowerPrompt.includes(kw))) {
-                // Security Check: Only GM can change rules
                 if (user.role !== 'GENERAL_MANAGER') {
                     traces.push(createLog('ada.stargate', 'ERROR', `Access Denied: Rule modification requires EXECUTIVE clearance.`));
                     return { text: "⛔ **ACCESS DENIED**\n\nOnly General Managers are authorized to modify Operational Rules.", actions: [], traces };
                 }
-
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SYSTEM_ADMIN -> Delegating to Ada.System`));
                 const result = await systemExpert.processRuleUpdate(prompt, addTrace);
                 actions.push(...result.actions);
                 return { text: result.message, actions, traces };
             }
 
-            // B. LEGAL, SECURITY & PRACTICAL KNOWLEDGE
-            // Expanded keywords to catch "anchor", "meltemi", "battery" for the new Practical Guide
-            if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk', 'anchor', 'demir', 'meltemi', 'wind', 'battery', 'akü', 'chain', 'zincir'].some(kw => lowerPrompt.includes(kw))) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY/SEAMANSHIP -> Delegating to Ada.Legal`));
+            // F. LEGAL, SECURITY & PRACTICAL KNOWLEDGE
+            if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk', 'anchor', 'demir', 'meltemi', 'wind', 'battery', 'akü', 'chain', 'zincir', 'colreg'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY -> Delegating to Ada.Legal`));
                 
+                if (lowerPrompt.includes('colreg')) {
+                    // Quick COLREGs Check via Sea Agent Logic
+                    const res = await seaExpert.evaluateSituation({ heading: 0 }, { bearing: 45, range: 0.5, name: 'Target' }, 'GOOD', addTrace);
+                    return { text: `**COLREGs ADVISORY**\nRule: ${res.rule}\nAction: **${res.action}**`, actions, traces };
+                }
+
                 if (lowerPrompt.includes('staff') || lowerPrompt.includes('patrol')) {
                     const result = await hrExpert.trackPatrolStatus(addTrace);
                     return { text: result.message, actions, traces };
                 }
                 
-                // Ada.Legal now handles Practical Seamanship questions too via simulateRagLookup
                 const legalRes = await legalExpert.process({ query: prompt }, user, addTrace);
                 const advice = legalRes[0]?.params?.advice || "Consulting knowledge base...";
                 return { text: advice, actions, traces };
             }
 
-            // C. FINANCE & COMMERCIAL
-            if (['balance', 'debt', 'owe', 'finance', 'invoice', 'price', 'fee', 'commercial', 'shop', 'tenant', 'loyalty', 'booking', 'reservation'].some(kw => lowerPrompt.includes(kw))) {
+            // G. FINANCE & COMMERCIAL
+            if (['balance', 'debt', 'owe', 'finance', 'invoice', 'fee', 'commercial', 'shop', 'tenant', 'loyalty', 'booking', 'reservation'].some(kw => lowerPrompt.includes(kw))) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: FINANCE/COMMERCIAL -> Delegating to Ada.Finance`));
 
                 if (lowerPrompt.includes('balance') || lowerPrompt.includes('debt')) {
@@ -102,11 +168,10 @@ export const orchestratorService = {
                 return { text: booking.message, actions, traces };
             }
 
-            // D. MARINA OPERATIONS & SCIENCE
+            // H. MARINA OPERATIONS & SCIENCE
             if (['arrival', 'departure', 'dock', 'berth', 'tender', 'water', 'electricity', 'waste', 'blue card', 'weather', 'facility', 'technical', 'lift', 'science', 'mission', 'ocean', 'research'].some(kw => lowerPrompt.includes(kw))) {
                 traces.push(createLog('ada.stargate', 'ROUTING', `Intent: MARINA_OPS -> Delegating to Ada.Marina`));
                 
-                // NEW: SCIENCE ROUTING
                 if (lowerPrompt.includes('science') || lowerPrompt.includes('mission') || lowerPrompt.includes('ocean')) {
                     const mission = await scienceExpert.assignMission("S/Y Phisedelia", "Sector Zulu", addTrace);
                     return { text: mission, actions, traces };
@@ -129,7 +194,7 @@ export const orchestratorService = {
                 return { text: `**BERTH ALLOCATION:** ${berth.berth} - ${berth.reasoning}`, actions, traces };
             }
 
-            // E. SYSTEM & STARGATE
+            // I. SYSTEM & STARGATE (Default)
             traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SYSTEM/GENERAL -> Delegating to Ada.Stargate`));
             
             if (['system', 'status', 'connect', 'offline', 'cyber'].some(kw => lowerPrompt.includes(kw))) {
