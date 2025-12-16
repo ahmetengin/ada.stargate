@@ -1,35 +1,35 @@
 
 import React, { useState } from 'react';
-import { Eye, Radio, FileText, X, Navigation, Video } from 'lucide-react';
+import { Eye, Radio, FileText, X, Navigation, Video, Crown, CalendarCheck } from 'lucide-react';
 
 export const LiveMap: React.FC = () => {
   const [hoveredBerth, setHoveredBerth] = useState<string | null>(null);
   const [selectedVessel, setSelectedVessel] = useState<any | null>(null);
 
-  // Mock Berth Data
+  // Mock Berth Data with Relationship Status
   const berths = [
     // --- PONTOON A (Top) ---
-    { id: 'A-N1', status: 'OCCUPIED', vessel: 'S/Y Wind Chaser', type: 'Sail', cx: 60, cy: 35, orientation: 'up' },
+    { id: 'A-N1', status: 'OCCUPIED', vessel: 'S/Y Wind Chaser', type: 'Sail', cx: 60, cy: 35, orientation: 'up', relationship: 'VISITOR' },
     { id: 'A-N2', status: 'EMPTY', vessel: null, type: null, cx: 80, cy: 35, orientation: 'up' },
-    { id: 'A-N3', status: 'OCCUPIED', vessel: 'M/Y Solaris', type: 'Motor', cx: 100, cy: 35, orientation: 'up' },
+    { id: 'A-N3', status: 'OCCUPIED', vessel: 'M/Y Solaris', type: 'Motor', cx: 100, cy: 35, orientation: 'up', relationship: 'CONTRACT_HOLDER' },
     
     // South Side (Facing Down)
-    { id: 'A-S1', status: 'OCCUPIED', vessel: 'S/Y Phisedelia', type: 'Sail (VO65)', cx: 60, cy: 43, orientation: 'down' },
-    { id: 'A-S2', status: 'OCCUPIED', vessel: 'M/Y Blue Horizon', type: 'Motor', cx: 80, cy: 43, orientation: 'down' },
-    { id: 'A-S3', status: 'BREACH', vessel: 'Speedboat X', type: 'Speed', cx: 100, cy: 43, orientation: 'down' },
-    { id: 'A-S4', status: 'OCCUPIED', vessel: 'Tender Alpha', type: 'Service', cx: 120, cy: 43, orientation: 'down' },
+    { id: 'A-S1', status: 'OCCUPIED', vessel: 'S/Y Phisedelia', type: 'Sail (VO65)', cx: 60, cy: 43, orientation: 'down', relationship: 'CONTRACT_HOLDER' },
+    { id: 'A-S2', status: 'OCCUPIED', vessel: 'M/Y Blue Horizon', type: 'Motor', cx: 80, cy: 43, orientation: 'down', relationship: 'CONTRACT_HOLDER' },
+    { id: 'A-S3', status: 'BREACH', vessel: 'Speedboat X', type: 'Speed', cx: 100, cy: 43, orientation: 'down', relationship: 'VISITOR' },
+    { id: 'A-S4', status: 'OCCUPIED', vessel: 'Tender Alpha', type: 'Service', cx: 120, cy: 43, orientation: 'down', relationship: 'CONTRACT_HOLDER' },
 
     // --- PONTOON B (Middle) ---
-    { id: 'B-N1', status: 'OCCUPIED', vessel: 'Catamaran Lir', type: 'Cat', cx: 60, cy: 85, orientation: 'up' },
-    { id: 'B-N2', status: 'OCCUPIED', vessel: 'S/Y Aegeas', type: 'Sail', cx: 90, cy: 85, orientation: 'up' },
+    { id: 'B-N1', status: 'OCCUPIED', vessel: 'Catamaran Lir', type: 'Cat', cx: 60, cy: 85, orientation: 'up', relationship: 'VISITOR' },
+    { id: 'B-N2', status: 'OCCUPIED', vessel: 'S/Y Aegeas', type: 'Sail', cx: 90, cy: 85, orientation: 'up', relationship: 'RESERVATION' },
 
     // South Side (Facing Down)
     { id: 'B-S1', status: 'EMPTY', vessel: null, type: null, cx: 70, cy: 93, orientation: 'down' },
-    { id: 'B-S2', status: 'OCCUPIED', vessel: 'M/Y Poseidon', type: 'Superyacht', cx: 100, cy: 93, orientation: 'down' },
+    { id: 'B-S2', status: 'OCCUPIED', vessel: 'M/Y Poseidon', type: 'Superyacht', cx: 100, cy: 93, orientation: 'down', relationship: 'RESERVATION' },
     
     // --- VIP QUAY (Right) ---
-    { id: 'VIP-01', status: 'OCCUPIED', vessel: 'M/Y Grand Turk', type: 'Mega', cx: 230, cy: 50, orientation: 'left' },
-    { id: 'VIP-02', status: 'OCCUPIED', vessel: 'M/Y White Pearl', type: 'Mega', cx: 230, cy: 100, orientation: 'left' },
+    { id: 'VIP-01', status: 'OCCUPIED', vessel: 'M/Y Grand Turk', type: 'Mega', cx: 230, cy: 50, orientation: 'left', relationship: 'CONTRACT_HOLDER' },
+    { id: 'VIP-02', status: 'OCCUPIED', vessel: 'M/Y White Pearl', type: 'Mega', cx: 230, cy: 100, orientation: 'left', relationship: 'VISITOR' },
   ];
 
   return (
@@ -73,9 +73,14 @@ export const LiveMap: React.FC = () => {
                 }
 
                 let fillClass = "fill-slate-600 dark:fill-[#3f3f46]"; // Empty
-                if (b.status === 'OCCUPIED') fillClass = "fill-emerald-600 dark:fill-[#059669]";
+                if (b.status === 'OCCUPIED') fillClass = "fill-slate-600 dark:fill-[#52525b]"; // Base occupied color
                 if (b.status === 'BREACH') fillClass = "fill-red-500 dark:fill-[#ef4444]";
                 if (selectedVessel && selectedVessel.id === b.id) fillClass = "fill-indigo-500 dark:fill-[#6366f1]";
+
+                // Status Rings (The Contract/Reservation Indicator)
+                let ringColor = "";
+                if (b.relationship === 'CONTRACT_HOLDER') ringColor = "#fbbf24"; // Amber/Gold
+                if (b.relationship === 'RESERVATION') ringColor = "#6366f1"; // Indigo
 
                 return (
                     <g 
@@ -86,8 +91,16 @@ export const LiveMap: React.FC = () => {
                         className="cursor-pointer transition-all hover:opacity-80"
                         style={{ filter: selectedVessel?.id === b.id ? 'drop-shadow(0 0 5px rgba(99, 102, 241, 0.8))' : '' }}
                     >
+                        {/* Status Halo */}
+                        {ringColor && b.status === 'OCCUPIED' && (
+                            <circle cx={labelX} cy={labelY} r="12" fill="none" stroke={ringColor} strokeWidth="0.8" opacity="0.6" />
+                        )}
+
                         <path d={boatPath} className={`${fillClass} stroke-white/20 dark:stroke-white/10`} strokeWidth="0.5" />
+                        
+                        {/* Status Dot */}
                         {b.status === 'BREACH' && <circle cx={labelX} cy={labelY} r="3" fill="#ef4444" className="animate-ping" />}
+                        {b.relationship === 'CONTRACT_HOLDER' && <circle cx={labelX} cy={labelY} r="1.5" fill="#fbbf24" />}
                     </g>
                 );
             })}
@@ -102,7 +115,11 @@ export const LiveMap: React.FC = () => {
                     const b = berths.find(x => x.id === hoveredBerth);
                     return (
                         <div>
-                            <div className="font-bold text-slate-800 dark:text-white font-mono">{b?.id}</div>
+                            <div className="font-bold text-slate-800 dark:text-white font-mono flex items-center gap-2">
+                                {b?.id}
+                                {b?.relationship === 'CONTRACT_HOLDER' && <Crown size={10} className="text-amber-500" />}
+                                {b?.relationship === 'RESERVATION' && <CalendarCheck size={10} className="text-indigo-500" />}
+                            </div>
                             <div className="text-slate-600 dark:text-zinc-400">{b?.vessel || 'VACANT'}</div>
                         </div>
                     )
@@ -119,7 +136,11 @@ export const LiveMap: React.FC = () => {
                 >
                     <div className="flex justify-between items-start mb-4">
                         <div>
-                            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1">Tactical Ops</div>
+                            <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                Tactical Ops
+                                {selectedVessel.relationship === 'CONTRACT_HOLDER' && <span className="bg-amber-500/20 text-amber-500 px-1.5 py-0.5 rounded text-[8px]">CONTRACT</span>}
+                                {selectedVessel.relationship === 'RESERVATION' && <span className="bg-indigo-500/20 text-indigo-500 px-1.5 py-0.5 rounded text-[8px]">RESERVED</span>}
+                            </div>
                             <div className="text-lg font-black text-slate-800 dark:text-white leading-none">{selectedVessel.vessel || 'VACANT BERTH'}</div>
                             <div className="text-xs font-mono text-zinc-500 mt-1">{selectedVessel.id} • {selectedVessel.type || 'N/A'}</div>
                         </div>

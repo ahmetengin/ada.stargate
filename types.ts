@@ -35,6 +35,7 @@ export interface Message {
   attachments?: Attachment[];
   groundingSources?: GroundingSource[];
   generatedImage?: string; // Base64
+  parts?: any[]; // Added to support gemini parts if needed locally
 }
 
 export enum ModelType {
@@ -78,6 +79,7 @@ export interface Tender {
   type: 'RIB' | 'Workboat' | 'Palamar Botu';
   assignment?: string;
   serviceCount?: number;
+  sensors?: string[];
 }
 
 export interface VhfLog {
@@ -99,6 +101,7 @@ export interface AisTarget {
         lat: number;
         lng: number;
     };
+    source?: string;
 }
 
 export interface VesselSystemsStatus {
@@ -126,6 +129,7 @@ export interface VesselIntelligenceProfile {
   loa: number;
   beam: number;
   status: 'DOCKED' | 'AT_ANCHOR' | 'INBOUND' | 'UNDERWAY';
+  relationship: 'CONTRACT_HOLDER' | 'RESERVATION' | 'VISITOR'; // NEW FIELD
   location?: string;
   coordinates?: { lat: number, lng: number };
   voyage: { lastPort: string, nextPort: string, eta: string };
@@ -316,39 +320,19 @@ export interface MasterDataStructure {
   };
   campus_stats?: any;
   commercial_tenants?: any;
-  technical_facilities?: any;
-  hr_management?: any;
-  analytics_data?: any;
   strategic_partners?: any;
-  legal_framework?: any;
-  event_calendar?: any;
-  concierge_services?: any;
-  facility_management?: any;
-  services?: {
-    amenities?: {
-      restaurants?: string[];
-    };
-  };
-  vessel_id?: string;
-  type?: string;
-  flag?: string;
-  loa?: number;
-  
-  // Added properties for D-Marin global structure
   loyalty_program?: any;
+  technical_facilities?: any;
+  facility_management?: any;
+  analytics_data?: any;
+  legal_framework?: any;
+  concierge_services?: any;
+  hr_management?: any;
   marina_portfolio?: any;
+  ocean_guardians?: any;
   digital_services?: any;
-  ocean_guardians?: {
-      initiative_name: string;
-      mission: string;
-      active_missions: {
-          id: string;
-          name: string;
-          target: string;
-          reward: string;
-      }[];
-      partners: string[];
-  };
+  event_calendar?: any;
+  services?: any;
 }
 
 export interface TenantConfig {
@@ -360,10 +344,10 @@ export interface TenantConfig {
   status: 'ONLINE' | 'OFFLINE';
   api_endpoint?: string;
   region?: string;
-  tier?: 'PRESTIGE_HUB' | 'STANDARD';
+  tier?: string;
   mission: string;
   contextSources: string[];
-  rules: Record<string, any>;
+  rules: any;
   doctrine: string;
-  masterData: Partial<MasterDataStructure>;
+  masterData: MasterDataStructure;
 }

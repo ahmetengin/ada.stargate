@@ -1,26 +1,24 @@
 
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
 import { getCurrentMaritimeTime } from './utils';
+import { sendToBackend, checkBackendHealth } from './api';
 
-// --- THE BIG 4 EXPERTS & SPECIALISTS ---
+// --- LOCAL EXPERTS (The Edge Brain) ---
 import { hrExpert } from './agents/hrAgent';
 import { financeExpert } from './agents/financeAgent';
 import { marinaExpert } from './agents/marinaAgent';
 import { securityExpert } from './agents/securityAgent';
 import { facilityExpert } from './agents/facilityAgent';
 import { commercialExpert } from './agents/commercialAgent';
-import { customerExpert } from './agents/customerAgent';
 import { analyticsExpert } from './agents/analyticsAgent';
 import { legalExpert } from './agents/legalAgent';
 import { itExpert } from './agents/itAgent';
 import { berthExpert } from './agents/berthAgent';
 import { technicExpert } from './agents/technicAgent';
 import { reservationsExpert } from './agents/reservationsAgent';
-import { federationExpert } from './agents/federationAgent';
 import { kitesExpert } from './agents/travelAgent';
 import { systemExpert } from './agents/systemAgent';
 import { scienceExpert } from './agents/scienceAgent';
-// New Agents
 import { roboticsExpert } from './agents/roboticsAgent';
 import { shieldExpert } from './agents/shieldAgent';
 import { yieldExpert } from './agents/yieldAgent';
@@ -52,12 +50,61 @@ export const orchestratorService = {
         
         const addTrace = (t: AgentTraceLog) => traces.push(t);
 
-        traces.push(createLog('ada.stargate', 'ROUTING', `Processing request locally. Hybrid Core disabled.`));
+        // --- PHASE 1: CONNECTIVITY CHECK ---
+        // We check if the Python Brain is alive. If not, we switch to "EDGE MODE" smoothly.
+        let useEdgeMode = true;
+        
+        try {
+            const isBackendAlive = await checkBackendHealth();
+            if (isBackendAlive) {
+                useEdgeMode = false;
+                // Attempt to contact Python Backend
+                const backendResponse = await sendToBackend(prompt, user, { 
+                    vesselsInPort, 
+                    weather: "NW 12kn",
+                    userRole: user.role 
+                });
+
+                if (backendResponse && backendResponse.text) {
+                    const backendTrace = createLog('ada.stargate', 'THINKING', `[CLOUD] Processed via Hyperscale Node. Intent: ${backendResponse.traces?.[0]?.content || 'Processed'}`);
+                    
+                    if (backendResponse.traces) {
+                        backendResponse.traces.forEach((t: any) => {
+                           traces.push(createLog('ada.stargate', 'OUTPUT', `Backend: ${t.content}`)); 
+                        });
+                    } else {
+                        traces.push(backendTrace);
+                    }
+
+                    return {
+                        text: backendResponse.text,
+                        actions: backendResponse.actions || [],
+                        traces: traces
+                    };
+                }
+            }
+        } catch (e) {
+            // Backend failed or didn't respond, proceed to Edge Mode
+            useEdgeMode = true;
+        }
+
+        // --- PHASE 2: EDGE ORCHESTRATION (Browser-Based Intelligence) ---
+        // This runs purely in the browser, using the imported TypeScript agents.
+        
+        traces.push(createLog('ada.stargate', 'ROUTING', `⚡ NEURAL SHIFT: Switching to EDGE COMPUTE (Local Browser Runtime).`));
 
         try {
+            
+            // 0. SIGNALK TELEMETRY (NEW - Ada.Sea)
+            if (['wind', 'rüzgar', 'depth', 'derinlik', 'speed', 'hız', 'sog', 'telemetry', 'sensor'].some(kw => lowerPrompt.includes(kw))) {
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: TELEMETRY -> Delegating to Ada.Sea (SignalK MCP)`));
+                const res = await seaExpert.getSignalKData(lowerPrompt, addTrace);
+                return { text: res.message, actions, traces };
+            }
+
             // A. CONCIERGE (Hospitality & Services)
             if (['buggy', 'golf cart', 'shuttle', 'ice', 'coffee', 'latte', 'espresso', 'cleaning', 'laundry', 'wash', 'taxi', 'cab', 'transfer', 'valet'].some(kw => lowerPrompt.includes(kw))) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: CONCIERGE -> Delegating to Ada.Concierge`));
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: CONCIERGE -> Delegating to Ada.Concierge (Local)`));
                 
                 let res;
                 if (lowerPrompt.includes('buggy') || lowerPrompt.includes('golf') || lowerPrompt.includes('shuttle')) {
@@ -67,7 +114,6 @@ export const orchestratorService = {
                 } else if (lowerPrompt.includes('cleaning') || lowerPrompt.includes('laundry') || lowerPrompt.includes('wash')) {
                     res = await conciergeExpert.scheduleService("Interior Cleaning", "S/Y Phisedelia", "14:00", addTrace);
                 } else {
-                    // Default to provisions (Ice, Coffee, etc.)
                     const items = lowerPrompt.replace(/order|please|bring|need/g, '').trim();
                     res = await conciergeExpert.orderProvisions(items, "S/Y Phisedelia", addTrace);
                 }
@@ -77,7 +123,7 @@ export const orchestratorService = {
 
             // B. ROBOTICS (Subsea & Air)
             if (['robot', 'drone', 'hull', 'clean', 'inspection', 'fly'].some(kw => lowerPrompt.includes(kw))) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: ROBOTICS -> Delegating to Ada.Robotics`));
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: ROBOTICS -> Delegating to Ada.Robotics (Local)`));
                 
                 if (lowerPrompt.includes('hull') || lowerPrompt.includes('clean') || lowerPrompt.includes('inspect')) {
                     const action = lowerPrompt.includes('clean') ? 'CLEAN' : 'INSPECT';
@@ -91,7 +137,7 @@ export const orchestratorService = {
 
             // C. SHIELD (Security & EW)
             if (['shield', 'jam', 'dome', 'sonar', 'diver', 'perimeter'].some(kw => lowerPrompt.includes(kw))) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SHIELD -> Delegating to Ada.Shield`));
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: SHIELD -> Delegating to Ada.Shield (Local)`));
                 
                 if (lowerPrompt.includes('jam') || lowerPrompt.includes('dome')) {
                     const res = await shieldExpert.activateDome('JAMMING', 10, addTrace);
@@ -104,13 +150,13 @@ export const orchestratorService = {
 
             // D. YIELD (Dynamic Pricing)
             if (['yield', 'price', 'rate', 'forecast', 'revenue'].some(kw => lowerPrompt.includes(kw)) && user.role === 'GENERAL_MANAGER') {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: YIELD -> Delegating to Ada.Yield`));
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: YIELD -> Delegating to Ada.Yield (Local)`));
                 
                 if (lowerPrompt.includes('forecast')) {
                     const res = await yieldExpert.forecastRevenue(30, addTrace);
                     return { text: res, actions, traces };
                 } else {
-                    const res = await yieldExpert.calculateMultiplier(92, 'HIGH', addTrace); // Mock inputs
+                    const res = await yieldExpert.calculateMultiplier(92, 'HIGH', addTrace);
                     return { text: `**DYNAMIC PRICING**\nCurrent Multiplier: **${res.multiplier}x**\nReason: ${res.reasoning}`, actions, traces };
                 }
             }
@@ -129,10 +175,9 @@ export const orchestratorService = {
 
             // F. LEGAL, SECURITY & PRACTICAL KNOWLEDGE
             if (['rule', 'law', 'contract', 'sale', 'staff', 'patrol', 'security', 'cctv', 'pass', 'kvkk', 'anchor', 'demir', 'meltemi', 'wind', 'battery', 'akü', 'chain', 'zincir', 'colreg'].some(kw => lowerPrompt.includes(kw))) {
-                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY -> Delegating to Ada.Legal`));
+                traces.push(createLog('ada.stargate', 'ROUTING', `Intent: LEGAL/SECURITY -> Delegating to Ada.Legal (RAG)`));
                 
                 if (lowerPrompt.includes('colreg')) {
-                    // Quick COLREGs Check via Sea Agent Logic
                     const res = await seaExpert.evaluateSituation({ heading: 0 }, { bearing: 45, range: 0.5, name: 'Target' }, 'GOOD', addTrace);
                     return { text: `**COLREGs ADVISORY**\nRule: ${res.rule}\nAction: **${res.action}**`, actions, traces };
                 }
@@ -212,7 +257,7 @@ export const orchestratorService = {
                  return { text: res.message, actions, traces };
             }
 
-            // Return empty text to trigger LLM fallback in App.tsx
+            // Return empty to trigger Client-Side LLM fallback in App.tsx
             return { text: "", actions, traces };
 
         } catch (error: any) {

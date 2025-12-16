@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
-import { ArrowUp, AudioWaveform, ScanLine, Radio } from 'lucide-react';
+import { ArrowUp, AudioWaveform, ScanLine, Radio, Command } from 'lucide-react';
 import { ModelType, UserRole } from '../../types';
 import { QuickActions } from './QuickActions';
 
@@ -110,24 +111,27 @@ export const InputArea: React.FC<InputAreaProps> = ({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto space-y-4">
       
       {userRole && onQuickAction && (
-          <div className="opacity-80 hover:opacity-100 transition-opacity w-full mb-2">
+          <div className="w-full">
               <QuickActions userRole={userRole} onAction={onQuickAction} />
           </div>
       )}
 
-      <div className={`relative bg-white/80 dark:bg-[#0a101d]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border shadow-sm transition-all duration-300 flex items-end p-1.5 sm:p-2 
-          ${isLoading ? 'border-[var(--accent-color)] shadow-md' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]'}
-          ${isDictating ? 'ring-1 ring-red-500/50 border-red-500/50' : ''}`}>
+      <div className={`relative bg-white/90 dark:bg-[#0a101d]/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl border shadow-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] flex items-end p-2 
+          ${isLoading 
+            ? 'border-[var(--accent-color)] shadow-[0_0_15px_rgba(34,211,238,0.2)] opacity-80 cursor-wait' 
+            : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:shadow-lg focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)]/50 focus-within:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)]'
+          }
+          ${isDictating ? 'ring-2 ring-red-500/50 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : ''}`}>
           
-          <div className="flex items-center gap-0.5 sm:gap-1 pr-1.5 sm:pr-2 border-r border-[var(--border-color)] mr-1.5 sm:mr-2 mb-1.5">
-              <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Tarayıcı">
-                  <ScanLine size={16} />
+          <div className="flex flex-col justify-end gap-1 pr-2 border-r border-[var(--border-color)] mr-2 mb-1.5 h-full">
+              <button onClick={onScanClick} className="p-2 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors group" title="Tarayıcı">
+                  <ScanLine size={18} className="group-hover:scale-110 transition-transform"/>
               </button>
-              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-red-500 hover:text-red-600 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="VHF Telsiz Modu">
-                  <Radio size={16} />
+              <button onClick={onRadioClick} className="p-2 text-red-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors group" title="VHF Telsiz Modu">
+                  <Radio size={18} className="group-hover:animate-pulse"/>
               </button>
           </div>
           
@@ -138,31 +142,38 @@ export const InputArea: React.FC<InputAreaProps> = ({
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder={isDictating ? "Dinliyorum..." : "Talimat verin..."}
-            className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] py-3 font-mono min-w-0 max-h-[150px] resize-none ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
+            className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] py-3 font-mono min-w-0 max-h-[150px] resize-none leading-relaxed ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
             disabled={isLoading}
           />
 
-          <div className="flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 mb-1">
+          <div className="flex items-center gap-2 pl-2 mb-1">
               <button 
                 onClick={toggleDictation} 
-                className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center ${isDictating ? 'text-white bg-red-500 shadow-[0_0_20px_red] scale-110 animate-pulse' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5'}`}
                 title="Sesli Giriş"
               >
-                  <AudioWaveform size={16} />
+                  <AudioWaveform size={20} />
               </button>
               <button 
                 onClick={handleSend}
                 disabled={!text.trim() || isLoading}
-                className={`p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center ${text.trim() ? 'bg-[var(--accent-color)] text-white shadow-md hover:scale-105' : 'bg-black/5 dark:bg-white/5 text-[var(--text-secondary)]'}`}
+                className={`p-2.5 rounded-xl transition-all flex items-center justify-center shadow-sm ${text.trim() ? 'bg-[var(--accent-color)] text-white shadow-lg hover:scale-105 hover:shadow-cyan-500/30' : 'bg-black/5 dark:bg-white/5 text-[var(--text-secondary)]'}`}
               >
-                  {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <ArrowUp size={16} />}
+                  {isLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <ArrowUp size={20} />}
               </button>
           </div>
       </div>
       
-      <div className="hidden sm:flex text-[9px] text-center text-[var(--text-secondary)] mt-3 uppercase tracking-[0.2em] font-bold opacity-50 items-center justify-center gap-2">
-          <div className="w-1 h-1 bg-emerald-500 rounded-full"></div>
-          GÜVENLİ BAĞLANTI KURULDU • 256-BIT ŞİFRELEME
+      <div className="hidden sm:flex items-center justify-center gap-3 text-[9px] text-[var(--text-secondary)] uppercase tracking-[0.2em] font-bold opacity-60">
+          <div className={`flex items-center gap-1.5 ${isLoading ? 'text-amber-500' : 'text-emerald-500'}`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+            {isLoading ? 'PROCESSING NEURAL TASK' : 'SYSTEM READY'}
+          </div>
+          <span className="text-[var(--border-color)]">|</span>
+          <div className="flex items-center gap-1.5">
+            <Command size={10} /> 
+            EDGE COMPUTE ACTIVE
+          </div>
       </div>
     </div>
   );

@@ -1,8 +1,6 @@
-
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import path from 'path'; // Import 'path' module
-// Fix: Import fileURLToPath from 'url' for ESM __dirname equivalent
+import path from 'path'; 
 import { fileURLToPath } from 'url';
 
 // Use process.env for API_KEY injection during build for frontend
@@ -19,33 +17,38 @@ export default defineConfig({
   resolve: {
     alias: {
       // FIX: Ensure @ points directly to the project root using process.cwd()
-      // Cast process to any to resolve 'Property 'cwd' does not exist on type 'Process'' error
-      '@': path.resolve((process as any).cwd(), './'), // Maps @ directly to the current working directory (project root)
+      '@': path.resolve((process as any).cwd(), './'), 
     },
   },
   server: {
     host: true,
-    port: 3000, // Frontend will run on port 3000 for local dev
+    port: 3000, 
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000', // Python backend
+        target: 'http://127.0.0.1:8000', 
         changeOrigin: true,
-        ws: true // Enable WebSocket proxying for /api if needed by backend
+        ws: true 
       },
       '/ws': {
-        target: 'http://127.0.0.1:8000', // For telemetry WebSocket
+        target: 'http://127.0.0.1:8000', 
         changeOrigin: true,
         ws: true
       },
       '/radio': {
-        target: 'http://127.0.0.1:8000', // For FastRTC Gradio interface
+        target: 'http://127.0.0.1:8000', 
         changeOrigin: true,
         ws: true
       }
     }
   },
   build: {
-    outDir: 'dist', // Output directory for build files
-    emptyOutDir: true, // Clear the output directory before building
-  }
+    outDir: 'dist', 
+    emptyOutDir: true, 
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './setupTests.ts',
+    css: true,
+  },
 });

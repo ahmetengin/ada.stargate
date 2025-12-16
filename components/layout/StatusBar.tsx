@@ -1,12 +1,11 @@
 
 import React from 'react';
-import { GitBranch, RefreshCw, AlertCircle, User } from 'lucide-react';
+import { GitBranch, RefreshCw, AlertCircle, User, Cpu } from 'lucide-react';
 import { UserProfile } from '../../types';
 
 interface StatusBarProps {
   userProfile: UserProfile;
   onToggleAuth: () => void;
-  // Removed nodeHealth, latency, activeChannel props
 }
 
 interface ItemProps {
@@ -24,7 +23,6 @@ const Item: React.FC<ItemProps> = ({ children, border = true, hover = true }) =>
 export const StatusBar: React.FC<StatusBarProps> = ({ 
   userProfile, 
   onToggleAuth
-  // Removed nodeHealth, latency
 }) => {
   const isGM = userProfile.role === 'GENERAL_MANAGER';
   const isLegalRed = userProfile.legalStatus === 'RED';
@@ -41,8 +39,13 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         </Item>
         
         <Item border={true}>
-           <RefreshCw size={12} className={'text-emerald-400'} /> {/* Simplified to static color */}
+           <RefreshCw size={12} className={'text-emerald-400'} />
            <span>v5.1.0</span>
+        </Item>
+
+        <Item border={true}>
+            <Cpu size={12} className="text-amber-500" />
+            <span className="font-bold text-amber-500">EDGE MODE (BROWSER)</span>
         </Item>
       </div>
 

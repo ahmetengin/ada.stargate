@@ -1,35 +1,23 @@
 
 import React from 'react';
-import { UserProfile, VhfLog } from '../../types';
+import { UserProfile } from '../../types';
 import { FEDERATION_REGISTRY } from '../../services/config';
 import { 
     Anchor, ChevronRight, Projector, Activity, Radio, Users, Briefcase, UserCheck, Wrench
 } from 'lucide-react';
 
+export type SidebarTabId = 'vhf' | 'presenter' | 'crm' | 'tech' | 'hr' | 'observer' | 'none';
+
 interface SidebarProps {
   nodeStates: Record<string, 'connected' | 'working' | 'disconnected'>;
-  isMonitoring: boolean;
   userProfile: UserProfile;
-  vhfLogs: VhfLog[];
+  activeTenantId: string;
+  activeTab: SidebarTabId;
+  onTabChange: (tabId: SidebarTabId) => void;
   onRoleChange: (role: string) => void;
-  onScannerClick?: () => void;
   onPulseClick?: () => void;
   onTenantSwitch: (tenantId: string) => void;
-  onEnterObserverMode?: () => void;
-  onEnterScribeMode?: () => void;
-  onOpenVoiceMode?: () => void;
-  onOpenCustomerMode?: () => void;
-  onOpenTeamMode?: () => void;
-  activeTenantId: string;
 }
-
-const ActivityIcon = ({ color }: { color: string }) => (
-    <div className="flex gap-0.5">
-        <div className={`w-0.5 h-2 ${color} animate-pulse`}></div>
-        <div className={`w-0.5 h-3 ${color} animate-pulse delay-75`}></div>
-        <div className={`w-0.5 h-1.5 ${color} animate-pulse delay-150`}></div>
-    </div>
-);
 
 const SectionHeader = ({ title }: { title: string }) => (
     <h3 className="text-[10px] font-bold text-[var(--accent-color)] uppercase tracking-widest mb-2 pl-2 border-l-2 border-[var(--accent-color)]">
@@ -37,7 +25,15 @@ const SectionHeader = ({ title }: { title: string }) => (
     </h3>
 );
 
-const PersonaButton = ({ icon: Icon, label, subtext, onClick, active }: { icon: any, label: string, subtext: string, onClick: () => void, active?: boolean }) => (
+interface PersonaButtonProps {
+    icon: any;
+    label: string;
+    subtext: string;
+    onClick: () => void;
+    active?: boolean;
+}
+
+const PersonaButton: React.FC<PersonaButtonProps> = ({ icon: Icon, label, subtext, onClick, active }) => (
     <button 
         onClick={onClick}
         className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all group mb-2 ${
@@ -59,7 +55,6 @@ const PersonaButton = ({ icon: Icon, label, subtext, onClick, active }: { icon: 
     </button>
 );
 
-// --- SUB-COMPONENTS FOR FOOTER ---
 const RoleMiniButton = ({ role, current, onClick, label }: any) => (
     <button
         onClick={onClick}
@@ -88,22 +83,26 @@ const TenantButton = ({ tenantId, currentTenantId, onClick, label }: any) => (
 );
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
-  nodeStates, 
   userProfile,
   onRoleChange,
   onPulseClick,
   onTenantSwitch,
-  onEnterObserverMode,
-  onEnterScribeMode,
-  onOpenVoiceMode,
-  onOpenCustomerMode,
-  onOpenTeamMode,
-  activeTenantId
+  activeTenantId,
+  activeTab,
+  onTabChange
 }) => {
 
   const isGM = userProfile.role === 'GENERAL_MANAGER';
   const activeTenant = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || FEDERATION_REGISTRY.peers[0];
   const tenantNetworkName = activeTenant ? activeTenant.network : 'Unknown Network';
+
+  const menuItems: { id: SidebarTabId; label: string; subtext: string; icon: any }[] = [
+      { id: 'vhf', label: 'VHF Operator', subtext: 'Voice & Radio Protocol', icon: Radio },
+      { id: 'presenter', label: 'Presenter', subtext: 'Sales & Negotiation', icon: Projector },
+      { id: 'crm', label: 'CRM Analyst', subtext: 'Customer Intelligence', icon: UserCheck },
+      { id: 'tech', label: 'Tech Support', subtext: 'Equipment Repair & Guides', icon: Wrench },
+      { id: 'hr', label: 'Team Lead', subtext: 'HR & Internal Ops', icon: Briefcase },
+  ];
 
   return (
     <div className="h-full w-full flex flex-col bg-[var(--glass-bg)] backdrop-blur-md border-r border-[var(--border-color)] text-[var(--text-secondary)] relative overflow-hidden transition-colors">
@@ -144,36 +143,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <SectionHeader title="Select Persona" />
                     <div className="space-y-1">
-                        <PersonaButton 
-                            icon={Radio} 
-                            label="VHF Operator" 
-                            subtext="Voice & Radio Protocol" 
-                            onClick={onOpenVoiceMode || (() => {})} 
-                        />
-                        <PersonaButton 
-                            icon={Projector} 
-                            label="Presenter" 
-                            subtext="Sales & Negotiation" 
-                            onClick={onEnterScribeMode || (() => {})} 
-                        />
-                        <PersonaButton 
-                            icon={UserCheck} 
-                            label="CRM Analyst" 
-                            subtext="Customer Intelligence" 
-                            onClick={onOpenCustomerMode || (() => {})} 
-                        />
-                        <PersonaButton 
-                            icon={Wrench} 
-                            label="Tech Support" 
-                            subtext="Equipment Repair & Guides" 
-                            onClick={onOpenTeamMode || (() => {})} 
-                        />
-                        <PersonaButton 
-                            icon={Briefcase} 
-                            label="Team Lead" 
-                            subtext="HR & Internal Ops" 
-                            onClick={onOpenTeamMode || (() => {})} 
-                        />
+                        {menuItems.map((item) => (
+                            <PersonaButton
+                                key={item.id}
+                                icon={item.icon}
+                                label={item.label}
+                                subtext={item.subtext}
+                                active={activeTab === item.id}
+                                onClick={() => onTabChange(item.id)}
+                            />
+                        ))}
                     </div>
                 </div>
 
@@ -181,8 +160,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="mt-6">
                     <SectionHeader title="System Utils" />
                     <button 
-                        onClick={onEnterObserverMode}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[var(--text-primary)] transition-all group border border-transparent hover:border-[var(--border-color)]"
+                        onClick={() => onTabChange('observer')}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all group border ${
+                            activeTab === 'observer' 
+                            ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] text-[var(--text-primary)]'
+                            : 'text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 hover:text-[var(--text-primary)] border-transparent hover:border-[var(--border-color)]'
+                        }`}
                     >
                         <div className="flex items-center gap-3">
                             <Activity size={14} />

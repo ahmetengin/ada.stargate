@@ -23,6 +23,7 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
         name: 'S/Y Phisedelia', imo: '987654321', type: 'VO65 Racing Yacht (ex-Mapfre)', flag: 'MT', 
         ownerName: 'Ahmet Engin', ownerId: '12345678901', ownerEmail: 'ahmet.engin@example.com', ownerPhone: '+905321234567',
         dwt: 150, loa: 20.4, beam: 5.6, status: 'DOCKED', location: 'Pontoon C-12', 
+        relationship: 'CONTRACT_HOLDER', // GOLD MEMBER
         coordinates: { lat: 40.9634, lng: 28.6289 }, // Inside Marina
         voyage: { lastPort: 'Alicante', nextPort: 'WIM', eta: 'Arrived' },
         paymentHistoryStatus: 'REGULAR',
@@ -33,6 +34,7 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
         name: 'M/Y Blue Horizon', imo: '123456789', type: 'Motor Yacht', flag: 'KY', 
         ownerName: 'Jane Smith', ownerId: '98765432109', ownerEmail: 'jane.smith@example.com', ownerPhone: '+447911123456',
         dwt: 300, loa: 24.0, beam: 6.1, status: 'DOCKED', location: 'Pontoon A-05', 
+        relationship: 'CONTRACT_HOLDER',
         coordinates: { lat: 40.9640, lng: 28.6295 }, 
         voyage: { lastPort: 'Monaco', nextPort: 'WIM', eta: 'N/A' },
         adaSeaOneStatus: 'ACTIVE',
@@ -41,6 +43,7 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
     { 
         name: 'S/Y Mistral', imo: '555666777', type: 'Sailing Yacht', flag: 'TR', 
         dwt: 120, loa: 14.2, beam: 4.1, status: 'AT_ANCHOR', location: 'Sector Zulu', 
+        relationship: 'VISITOR',
         coordinates: { lat: 40.9500, lng: 28.6300 }, 
         voyage: { lastPort: 'Bodrum', nextPort: 'WIM', eta: 'N/A' },
         utilities: { electricityKwh: 0, waterM3: 0, lastReading: 'Disconnected', status: 'DISCONNECTED' }
@@ -49,6 +52,7 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
         name: 'M/Y Poseidon', imo: '888999000', type: 'Superyacht', flag: 'BS', 
         ownerName: 'Michael Johnson', ownerId: 'A123B456C',
         dwt: 499, loa: 32.5, beam: 7.8, status: 'DOCKED', location: 'VIP Quay', 
+        relationship: 'RESERVATION', // INCOMING VIP
         coordinates: { lat: 40.9650, lng: 28.6270 }, 
         voyage: { lastPort: 'Antalya', nextPort: 'Dubrovnik', eta: '2025-11-28' },
         adaSeaOneStatus: 'ACTIVE',
@@ -145,11 +149,12 @@ export const marinaExpert = {
     },
 
     // ATC Radar Scan (20nm radius + Ambarlı Commercial Traffic)
+    // UPDATED: Now simulates fetching data from MarineTraffic for distant targets
     scanSector: async (lat: number, lng: number, radiusMiles: number, addTrace: (t: AgentTraceLog) => void): Promise<AisTarget[]> => {
         addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Scanning Radar Sector: ${radiusMiles}nm radius around ${lat}, ${lng}...`, 'WORKER'));
         
-        // 1. WIM Fleet (AIS)
-        const fleet = FLEET_DB.filter(v => {
+        // 1. WIM Fleet (Local AIS - Real Time)
+        const localTargets = FLEET_DB.filter(v => {
             if (!v.coordinates) return false;
             const dist = haversineDistance(lat, lng, v.coordinates.lat, v.coordinates.lng);
             return dist <= radiusMiles;
@@ -160,7 +165,8 @@ export const marinaExpert = {
             squawk: '1200', // VFR Standard
             status: v.status!,
             coordinates: v.coordinates!,
-            speed: v.status === 'DOCKED' ? '0.0' : '8.5'
+            speed: v.status === 'DOCKED' ? '0.0' : '8.5',
+            source: 'LOCAL_AIS' // Tagged as Local
         }));
 
         // 2. Ambarlı Commercial Traffic (Simulated Injection)
@@ -169,9 +175,19 @@ export const marinaExpert = {
             { name: "M/T Torm Republican", type: "Chemical Tanker", distance: "6.5", squawk: "2305", status: "ANCHORED", speed: "0.0", coordinates: { lat: 40.9000, lng: 28.6000 } }
         ];
 
-        addTrace(createLog('ada.marina', 'OUTPUT', `Radar Contact: ${fleet.length} WIM vessels + ${commercialTraffic.length} Commercial Targets (Ambarlı).`, 'WORKER'));
+        // 3. MarineTraffic Injection (Simulating `signalk-marinetraffic-public`)
+        // These are distant vessels that we "see" thanks to the plugin
+        const globalTraffic: AisTarget[] = [];
+        if (radiusMiles > 50) {
+             globalTraffic.push({ name: "S/Y Maltese Falcon", type: "Superyacht", distance: "145.0", squawk: "3300", status: "UNDERWAY", speed: "12.0", coordinates: { lat: 39.5, lng: 26.5 }, source: 'MARINETRAFFIC' });
+             addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Connected to MarineTraffic API via SignalK. Retrieved 1 global target.`, 'WORKER'));
+        }
+
+        const allTargets = [...localTargets, ...commercialTraffic, ...globalTraffic];
+
+        addTrace(createLog('ada.marina', 'OUTPUT', `Radar Contact: ${allTargets.length} Targets (${localTargets.length} Local, ${globalTraffic.length} Satellite).`, 'WORKER'));
         
-        return [...fleet, ...commercialTraffic];
+        return allTargets;
     },
 
     // Alias for findVesselsNear to use scanSector logic

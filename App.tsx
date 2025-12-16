@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast, VhfLog } from './types';
-import { Sidebar } from './components/layout/Sidebar';
+import { Sidebar, SidebarTabId } from './components/layout/Sidebar';
 import { ChatInterface } from './components/chat/ChatInterface';
 import { Canvas } from './components/dashboards/Canvas';
 import { BootSequence } from './components/layout/BootSequence';
@@ -71,7 +71,6 @@ const App: React.FC = () => {
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [presentationState, setPresentationState] = useState<PresentationState>({ isActive: false, slide: 'intro', transcript: '', analysisResults: null });
   const [weatherData, setWeatherData] = useState<WeatherForecast | null>(null);
-  const [vhfLogs, setVhfLogs] = useState<VhfLog[]>([]);
   
   const [hasAnnouncedArrival, setHasAnnouncedArrival] = useState(false);
 
@@ -229,8 +228,44 @@ const App: React.FC = () => {
       setMessages(prev => [...prev, ...newEntries]);
   };
 
-  const handleEnterObserverMode = () => {
-    setIsObserverOpen(true);
+  const handleSidebarTabChange = (tabId: SidebarTabId) => {
+    if (tabId === 'observer') {
+        setIsObserverOpen(true);
+        return;
+    }
+    if (tabId === 'presenter') {
+        setPresentationState({ isActive: true, slide: 'intro', transcript: '', analysisResults: null });
+        setAppMode('presentation');
+        return;
+    }
+    if (tabId === 'vhf') {
+        setIsVoiceModalOpen(true);
+        return;
+    }
+    
+    // Dashboard Logic
+    if (tabId === 'crm') setGmDashboardTab('customer');
+    else if (tabId === 'tech') setGmDashboardTab('commercial'); // Mapping tech to commercial/tech as placeholder
+    else if (tabId === 'hr') setGmDashboardTab('hr');
+    else setGmDashboardTab(undefined);
+
+    // Expand canvas if needed for dashboard views
+    if (['crm', 'tech', 'hr'].includes(tabId) && window.innerWidth > 1024 && canvasWidth < 100) {
+        setCanvasWidth(500); 
+    }
+    
+    setIsMobileMenuOpen(false);
+  };
+
+  // Determine active sidebar tab based on state
+  const getActiveSidebarTab = (): SidebarTabId => {
+      if (isObserverOpen) return 'observer';
+      if (appMode === 'presentation') return 'presenter';
+      if (isVoiceModalOpen) return 'vhf';
+      if (gmDashboardTab === 'customer') return 'crm';
+      if (gmDashboardTab === 'commercial') return 'tech'; // Approximate map
+      if (gmDashboardTab === 'hr') return 'hr';
+      return 'none';
   };
 
   const handleEnterScribeMode = () => {
@@ -255,35 +290,6 @@ const App: React.FC = () => {
     const results = await executiveExpert.analyzeMeeting(presentationState.transcript, 'Değerli Müşteri', (trace: AgentTraceLog) => setAgentTraces(prev => [trace, ...prev]));
     setPresentationState(prev => ({ ...prev, slide: 'analysis', analysisResults: results }));
     setIsLoading(false);
-  };
-
-  const handleArchiveMeeting = (results: { minutes: string, proposal: string }) => {
-      const archiveMessage: Message = {
-          id: `archive_${Date.now()}`,
-          role: MessageRole.Model,
-          text: `**📁 TOPLANTI ARŞİVİ KAYDEDİLDİ**\n\nAda Executive Modu üzerinden gerçekleştirilen toplantı notları ve teklif taslağı başarıyla oluşturulmuştur.\n\n---\n\n${results.minutes}\n\n---\n\n${results.proposal}`,
-          timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, archiveMessage]);
-      handleClosePresentation();
-  };
-
-  const handleOpenVoiceMode = () => {
-      setIsVoiceModalOpen(true);
-  };
-
-  const handleOpenCustomerMode = () => {
-      setGmDashboardTab('customer');
-      if (window.innerWidth > 1024 && canvasWidth < 100) {
-          setCanvasWidth(500); 
-      }
-  };
-
-  const handleOpenTeamMode = () => {
-      setGmDashboardTab('hr');
-      if (window.innerWidth > 1024 && canvasWidth < 100) {
-          setCanvasWidth(500); 
-      }
   };
 
   return (
@@ -319,14 +325,13 @@ const App: React.FC = () => {
                 <div className="fixed inset-0 z-50 bg-black/80 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
                     <div className="w-72 h-full bg-[var(--glass-bg)] backdrop-blur-xl border-r border-[var(--border-color)] animate-in slide-in-from-left duration-300 shadow-2xl" onClick={e => e.stopPropagation()}>
                         <Sidebar 
-                            nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
-                            onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
-                            onEnterObserverMode={() => { handleEnterObserverMode(); setIsMobileMenuOpen(false); }}
-                            onEnterScribeMode={() => { handleEnterScribeMode(); setIsMobileMenuOpen(false); }} 
-                            onOpenVoiceMode={() => { handleOpenVoiceMode(); setIsMobileMenuOpen(false); }}
-                            onOpenCustomerMode={() => { handleOpenCustomerMode(); setIsMobileMenuOpen(false); }}
-                            onOpenTeamMode={() => { handleOpenTeamMode(); setIsMobileMenuOpen(false); }}
-                            activeTenantId={activeTenantId} vhfLogs={vhfLogs}
+                            nodeStates={nodeStates} 
+                            userProfile={userProfile}
+                            onRoleChange={handleRoleChange} 
+                            onTenantSwitch={handleTenantSwitch}
+                            activeTab={getActiveSidebarTab()}
+                            onTabChange={handleSidebarTabChange}
+                            activeTenantId={activeTenantId}
                         />
                     </div>
                 </div>
@@ -334,14 +339,13 @@ const App: React.FC = () => {
 
             <div className="hidden lg:flex flex-col flex-shrink-0 border-r border-[var(--border-color)]" style={{ width: `${sidebarWidth}px` }}>
                 <Sidebar 
-                    nodeStates={nodeStates} isMonitoring={false} userProfile={userProfile}
-                    onRoleChange={handleRoleChange} onTenantSwitch={handleTenantSwitch}
-                    onEnterObserverMode={handleEnterObserverMode}
-                    onEnterScribeMode={handleEnterScribeMode} 
-                    onOpenVoiceMode={handleOpenVoiceMode}
-                    onOpenCustomerMode={handleOpenCustomerMode}
-                    onOpenTeamMode={handleOpenTeamMode}
-                    activeTenantId={activeTenantId} vhfLogs={vhfLogs}
+                    nodeStates={nodeStates} 
+                    userProfile={userProfile}
+                    onRoleChange={handleRoleChange} 
+                    onTenantSwitch={handleTenantSwitch}
+                    activeTab={getActiveSidebarTab()}
+                    onTabChange={handleSidebarTabChange}
+                    activeTenantId={activeTenantId}
                 />
             </div>
             
@@ -356,7 +360,7 @@ const App: React.FC = () => {
                     onModelChange={setSelectedModel} onSend={handleSend}
                     onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
                     onRadioClick={() => setIsVoiceModalOpen(true)} 
-                    onTraceClick={handleEnterObserverMode} 
+                    onTraceClick={() => setIsObserverOpen(true)}
                     onThemeChange={handleThemeChange}
                     onToggleSidebar={() => setIsMobileMenuOpen(true)} 
                 />
@@ -369,7 +373,7 @@ const App: React.FC = () => {
             <div className="hidden xl:flex flex-col border-l border-[var(--border-color)] bg-[var(--bg-secondary)]" style={{ width: `${canvasWidth}px` }}>
                 <Canvas 
                     vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
-                    onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
+                    onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
                     agentTraces={agentTraces} aisTargets={aisTargets} activeTenantConfig={activeTenantConfig}
                     activeTabOverride={gmDashboardTab}
                 />
@@ -389,7 +393,7 @@ const App: React.FC = () => {
           userProfile={userProfile} 
           weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }} activeTenantConfig={activeTenantConfig}
           tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
-          onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={handleEnterObserverMode}
+          onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
       />
       <VoiceModal
           isOpen={isVoiceModalOpen}

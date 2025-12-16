@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Activity, ShieldCheck, User, Zap, Droplets, Gauge, Thermometer, ScanEye } from 'lucide-react';
+import { Activity, ShieldCheck, User, Zap, Droplets, Gauge, Thermometer, ScanEye, Crown, CalendarCheck } from 'lucide-react';
 import { VesselIntelligenceProfile, VesselSystemsStatus } from '../../types';
 import { maskFullName } from '../../services/utils';
 import { marinaExpert } from '../../services/agents/marinaAgent';
@@ -35,11 +35,27 @@ export const VesselCard: React.FC<VesselCardProps> = ({ profile }) => {
     return (
         <div className="mt-6 border border-zinc-200 dark:border-white/5 bg-white dark:bg-[#0a121e] p-4 rounded-xl font-mono text-xs shadow-lg animate-in fade-in slide-in-from-left-2 max-w-md relative overflow-hidden group transition-colors">
             {/* Subtle Gradient Overlay */}
-            <div className="absolute top-0 left-0 w-1 h-full bg-teal-500/50"></div>
+            <div className={`absolute top-0 left-0 w-1 h-full ${
+                profile.relationship === 'CONTRACT_HOLDER' ? 'bg-amber-500' : 
+                profile.relationship === 'RESERVATION' ? 'bg-indigo-500' : 'bg-teal-500/50'
+            }`}></div>
             
             <div className="flex justify-between items-center mb-4 border-b border-zinc-100 dark:border-white/5 pb-3">
-                <div className="text-teal-600 dark:text-teal-500 font-bold uppercase tracking-widest flex items-center gap-2 text-[10px]">
-                    <ShieldCheck size={12} /> TARGET PROFILE
+                <div className="flex items-center gap-2">
+                    <div className="text-teal-600 dark:text-teal-500 font-bold uppercase tracking-widest flex items-center gap-2 text-[10px]">
+                        <ShieldCheck size={12} /> TARGET PROFILE
+                    </div>
+                    {/* Relationship Badge */}
+                    {profile.relationship === 'CONTRACT_HOLDER' && (
+                        <div className="flex items-center gap-1 bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 text-[9px] font-bold">
+                            <Crown size={10} /> CONTRACT
+                        </div>
+                    )}
+                    {profile.relationship === 'RESERVATION' && (
+                        <div className="flex items-center gap-1 bg-indigo-500/10 text-indigo-500 px-1.5 py-0.5 rounded border border-indigo-500/20 text-[9px] font-bold">
+                            <CalendarCheck size={10} /> BOOKED
+                        </div>
+                    )}
                 </div>
                 <div className="text-[9px] text-teal-600/50 dark:text-teal-500/50 font-bold flex items-center gap-1 animate-pulse">
                     <Activity size={10} /> LIVE LINK

@@ -17,7 +17,7 @@ export const executiveExpert = {
     // Skill: Analyze Meeting Transcript & Generate Documents
     analyzeMeeting: async (transcript: string, clientName: string, addTrace: (t: AgentTraceLog) => void): Promise<{ minutes: string, proposal: string }> => {
         
-        addTrace(createLog('ada.executive', 'THINKING', `Processing ${transcript.length} characters of meeting context. Initializing Gemini 1.5 Pro...`, 'EXPERT'));
+        addTrace(createLog('ada.executive', 'THINKING', `Processing ${transcript.length} characters of meeting context. Initializing Gemini 3 Pro (Reasoning Core)...`, 'EXPERT'));
 
         const prompt = `
         You are Ada, the Executive Partner and AI Chief of Staff for West Istanbul Marina.

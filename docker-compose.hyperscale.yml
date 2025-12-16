@@ -1,27 +1,31 @@
 version: '3.9'
 
 services:
-  # 1. THE BRAIN (Python LangGraph)
+  # 1. THE BRAIN (Python LangGraph + MAKER + SEAL)
   ada-core:
     build: 
       context: ./backend
       dockerfile: Dockerfile
     container_name: ada_core_hyperscale
     ports:
-      - "8000:8000" # API & Websocket
-      - "7860:7860" # FastRTC / Gradio UI (Direct Access)
+      - "8000:8000"
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
+      - OLLAMA_URL=http://ada-local-llm:11434
+      # Connect Brain to SignalK MCP
+      - MCP_SIGNALK_URL=http://ada-signalk-mcp:3002/sse
     depends_on:
       - ada-redis
       - ada-qdrant
+      - ada-local-llm
+      - ada-signalk-mcp
     volumes:
       - ./backend:/app
-      - ./docs:/docs # RAG access
+      - ./docs:/docs
 
-  # 2. MEMORY (Vector DB - Long Term)
+  # 2. MEMORY (Vector DB)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
@@ -30,7 +34,25 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
-  # 3. TRUTH (Relational DB - Entities)
+  # 3. LOCAL BRAIN (Ollama - Offline AI)
+  ada-local-llm:
+    image: ollama/ollama:latest
+    container_name: ada_local_llm
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  # 4. EVENT BUS (Redis)
+  ada-redis:
+    image: redis:alpine
+    container_name: ada_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 5. TRUTH (Postgres)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -43,29 +65,49 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # 4. NERVOUS SYSTEM (Event Bus - Short Term)
-  ada-redis:
-    image: redis:alpine
-    container_name: ada_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-  # 5. FRONTEND (React Interface)
+  # 6. FRONTEND (React)
   ada-frontend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: ada_frontend_hyperscale
     ports:
-      - "80:80"
+      - "3000:80"
     environment:
       - API_KEY=${API_KEY}
     depends_on:
       - ada-core
 
+  # 7. SIGNALK SERVER (NMEA Hub + MarineTraffic Bridge)
+  ada-signalk:
+    image: signalk/signalk-server
+    container_name: ada_signalk
+    ports:
+      - "3001:3000" # Expose Admin UI on 3001
+    environment:
+      - SECURITYSTRATEGY=./node_modules/@signalk/server-admin/lib/security/never
+    # Hybrid Command: Install MarineTraffic plugin then start server
+    entrypoint: sh -c "cd /home/node/.signalk && npm install signalk-marinetraffic-public && cd /home/node/signalk && ./startup.sh"
+    volumes:
+      - signalk_data:/home/node/.signalk
+    restart: always
+
+  # 8. SIGNALK MCP BRIDGE (The AI Interface)
+  # Exposes SignalK API as LLM Tools via Model Context Protocol
+  ada-signalk-mcp:
+    image: node:18-alpine
+    container_name: ada_signalk_mcp
+    # Run the MCP server pointing to the internal SignalK URL
+    command: sh -c "npx -y signalk-mcp-server --signalk-url http://ada-signalk:3000 --port 3002 --transport sse"
+    depends_on:
+      - ada-signalk
+    ports:
+      - "3002:3002"
+    restart: always
+
 volumes:
   postgres_data:
   qdrant_data:
   redis_data:
+  ollama_data:
+  signalk_data:

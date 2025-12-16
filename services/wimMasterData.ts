@@ -45,9 +45,35 @@ export const wimMasterData: MasterDataStructure = {
   },
   assets: {
     tenders: [
-        { id: "T-01", name: "ada.sea.wimAlfa", callsign: "WIM-A", status: "Idle", type: "RIB", serviceCount: 124 },
-        { id: "T-02", name: "ada.sea.wimBravo", callsign: "WIM-B", status: "Busy", assignment: "ARRIVAL_PILOT", type: "RIB", serviceCount: 88 },
-        { id: "T-03", name: "ada.sea.wimCharlie", callsign: "WIM-C", status: "Maintenance", type: "Workboat", serviceCount: 210 }
+        { 
+            id: "T-01", 
+            name: "ada.sea.wimAlfa", 
+            callsign: "WIM-A", 
+            status: "Idle", 
+            type: "RIB", 
+            serviceCount: 124,
+            // Capability: Mobile Bathymetry & Micro-Climate Sensing
+            sensors: ["Depth (Chirp)", "Wind (Ultrasonic)", "SeaTemp"] 
+        },
+        { 
+            id: "T-02", 
+            name: "ada.sea.wimBravo", 
+            callsign: "WIM-B", 
+            status: "Busy", 
+            assignment: "ARRIVAL_PILOT", 
+            type: "RIB", 
+            serviceCount: 88,
+            sensors: ["Depth (Forward Scan)", "Camera (360)"]
+        },
+        { 
+            id: "T-03", 
+            name: "ada.sea.wimCharlie", 
+            callsign: "WIM-C", 
+            status: "Maintenance", 
+            type: "Workboat", 
+            serviceCount: 210,
+            sensors: ["Fire Monitor", "Towing Load Cell"]
+        }
     ],
     charter_fleet: [
         { id: "YCH-01", name: "WIM Explorer", type: "Motor Yacht", length: "18m", capacity: 10, status: "Available" },
