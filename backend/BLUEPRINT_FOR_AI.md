@@ -1,4 +1,3 @@
-
 # 🧬 ADA STARGATE: MASTER BLUEPRINT FOR AI ARCHITECTS
 
 **Target:** Gemini CLI / Cursor / Claude Code

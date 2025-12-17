@@ -1,30 +1,7 @@
 
 import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
 import { getCurrentMaritimeTime } from './utils';
-import { sendToBackend, checkBackendHealth } from './api';
-
-// --- LOCAL EXPERTS (The Edge Brain) ---
-import { hrExpert } from './agents/hrAgent';
-import { financeExpert } from './agents/financeAgent';
-import { marinaExpert } from './agents/marinaAgent';
-import { securityExpert } from './agents/securityAgent';
-import { facilityExpert } from './agents/facilityAgent';
-import { commercialExpert } from './agents/commercialAgent';
-import { analyticsExpert } from './agents/analyticsAgent';
-import { legalExpert } from './agents/legalAgent';
-import { itExpert } from './agents/itAgent';
-import { berthExpert } from './agents/berthAgent';
-import { technicExpert } from './agents/technicAgent';
-import { reservationsExpert } from './agents/reservationsAgent';
-import { kitesExpert } from './agents/travelAgent';
-import { systemExpert } from './agents/systemAgent';
-import { scienceExpert } from './agents/scienceAgent';
-import { roboticsExpert } from './agents/roboticsAgent';
-import { shieldExpert } from './agents/shieldAgent';
-import { yieldExpert } from './agents/yieldAgent';
-import { seaExpert } from './agents/seaAgent';
-import { conciergeExpert } from './agents/conciergeAgent';
-import { federationExpert } from './agents/federationAgent';
+import { sendToBackend } from './api';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
@@ -36,6 +13,12 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
 });
 
 export const orchestratorService = {
+    /**
+     * PROCESS REQUEST v2.0 (HYPERSCALE BRIDGE)
+     * This function no longer contains business logic. It acts as a secure bridge,
+     * forwarding the user's prompt and the full operational context to the 
+     * Python backend where the LangGraph brain resides.
+     */
     async processRequest(
         prompt: string, 
         user: UserProfile, 
@@ -45,119 +28,45 @@ export const orchestratorService = {
         messages: Message[] = [],
         activeTenantConfig: TenantConfig
     ): Promise<OrchestratorResponse> {
-        const traces: AgentTraceLog[] = [];
-        let actions: AgentAction[] = [];
-        let responseText = "";
-
-        const addTrace = (t: AgentTraceLog) => traces.push(t);
-
-        // 1. ROUTING
-        addTrace(createLog('ada.stargate', 'ROUTING', `Analyzing Intent for ${activeTenantConfig.name}: "${prompt}"`, 'ORCHESTRATOR'));
-
-        const lowerPrompt = prompt.toLowerCase();
-
-        // --- SPECIAL UI TRIGGERS (PRESENTER MODE) ---
-        if (lowerPrompt.includes('sunum') || lowerPrompt.includes('present') || lowerPrompt.includes('toplantı') || lowerPrompt.includes('meeting')) {
-            addTrace(createLog('ada.stargate', 'PLANNING', `Activating Executive Presentation Protocol...`, 'EXPERT'));
-            actions.push({
-                id: `ui_present_${Date.now()}`,
-                kind: 'internal',
-                name: 'ada.mission_control.start_presentation',
-                params: {}
-            });
-            responseText = "**PRESENTATION MODE INITIATED**\n\nStand by. Taking over main screen.";
-        }
         
-        // --- SECURITY & CCTV ---
-        else if (lowerPrompt.includes('yolo') || lowerPrompt.includes('kamera') || lowerPrompt.includes('tespit') || lowerPrompt.includes('cctv')) {
-            addTrace(createLog('ada.stargate', 'ROUTING', 'Intent: Security Check. Routing to ada.security...', 'ORCHESTRATOR'));
-            // Simple location parsing
-            const locationMatch = prompt.match(/ponton [A-Z]/i) || prompt.match(/A-\d+/i);
-            const location = locationMatch ? locationMatch[0] : 'Main Area';
+        const traces: AgentTraceLog[] = [createLog('ada.stargate', 'ROUTING', `[EDGE] Request received. Transmitting to Hyperscale Core...`, 'ORCHESTRATOR')];
 
-            const res = await securityExpert.reviewCCTV(location, 'last 5 minutes', addTrace);
-            
-            if (res.confirmed) {
-                responseText = `**⚠️ GÜVENLİK UYARISI**\n\n**Konum:** ${location}\n**Tespit:** ${res.details}\n\nDerhal güvenlik birimi yönlendiriliyor.`;
-                const dispatchActions = await securityExpert.dispatchGuard(location, 'EMERGENCY', addTrace);
-                actions.push(...dispatchActions);
-            } else {
-                responseText = `**CCTV SİSTEM KONTROLÜ**\n\nBelirtilen bölgede yapılan incelemede herhangi bir anomali tespit edilmemiştir. Sistem normal seyrinde çalışmaktadır.`;
-            }
-        }
-
-        // --- FEDERATION (Setur/D-Marin Cross Check) ---
-        else if (lowerPrompt.includes('availability') && (lowerPrompt.includes('other marina') || lowerPrompt.includes('partner'))) {
-             // Example extraction logic
-             const target = lowerPrompt.includes('kalamis') ? 'TR_KAL' : 'TR_GOC'; 
-             const fedResult = await federationExpert.getRemoteBerthAvailability(target, 'TODAY', addTrace);
-             if (fedResult) responseText = fedResult.message;
-        }
-
-        // --- MARINA OPS ---
-        else if (lowerPrompt.includes('hail') || lowerPrompt.includes('arrival') || lowerPrompt.includes('depart') || lowerPrompt.includes('traffic')) {
-            if (lowerPrompt.includes('depart')) {
-                // Parse vessel name roughly
-                const vesselName = "S/Y Phisedelia"; // Simplified for demo
-                const res = await marinaExpert.processDeparture(vesselName, tenders, activeTenantConfig, addTrace);
-                responseText = res.message;
-                actions = res.actions;
-            } else if (lowerPrompt.includes('arrival')) {
-                const res = await marinaExpert.processArrival("S/Y Phisedelia", tenders, { status: 'CLEAR', amount: 0 }, activeTenantConfig, addTrace);
-                responseText = res.message;
-                actions = res.actions;
-            } else if (lowerPrompt.includes('hail')) {
-                const hail = await marinaExpert.generateProactiveHail("S/Y Phisedelia", activeTenantConfig);
-                responseText = hail;
-            } else {
-                // Radar / Traffic
-                const targets = await marinaExpert.scanSector(activeTenantConfig.masterData.identity.location.coordinates.lat, activeTenantConfig.masterData.identity.location.coordinates.lng, 10, addTrace);
-                responseText = `**RADAR SCAN COMPLETE**\n\nDetected ${targets.length} targets in ${activeTenantConfig.name} approach sector.`;
-            }
-        }
-
-        // --- FINANCE ---
-        else if (lowerPrompt.includes('invoice') || lowerPrompt.includes('debt') || lowerPrompt.includes('pay')) {
-            const res = await financeExpert.process({ intent: 'create_invoice', vesselName: 'S/Y Phisedelia' }, user, addTrace);
-            actions = res;
-            responseText = "**FINANCIAL OPERATION INITIATED**\n\nInvoice generation sequence started. Please check the Finance module.";
-        }
-
-        // --- LEGAL ---
-        else if (lowerPrompt.includes('rule') || lowerPrompt.includes('law') || lowerPrompt.includes('regulation')) {
-            const res = await legalExpert.process({ query: prompt }, user, addTrace);
-            // Assuming the first action contains the text response in params
-            if (res.length > 0 && res[0].params.advice) {
-                responseText = res[0].params.advice;
-            } else {
-                responseText = "I've consulted the legal archives.";
-            }
-        }
-
-        // --- TRAVEL (KITES) ---
-        else if (lowerPrompt.includes('flight') || lowerPrompt.includes('hotel') || lowerPrompt.includes('transfer')) {
-            const res = await kitesExpert.searchFlights('IST', 'LHR', '2025-11-25', addTrace);
-            responseText = res.message;
-        }
-
-        // --- SYSTEM ADMIN ---
-        else if (lowerPrompt.includes('update') && (lowerPrompt.includes('rule') || lowerPrompt.includes('config'))) {
-            const res = await systemExpert.processRuleUpdate(prompt, addTrace);
-            responseText = res.message;
-            actions = res.actions;
-        }
-
-        // --- DEFAULT FALLBACK (LLM) ---
-        // If no specific agent handled it, or if responseText is still empty
-        if (!responseText) {
-             // In a real app, we would query the LLM here using genericAgent or similar
-             // For this mock orchestrator, we leave it empty to let the UI handle the "..." loading state which triggers streamChatResponse
-        }
-
-        return {
-            text: responseText,
-            actions: actions,
-            traces: traces
+        // Package the entire current state for the backend brain
+        const context = {
+            user_profile: user,
+            active_tenant: activeTenantConfig,
+            marina_state: {
+                vessels_in_port: vesselsInPort,
+                pending_movements: registry.length,
+                active_tenders: tenders.filter(t => t.status === 'Busy').length
+            },
+            chat_history: messages.slice(-5) // Send last 5 messages for context
         };
+
+        try {
+            const backendResponse = await sendToBackend(prompt, user, context);
+
+            if (backendResponse) {
+                traces.push(createLog('ada.stargate', 'OUTPUT', `[CORE] Response received from Python Backend.`, 'ORCHESTRATOR'));
+                return {
+                    text: backendResponse.text || "An unexpected error occurred in the backend.",
+                    actions: backendResponse.actions || [],
+                    // Combine traces from backend and frontend
+                    traces: [...traces, ...(backendResponse.traces || [])]
+                };
+            }
+
+            // Fallback if backend is unreachable
+            throw new Error("Backend communication failed, response was null.");
+
+        } catch (error) {
+            console.error("Orchestrator to Backend failed:", error);
+            const errorTrace = createLog('ada.stargate', 'CRITICAL', 'Neural link to Hyperscale Core is unstable. Operating in limited Edge mode.', 'ORCHESTRATOR');
+            return {
+                text: "⚠️ **SYSTEM ALERT**\n\nAna beyinle bağlantı kurulamadı. Sistem, sınırlı yeteneklerle (Dağ Modu) çalışıyor.\n\nLütfen sistem yöneticisi ile görüşün.",
+                actions: [],
+                traces: [...traces, errorTrace]
+            };
+        }
     }
 };

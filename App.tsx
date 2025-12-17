@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast, VhfLog } from './types';
 import { Sidebar, SidebarTabId } from './components/layout/Sidebar';
 import { ChatInterface } from './components/chat/ChatInterface';
@@ -57,6 +57,7 @@ const App: React.FC = () => {
   const [theme, setTheme] = useState<ThemeMode>(persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
   
   const [messages, setMessages] = useState<Message[]>([]);
+  const isInitialLoad = useRef(true); // Ref to track initial load vs. role change
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
   const [nodeStates, setNodeStates] = useState<Record<string, 'connected' | 'working' | 'disconnected'>>({'ada.marina': 'connected', 'ada.finance': 'connected', 'ada.legal': 'connected', 'ada.sea': 'connected', 'ada.technic': 'connected', 'ada.customer': 'connected', 'ada.security': 'connected', 'ada.orchestrator': 'working'});
@@ -106,19 +107,38 @@ const App: React.FC = () => {
     }
   }, [theme]);
 
+  // EFFECT TO HANDLE INITIAL WELCOME MESSAGE AND ROLE CHANGES
   useEffect(() => {
     const initialSystemMessage: Message = {
       id: 'init', role: MessageRole.System, text: "Bilişsel Sistem Aktif.", timestamp: Date.now()
     };
+
     if (showBootSequence) {
+      // While booting, only have the system message ready
       setMessages([initialSystemMessage]);
-    } else {
+      return;
+    }
+    
+    // After boot sequence is complete
+    if (isInitialLoad.current) {
+      // This is the first time after boot, set the full welcome message
       const welcomeMessage: Message = {
-        id: `model_welcome_${Date.now()}`, role: MessageRole.Model,
+        id: `model_welcome_initial_${Date.now()}`, role: MessageRole.Model,
         text: `**ADA.STARGATE (HYPERSCALE)**\n\nSistem Başlatıldı. Bilişsel Varlık Modu devrede.\n\nHoş geldiniz, **Sayın ${userProfile.name}**.\nŞu an **${userProfile.role}** yetkisiyle operasyon merkezindesiniz.\n\n*LangGraph, SEAL ve MAKER modülleri emrinize amade.*`,
         timestamp: Date.now()
       };
       setMessages([initialSystemMessage, welcomeMessage]);
+      isInitialLoad.current = false;
+    } else {
+      // This is a subsequent role change, not the initial load.
+      // Append a system message instead of wiping the chat history to preserve context.
+      const roleChangeMessage: Message = {
+        id: `sys_role_change_${Date.now()}`,
+        role: MessageRole.System,
+        text: `Kimlik değiştirildi. Yeni oturum: ${userProfile.name} (${userProfile.role}).`,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, roleChangeMessage]);
     }
   }, [showBootSequence, userProfile.name, userProfile.role]);
 
@@ -189,14 +209,15 @@ const App: React.FC = () => {
     const newMessages = [...messages, newUserMessage];
     setMessages(newMessages);
 
+    // Call the new backend-connected orchestrator
     const res = await orchestratorService.processRequest(
       text, userProfile, tenders, registry, vesselsInPort, newMessages, activeTenantConfig
     );
     
+    // Update traces from backend
     setAgentTraces(prev => [...res.traces, ...prev].sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
 
-    // --- EXECUTE UI ACTIONS FROM ORCHESTRATOR ---
-    // This allows the AI to control the UI (e.g. Start Presentation)
+    // Execute any UI actions returned from the backend
     if (res.actions && res.actions.length > 0) {
         res.actions.forEach(action => {
             if (action.name === 'ada.mission_control.start_presentation') {
@@ -205,29 +226,15 @@ const App: React.FC = () => {
         });
     }
 
-    if(res.text === "") {
-        let fullResponse = '';
-        let sources: any[] = [];
-        
-        const newModelMessage: Message = {
-          id: `model_${Date.now()}`, role: MessageRole.Model, text: '...', timestamp: Date.now(),
-        };
-        setMessages(prev => [...prev, newModelMessage]);
-
-        await streamChatResponse(
-            newMessages, selectedModel, false, false, registry, tenders, userProfile, vesselsInPort, activeTenantConfig,
-            (chunk, grounding) => {
-                fullResponse += chunk;
-                if(grounding) sources = [...grounding];
-                setMessages(prev => prev.map(m => m.id === newModelMessage.id ? {...m, text: fullResponse, groundingSources: sources} : m));
-            }
-        );
-    } else {
-        const newModelMessage: Message = {
-            id: `model_${Date.now()}`, role: MessageRole.Model, text: res.text, timestamp: Date.now(),
-        };
-        setMessages(prev => [...prev, newModelMessage]);
-    }
+    // ARCHITECTURE CHANGE: Streaming logic is removed.
+    // The new orchestrator always returns a complete response.
+    const newModelMessage: Message = {
+        id: `model_${Date.now()}`,
+        role: MessageRole.Model,
+        text: res.text,
+        timestamp: Date.now(),
+    };
+    setMessages(prev => [...prev, newModelMessage]);
     
     setIsLoading(false);
   };

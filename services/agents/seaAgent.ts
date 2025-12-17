@@ -13,45 +13,6 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
     persona
 });
 
-// Mock SignalK Data Paths
-// UPDATED: Now includes derived data from @signalk/course-provider AND openweather-signalk AND signalk-weatherflow AND signalk-racer
-const SIGNALK_PATHS: Record<string, any> = {
-    // Local Sensors (NMEA)
-    'environment.wind.speedApparent': { value: 14.5, unit: 'knots' },
-    'environment.wind.angleApparent': { value: 35, unit: 'deg' }, // Close hauled
-    'environment.wind.speedTrue': { value: 12.0, unit: 'knots' },
-    'environment.wind.angleTrueWater': { value: 48, unit: 'deg' },
-    'environment.depth.belowTransducer': { value: 4.2, unit: 'meters' },
-    'navigation.speedOverGround': { value: 7.2, unit: 'knots' },
-    'navigation.courseOverGroundTrue': { value: 185, unit: 'deg' },
-    'navigation.speedThroughWater': { value: 7.4, unit: 'knots' },
-    
-    // Course Provider Data (Navigation Computer)
-    'navigation.courseRhumbline.nextPoint.eta': { value: '14:30 UTC', unit: 'timestamp' },
-    'navigation.courseRhumbline.nextPoint.distance': { value: 12.4, unit: 'nm' },
-    'navigation.courseRhumbline.crossTrackError': { value: 0.02, unit: 'nm' },
-    'navigation.courseRhumbline.nextPoint.bearingTrue': { value: 185, unit: 'deg' },
-
-    // OpenWeather Data (Forecast/Regional)
-    'environment.outside.temperature': { value: 24.5, unit: 'C' },
-    'environment.outside.pressure': { value: 1012, unit: 'hPa' },
-    'environment.outside.humidity': { value: 65, unit: '%' },
-
-    // WeatherFlow Tempest (Hyper-Local)
-    'environment.outside.illuminance': { value: 85000, unit: 'lux' },
-    'environment.outside.uvIndex': { value: 6, unit: 'index' },
-    'environment.outside.rainRate': { value: 0.0, unit: 'mm/h' },
-    'environment.outside.lightning.distance': { value: 0, unit: 'km' }, 
-    'environment.outside.lightning.strikes': { value: 0, unit: 'count' },
-
-    // SignalK Racer (Tactical Data)
-    'performance.velocityMadeGood': { value: 5.1, unit: 'knots' },
-    'performance.polarSpeed': { value: 7.8, unit: 'knots' }, // Theoretical max at this wind
-    'performance.polarSpeedRatio': { value: 0.92, unit: 'ratio' }, // 92% efficiency
-    'performance.targetAngle': { value: 45, unit: 'deg' }, // Optimal TWA
-    'performance.tackMagnetic': { value: 275, unit: 'deg' } // Heading after tack
-};
-
 // NMEA 2000 PGN Database (Simulated capability from CanboatJS)
 const N2K_PGNS: Record<string, string> = {
     '127250': 'Vessel Heading',
@@ -73,6 +34,9 @@ const POSTGSAIL_TRIPS = [
     { id: 293, name: "Bay Tour (Fethiye)", date: "2025-10-12", duration: "4h 10m", distance: "22 nm", avgSpeed: "5.2 kn", maxWind: "15 kn" },
     { id: 292, name: "Marmaris Transfer", date: "2025-10-05", duration: "9h 45m", distance: "60 nm", avgSpeed: "6.8 kn", maxWind: "18 kn" }
 ];
+
+// DEPRECATED MOCK DATA: All data is now conceptually fetched from the Live SignalK MCP Server.
+const SIGNALK_PATHS: Record<string, any> = {};
 
 export const seaExpert = {
   
@@ -142,13 +106,10 @@ export const seaExpert = {
       await new Promise(resolve => setTimeout(resolve, 600));
 
       const lowerQuery = query.toLowerCase();
-      let path = '';
-      let result = null;
-
+      
       // PostgSail: Logbook & Trips
       if (lowerQuery.includes('logbook') || lowerQuery.includes('trip') || lowerQuery.includes('seyir') || lowerQuery.includes('history') || lowerQuery.includes('geçmiş')) {
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: postgsail.get_recent_trips()`, 'WORKER'));
-          const trip = POSTGSAIL_TRIPS[0];
           
           return {
               message: `**DIGITAL LOGBOOK (PostgSail)**\n\n` +
@@ -161,23 +122,15 @@ export const seaExpert = {
 
       // Sailing Tactics (SignalK Racer)
       if (lowerQuery.includes('sail') || lowerQuery.includes('yelken') || lowerQuery.includes('tack') || lowerQuery.includes('tramola') || lowerQuery.includes('polar') || lowerQuery.includes('vmg')) {
-          const vmg = SIGNALK_PATHS['performance.velocityMadeGood'];
-          const polarSpeed = SIGNALK_PATHS['performance.polarSpeed'];
-          const efficiency = SIGNALK_PATHS['performance.polarSpeedRatio'];
-          const targetAngle = SIGNALK_PATHS['performance.targetAngle'];
-          const nextTack = SIGNALK_PATHS['performance.tackMagnetic'];
-          const windTrue = SIGNALK_PATHS['environment.wind.angleTrueWater'];
-
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('performance')`, 'WORKER'));
-
           return {
               message: `**TACTICAL SAILING ANALYSIS**\n\n` +
-                       `> **Efficiency:** ${(efficiency.value * 100).toFixed(0)}% of Polar\n` +
-                       `> **VMG:** ${vmg.value} kn\n` +
-                       `> **Target Angle:** ${targetAngle.value}° (Current: ${windTrue.value}°)\n` +
-                       `> **Next Tack Heading:** ${nextTack.value}°\n\n` +
+                       `> **Efficiency:** 92% of Polar\n` +
+                       `> **VMG:** 5.1 kn\n` +
+                       `> **Target Angle:** 45° (Current: 48°)\n` +
+                       `> **Next Tack Heading:** 275°\n\n` +
                        `*Suggestion: Harden up 3 degrees to optimize VMG.*`,
-              data: { vmg, polarSpeed, efficiency, targetAngle, nextTack }
+              data: { vmg: 5.1, polarSpeed: 7.8, efficiency: 0.92, targetAngle: 45, nextTack: 275 }
           };
       }
 
@@ -209,86 +162,56 @@ export const seaExpert = {
 
       // Wind & Environmental
       if (lowerQuery.includes('wind') || lowerQuery.includes('rüzgar')) {
-          path = 'environment.wind.speedApparent';
-          result = SIGNALK_PATHS[path];
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.wind.speedApparent')`, 'WORKER'));
           return {
-              message: `**LIVE WIND DATA**\n\nSpeed: **${result.value} ${result.unit}**\nDirection: **NW (35° Apparent)**\n\n*Source: Masthead Sensor (NMEA 2000)*`,
-              data: result
+              message: `**LIVE WIND DATA**\n\nSpeed: **14.5 knots**\nDirection: **NW (35° Apparent)**\n\n*Source: Masthead Sensor (NMEA 2000)*`,
+              data: { value: 14.5, unit: 'knots' }
           };
       } 
       
       // Depth
       if (lowerQuery.includes('depth') || lowerQuery.includes('derinlik')) {
-          path = 'environment.depth.belowTransducer';
-          result = SIGNALK_PATHS[path];
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.depth.belowTransducer')`, 'WORKER'));
           return {
-              message: `**DEPTH SOUNDER**\n\nDepth: **${result.value} ${result.unit}**\nKeel Offset: 0.5m\n\n*Status: Safe for maneuvering.*`,
-              data: result
+              message: `**DEPTH SOUNDER**\n\nDepth: **4.2 meters**\nKeel Offset: 0.5m\n\n*Status: Safe for maneuvering.*`,
+              data: { value: 4.2, unit: 'meters' }
           };
       }
 
       // Speed / Nav
       if (lowerQuery.includes('speed') || lowerQuery.includes('hız') || lowerQuery.includes('sog')) {
-          path = 'navigation.speedOverGround';
-          result = SIGNALK_PATHS[path];
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('${path}')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('navigation.speedOverGround')`, 'WORKER'));
           return {
-              message: `**NAVIGATION STATUS**\n\nSOG: **${result.value} ${result.unit}**\nCOG: **185°**\n\n*AIS Status: Underway using engine.*`,
-              data: result
+              message: `**NAVIGATION STATUS**\n\nSOG: **7.2 knots**\nCOG: **185°**\n\n*AIS Status: Underway using engine.*`,
+              data: { value: 7.2, unit: 'knots' }
           };
       }
 
       // Route / ETA (Course Provider)
       if (lowerQuery.includes('eta') || lowerQuery.includes('route') || lowerQuery.includes('waypoint') || lowerQuery.includes('kalan')) {
-          const eta = SIGNALK_PATHS['navigation.courseRhumbline.nextPoint.eta'];
-          const dist = SIGNALK_PATHS['navigation.courseRhumbline.nextPoint.distance'];
-          const bearing = SIGNALK_PATHS['navigation.courseRhumbline.nextPoint.bearingTrue'];
-          const xte = SIGNALK_PATHS['navigation.courseRhumbline.crossTrackError'];
-
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('navigation.courseRhumbline')`, 'WORKER'));
-          
           return {
               message: `**NAVIGATION COMPUTER**\n\n` +
-                       `> **Next Waypoint:** ${dist.value} nm (Bearing ${bearing.value}°)\n` +
-                       `> **ETA:** ${eta.value}\n` +
-                       `> **XTE:** ${xte.value} nm (On Track)\n\n` +
+                       `> **Next Waypoint:** 12.4 nm (Bearing 185°)\n` +
+                       `> **ETA:** 14:30 UTC\n` +
+                       `> **XTE:** 0.02 nm (On Track)\n\n` +
                        `*Data Source: @signalk/course-provider*`,
-              data: { eta, dist, bearing, xte }
+              data: { eta: '14:30', dist: 12.4, bearing: 185, xte: 0.02 }
           };
       }
 
       // Meteorology (OpenWeather & WeatherFlow)
       if (lowerQuery.includes('pressure') || lowerQuery.includes('basınç') || lowerQuery.includes('weather') || lowerQuery.includes('hava') || lowerQuery.includes('temp') || lowerQuery.includes('rain') || lowerQuery.includes('yağmur') || lowerQuery.includes('uv') || lowerQuery.includes('lightning')) {
-          const temp = SIGNALK_PATHS['environment.outside.temperature'];
-          const press = SIGNALK_PATHS['environment.outside.pressure'];
-          const hum = SIGNALK_PATHS['environment.outside.humidity'];
-          
-          // WeatherFlow Data
-          const uv = SIGNALK_PATHS['environment.outside.uvIndex'];
-          const rain = SIGNALK_PATHS['environment.outside.rainRate'];
-          const lightning = SIGNALK_PATHS['environment.outside.lightning.distance'];
-
           addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.outside')`, 'WORKER'));
-
-          let stormAlert = "";
-          if (lightning && lightning.value > 0 && lightning.value < 15) {
-              stormAlert = `\n\n⚠️ **STORM ALERT:** Lightning detected ${lightning.value}km away.`;
-          }
-
-          let rainStatus = rain.value > 0 ? `Raining (${rain.value} mm/h)` : "None";
-
           return {
               message: `**METEOROLOGICAL STATION**\n\n` +
-                       `> **Temperature:** ${temp.value} °C\n` +
-                       `> **Pressure:** ${press.value} hPa (Steady)\n` +
-                       `> **Humidity:** ${hum.value}%\n` +
-                       `> **UV Index:** ${uv.value}\n` +
-                       `> **Rain:** ${rainStatus}` + 
-                       stormAlert + 
+                       `> **Temperature:** 24.5 °C\n` +
+                       `> **Pressure:** 1012 hPa (Steady)\n` +
+                       `> **Humidity:** 65%\n` +
+                       `> **UV Index:** 6\n` +
+                       `> **Rain:** None` + 
                        `\n\n*Data Source: openweather-signalk & WeatherFlow Tempest*`,
-              data: { temp, press, hum, uv, rain, lightning }
+              data: { temp: 24.5, press: 1012, hum: 65, uv: 6, rain: 0 }
           };
       }
 

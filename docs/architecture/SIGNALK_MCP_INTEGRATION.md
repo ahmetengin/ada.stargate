@@ -1,4 +1,3 @@
-
 # 📡 SignalK MCP Integration Strategy
 
 **Component:** `signalk-mcp-server`
