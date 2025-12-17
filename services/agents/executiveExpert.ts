@@ -1,8 +1,7 @@
 
-import { AgentTraceLog, NodeName, AgentAction } from '../../types';
-import { generateSimpleResponse } from '../geminiService'; // Reusing the Gemini connection
+import { AgentTraceLog, NodeName, AgentAction, TenantConfig } from '../../types';
+import { GoogleGenAI } from "@google/genai";
 import { MOCK_USER_DATABASE } from '../mockData'; 
-import { wimMasterData } from '../wimMasterData';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_exec_${Date.now()}_${Math.random()}`,
@@ -12,6 +11,8 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
     content,
     persona
 });
+
+const createClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const executiveExpert = {
     
@@ -32,47 +33,32 @@ export const executiveExpert = {
         2. **Final Proposal (Teklif):** Draft a formal email/proposal to ${clientName} reflecting exactly what was negotiated. Include pricing if mentioned, or standard rates if not. If a discount was promised, include it. Use Markdown for formatting.
         
         OUTPUT FORMAT:
-        Return a JSON object with two fields: "minutes" (Markdown string) and "proposal" (Markdown string for Email).
+        Return ONLY a raw JSON object with two fields: "minutes" (Markdown string) and "proposal" (Markdown string for Email).
         `;
 
-        // Simulating the "Thinking" delay of a large context model
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate thinking
         addTrace(createLog('ada.executive', 'TOOL_EXECUTION', `Extracting financial commitments and deliverables from transcript...`, 'WORKER'));
         
         let minutesOutput = "";
         let proposalOutput = "";
 
-        if (transcript.length > 100) { 
+        // Only call the expensive LLM if there's a substantial transcript
+        if (transcript.length > 50) { 
             try {
-                const llmResponse = await generateSimpleResponse(
-                    prompt, 
-                    MOCK_USER_DATABASE['GENERAL_MANAGER'],
-                    [], [], 0, [], 
-                    { 
-                        id: 'wim', 
-                        name: 'West Istanbul Marina', 
-                        fullName: 'ADA.MARINA.WIM', 
-                        network: 'wim.ada.network', 
-                        node_address: 'ada.marina.wim', 
-                        status: 'ONLINE', 
-                        mission: '', 
-                        contextSources: [], 
-                        rules: {}, 
-                        doctrine: '', 
-                        masterData: wimMasterData 
+                const ai = createClient();
+                const response = await ai.models.generateContent({
+                    model: 'gemini-3-pro-preview', // Use the powerful model for this task
+                    contents: prompt,
+                    config: {
+                        responseMimeType: 'application/json'
                     }
-                );
+                });
                 
-                const jsonMatch = llmResponse.match(/```json\n(.*)\n```/s);
-                if (jsonMatch && jsonMatch[1]) {
-                    const parsed = JSON.parse(jsonMatch[1]);
-                    minutesOutput = parsed.minutes || "";
-                    proposalOutput = parsed.proposal || "";
-                } else {
-                    minutesOutput = `**TOPLANTI TUTANAĞI:**\n\nLLM JSON döndüremedi. İşte transkriptten özet:\n${llmResponse.substring(0, 500)}...`;
-                    proposalOutput = `**TEKLİF TASLAĞI:**\n\nLLM JSON döndüremedi. İşte transkriptten özet:\n${llmResponse.substring(500, 1000)}...`;
-                }
+                const responseText = response.text?.trim() || '{}';
+                const parsed = JSON.parse(responseText);
+
+                minutesOutput = parsed.minutes || "Error: Could not parse minutes.";
+                proposalOutput = parsed.proposal || "Error: Could not parse proposal.";
 
             } catch (llmError) {
                 console.error("LLM Analysis Error:", llmError);
@@ -81,6 +67,7 @@ export const executiveExpert = {
                 proposalOutput = generateDefaultProposal(clientName);
             }
         } else {
+            // Fallback for short/empty transcripts
             minutesOutput = generateDefaultMinutes(clientName);
             proposalOutput = generateDefaultProposal(clientName);
         }

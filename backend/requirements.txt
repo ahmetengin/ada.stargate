@@ -22,3 +22,5 @@ opencv-python
 pyaudio
 pillow
 mss
+# IoT & Real-Time
+paho-mqtt

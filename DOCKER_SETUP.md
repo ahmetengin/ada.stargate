@@ -14,6 +14,8 @@ This guide details how to deploy the fully operational **Ada Stargate** ecosyste
 | **Memory** | `ada_qdrant` | `6333` | Vector Database for RAG (Rules & Regulations). |
 | **Event Bus** | `ada_redis` | `6379` | Message broker for agent observability. |
 | **Database** | `ada_postgres` | `5432` | Relational database for ledgers and user profiles. |
+| **SignalK** | `ada_signalk` | `3001` | NMEA/Sensor Data Server Admin UI. |
+| **SignalK MCP**| `ada_signalk_mcp` | `3002` | AI Bridge for SignalK. |
 
 ---
 
@@ -92,14 +94,17 @@ docker exec -it ada_core_hyperscale python ingest.py
 ## 5. Verification
 
 1.  **Mission Control (Frontend):**
-    Open `http://localhost` in your browser. You should see the React dashboard.
+    Open `http://localhost:3000` in your browser. You should see the React dashboard.
 
 2.  **API Health Check:**
     Open `http://localhost:8000/health`.
     Response: `{"status": "COGNITIVE_SYSTEM_ONLINE", ...}`
+    
+3.  **SignalK Server Admin:**
+    Open `http://localhost:3001`. You should see the SignalK dashboard, which you can use to add data connections (like NMEA simulators).
 
-3.  **VHF Radio (Voice Interface):**
-    Open `http://localhost:8000/radio`.
+4.  **VHF Radio (Voice Interface):**
+    Open `http://localhost:3000/radio`.
     You should see the "Ada VHF Radio (Channel 72)" interface. Click "Record" to speak.
 
 ---

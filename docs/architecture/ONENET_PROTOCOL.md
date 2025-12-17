@@ -10,22 +10,19 @@ Previously, Ada exposed 7+ ports to the host machine (8000, 6333, 6379, 5432...)
 We have implemented a **Reverse Proxy Gateway (Nginx)** that acts as the single entry point (`:3000` or `:80`) for the entire ecosystem.
 
 ### Topology
-```text
-[ EXTERNAL WORLD / USER ]
-        |
-        | (Port 3000)
-        v
-[ ADA GATEWAY (Nginx) ] <--- The Only Door
-        |
-        +-- /        --> [ Frontend (React) ]
-        +-- /api     --> [ Brain (Python/FastAPI) ]
-        +-- /ws      --> [ Telemetry (WebSockets) ]
-        +-- /qdrant  --> [ Memory (Vector DB) ]
-        +-- /mqtt    --> [ Sensors (Mosquitto) ]
-        |
-    (Private Docker Network: ada_onenet)
-        |
-    [ Hidden Internal Services: Redis, Postgres, Ollama ]
+```mermaid
+graph TD
+    A[EXTERNAL WORLD / USER] -->|Port 3000| B(ADA GATEWAY / Nginx);
+    
+    subgraph "Private Docker Network: ada_onenet"
+        B -->|/| C[Frontend (React)];
+        B -->|/api| D[Brain (Python/FastAPI)];
+        B -->|/ws| E[Telemetry (WebSockets)];
+        B -->|/qdrant| F[Memory (Vector DB)];
+        B -->|/mqtt| G[Sensors (Mosquitto)];
+    end
+    
+    style B fill:#8b5cf6,stroke:#7c3aed,color:#fff
 ```
 
 ## 3. Benefits

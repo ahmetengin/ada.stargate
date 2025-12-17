@@ -35,7 +35,7 @@ const POSTGSAIL_TRIPS = [
     { id: 292, name: "Marmaris Transfer", date: "2025-10-05", duration: "9h 45m", distance: "60 nm", avgSpeed: "6.8 kn", maxWind: "18 kn" }
 ];
 
-// DEPRECATED MOCK DATA: All data is now conceptually fetched from the Live SignalK MCP Server.
+// DEPRECATED MOCK DATA: All data is now conceptually fetched from the Live OneNet Data Stream.
 const SIGNALK_PATHS: Record<string, any> = {};
 
 export const seaExpert = {
@@ -98,18 +98,18 @@ export const seaExpert = {
       return { pgn, description, fields };
   },
 
-  // Skill: Get Real-Time Telemetry (Simulating SignalK MCP & PostgSail)
+  // Skill: Get Real-Time Telemetry (Simulating OneNet Data Stream & PostgSail)
   getSignalKData: async (query: string, addTrace: (t: AgentTraceLog) => void): Promise<{ message: string, data: any }> => {
-      addTrace(createLog('ada.sea', 'THINKING', `Connecting to SignalK MCP Server for live telemetry: "${query}"...`, 'EXPERT'));
+      addTrace(createLog('ada.sea', 'THINKING', `Connecting to OneNet Data Stream for live telemetry: "${query}"...`, 'EXPERT'));
       
-      // Simulate network delay for MCP
-      await new Promise(resolve => setTimeout(resolve, 600));
+      // Simulate network delay for IP-based data
+      await new Promise(resolve => setTimeout(resolve, 150));
 
       const lowerQuery = query.toLowerCase();
       
       // PostgSail: Logbook & Trips
       if (lowerQuery.includes('logbook') || lowerQuery.includes('trip') || lowerQuery.includes('seyir') || lowerQuery.includes('history') || lowerQuery.includes('geçmiş')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: postgsail.get_recent_trips()`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Query: postgsail.get_recent_trips()`, 'WORKER'));
           
           return {
               message: `**DIGITAL LOGBOOK (PostgSail)**\n\n` +
@@ -122,7 +122,7 @@ export const seaExpert = {
 
       // Sailing Tactics (SignalK Racer)
       if (lowerQuery.includes('sail') || lowerQuery.includes('yelken') || lowerQuery.includes('tack') || lowerQuery.includes('tramola') || lowerQuery.includes('polar') || lowerQuery.includes('vmg')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('performance')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Query: performance.*`, 'WORKER'));
           return {
               message: `**TACTICAL SAILING ANALYSIS**\n\n` +
                        `> **Efficiency:** 92% of Polar\n` +
@@ -134,44 +134,18 @@ export const seaExpert = {
           };
       }
 
-      // NMEA PGN Lookup (Engineering Mode)
-      if (lowerQuery.includes('pgn') || lowerQuery.includes('code') || lowerQuery.includes('protocol')) {
-          const pgnMatch = query.match(/\d{5,6}/);
-          if (pgnMatch) {
-              const protocolAnalysis = await seaExpert.analyzeRawProtocol(pgnMatch[0], addTrace);
-              return {
-                  message: `**NMEA 2000 DIAGNOSTICS (@canboat/canboatjs)**\n\n` +
-                           `> **PGN:** ${protocolAnalysis.pgn}\n` +
-                           `> **Definition:** ${protocolAnalysis.description}\n` +
-                           `> **Data Fields:** ${protocolAnalysis.fields.join(', ') || 'N/A'}\n\n` +
-                           `*Status: Raw stream available for debugging.*`,
-                  data: protocolAnalysis
-              };
-          }
-      }
-
-      // Windy Visual Map
-      if (lowerQuery.includes('windy') || lowerQuery.includes('map') || lowerQuery.includes('harita') || lowerQuery.includes('görsel')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_plugin_url('signalk-windy-plugin')`, 'WORKER'));
-          const windyUrl = "http://localhost:3001/signalk-windy-plugin/";
-          return {
-              message: `**VISUAL WEATHER MAP (WINDY)**\n\nI have generated a live weather overlay for the current sector.\n\n[Open Windy Map](${windyUrl})\n\n*Source: signalk-windy-plugin*`,
-              data: { url: windyUrl }
-          };
-      }
-
       // Wind & Environmental
       if (lowerQuery.includes('wind') || lowerQuery.includes('rüzgar')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.wind.speedApparent')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Query: environment.wind.speedApparent`, 'WORKER'));
           return {
-              message: `**LIVE WIND DATA**\n\nSpeed: **14.5 knots**\nDirection: **NW (35° Apparent)**\n\n*Source: Masthead Sensor (NMEA 2000)*`,
+              message: `**LIVE WIND DATA**\n\nSpeed: **14.5 knots**\nDirection: **NW (35° Apparent)**\n\n*Source: Vessel Main Bus (OneNet)*`,
               data: { value: 14.5, unit: 'knots' }
           };
       } 
       
       // Depth
       if (lowerQuery.includes('depth') || lowerQuery.includes('derinlik')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.depth.belowTransducer')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Query: environment.depth.belowTransducer`, 'WORKER'));
           return {
               message: `**DEPTH SOUNDER**\n\nDepth: **4.2 meters**\nKeel Offset: 0.5m\n\n*Status: Safe for maneuvering.*`,
               data: { value: 4.2, unit: 'meters' }
@@ -180,7 +154,7 @@ export const seaExpert = {
 
       // Speed / Nav
       if (lowerQuery.includes('speed') || lowerQuery.includes('hız') || lowerQuery.includes('sog')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('navigation.speedOverGround')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Query: navigation.speedOverGround`, 'WORKER'));
           return {
               message: `**NAVIGATION STATUS**\n\nSOG: **7.2 knots**\nCOG: **185°**\n\n*AIS Status: Underway using engine.*`,
               data: { value: 7.2, unit: 'knots' }
@@ -189,34 +163,19 @@ export const seaExpert = {
 
       // Route / ETA (Course Provider)
       if (lowerQuery.includes('eta') || lowerQuery.includes('route') || lowerQuery.includes('waypoint') || lowerQuery.includes('kalan')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('navigation.courseRhumbline')`, 'WORKER'));
+          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Query: navigation.course`, 'WORKER'));
           return {
               message: `**NAVIGATION COMPUTER**\n\n` +
                        `> **Next Waypoint:** 12.4 nm (Bearing 185°)\n` +
                        `> **ETA:** 14:30 UTC\n` +
                        `> **XTE:** 0.02 nm (On Track)\n\n` +
-                       `*Data Source: @signalk/course-provider*`,
+                       `*Data Source: Onboard Route Planner (OneNet)*`,
               data: { eta: '14:30', dist: 12.4, bearing: 185, xte: 0.02 }
           };
       }
-
-      // Meteorology (OpenWeather & WeatherFlow)
-      if (lowerQuery.includes('pressure') || lowerQuery.includes('basınç') || lowerQuery.includes('weather') || lowerQuery.includes('hava') || lowerQuery.includes('temp') || lowerQuery.includes('rain') || lowerQuery.includes('yağmur') || lowerQuery.includes('uv') || lowerQuery.includes('lightning')) {
-          addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `MCP Call: get_vessel_data('environment.outside')`, 'WORKER'));
-          return {
-              message: `**METEOROLOGICAL STATION**\n\n` +
-                       `> **Temperature:** 24.5 °C\n` +
-                       `> **Pressure:** 1012 hPa (Steady)\n` +
-                       `> **Humidity:** 65%\n` +
-                       `> **UV Index:** 6\n` +
-                       `> **Rain:** None` + 
-                       `\n\n*Data Source: openweather-signalk & WeatherFlow Tempest*`,
-              data: { temp: 24.5, press: 1012, hum: 65, uv: 6, rain: 0 }
-          };
-      }
-
+      
       return {
-          message: "Data point not found in SignalK stream.",
+          message: "Data point not found in OneNet stream.",
           data: null
       };
   }
