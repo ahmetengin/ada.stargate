@@ -80,7 +80,7 @@ export const securityExpert = {
                 detectedBy: 'SONAR',
                 timestamp: new Date().toISOString()
             });
-            addTrace(createLog('ada.shield', 'WARNING', `SUBSEA CONTACT: Diver signature in Sector Bravo.`, 'WORKER'));
+            addTrace(createLog('ada.shield', 'CRITICAL', `SUBSEA CONTACT: Diver signature in Sector Bravo.`, 'WORKER'));
         }
 
         if (threats.length === 0) {

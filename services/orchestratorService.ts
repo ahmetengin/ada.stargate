@@ -67,6 +67,24 @@ export const orchestratorService = {
             });
             responseText = "**PRESENTATION MODE INITIATED**\n\nStand by. Taking over main screen.";
         }
+        
+        // --- SECURITY & CCTV ---
+        else if (lowerPrompt.includes('yolo') || lowerPrompt.includes('kamera') || lowerPrompt.includes('tespit') || lowerPrompt.includes('cctv')) {
+            addTrace(createLog('ada.stargate', 'ROUTING', 'Intent: Security Check. Routing to ada.security...', 'ORCHESTRATOR'));
+            // Simple location parsing
+            const locationMatch = prompt.match(/ponton [A-Z]/i) || prompt.match(/A-\d+/i);
+            const location = locationMatch ? locationMatch[0] : 'Main Area';
+
+            const res = await securityExpert.reviewCCTV(location, 'last 5 minutes', addTrace);
+            
+            if (res.confirmed) {
+                responseText = `**⚠️ GÜVENLİK UYARISI**\n\n**Konum:** ${location}\n**Tespit:** ${res.details}\n\nDerhal güvenlik birimi yönlendiriliyor.`;
+                const dispatchActions = await securityExpert.dispatchGuard(location, 'EMERGENCY', addTrace);
+                actions.push(...dispatchActions);
+            } else {
+                responseText = `**CCTV SİSTEM KONTROLÜ**\n\nBelirtilen bölgede yapılan incelemede herhangi bir anomali tespit edilmemiştir. Sistem normal seyrinde çalışmaktadır.`;
+            }
+        }
 
         // --- FEDERATION (Setur/D-Marin Cross Check) ---
         else if (lowerPrompt.includes('availability') && (lowerPrompt.includes('other marina') || lowerPrompt.includes('partner'))) {
