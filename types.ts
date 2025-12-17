@@ -16,6 +16,24 @@ export enum LiveConnectionState {
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
 
+// --- TELEMETRY TYPES ---
+export type Severity = 'critical' | 'error' | 'warn' | 'info' | 'debug';
+
+export interface TelemetryEvent {
+    ts: string;
+    type: string;
+    severity: Severity;
+    source: string;
+    marina_id: string;
+    berth_id?: string;
+    zone?: string;
+    correlation_id?: string;
+    actor?: { role: string; id?: string };
+    asset?: { kind: string; id?: string; name?: string };
+    payload: Record<string, any>;
+}
+
+// ... Rest of the existing types ...
 export interface Attachment {
   mimeType: string;
   data: string; // Base64
@@ -35,7 +53,7 @@ export interface Message {
   attachments?: Attachment[];
   groundingSources?: GroundingSource[];
   generatedImage?: string; // Base64
-  parts?: any[]; // Added to support gemini parts if needed locally
+  parts?: any[];
 }
 
 export enum ModelType {
@@ -109,7 +127,7 @@ export interface VesselSystemsStatus {
   tanks: { fuel: number, freshWater: number, blackWater: number };
   bilge: { forward: string, aft: string, pumpStatus: string };
   shorePower: { connected: boolean, voltage: number, amperage: number };
-  comfort?: { // Ada Sea ONE IoT
+  comfort?: {
     climate: { zone: string, setPoint: number, currentTemp: number, mode: string, fanSpeed: string };
     lighting: { salon: boolean, deck: boolean, underwater: boolean };
     security: { mode: string, camerasActive: boolean };
@@ -129,7 +147,7 @@ export interface VesselIntelligenceProfile {
   loa: number;
   beam: number;
   status: 'DOCKED' | 'AT_ANCHOR' | 'INBOUND' | 'UNDERWAY';
-  relationship: 'CONTRACT_HOLDER' | 'RESERVATION' | 'VISITOR'; // NEW FIELD
+  relationship: 'CONTRACT_HOLDER' | 'RESERVATION' | 'VISITOR';
   location?: string;
   coordinates?: { lat: number, lng: number };
   voyage: { lastPort: string, nextPort: string, eta: string };
@@ -299,11 +317,10 @@ export interface TravelItinerary {
   transfers: any[];
 }
 
-// NEW: Presentation Mode State
 export interface PresentationState {
   isActive: boolean;
   slide: 'intro' | 'scribe' | 'analysis' | 'observer';
-  transcript: string; // The live speech-to-text buffer
+  transcript: string;
   language?: 'en' | 'tr';
   analysisResults: {
     minutes: string;
@@ -311,7 +328,6 @@ export interface PresentationState {
   } | null;
 }
 
-// Data structure for the entire marina master data
 export interface MasterDataStructure {
   identity: any;
   assets: {

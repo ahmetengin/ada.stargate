@@ -1,7 +1,5 @@
 
-
 import React, { useEffect, useState } from 'react';
-// FIX: Removed unused VhfLog import
 import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { GuestDashboard } from './dashboards/GuestDashboard';
 import { CaptainDashboard } from './dashboards/CaptainDashboard';
@@ -18,6 +16,7 @@ interface CanvasProps {
   onOpenTrace?: () => void;
   agentTraces?: AgentTraceLog[];
   activeTenantConfig: TenantConfig; 
+  activeTabOverride?: string;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ 
@@ -29,7 +28,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   onOpenReport,
   onOpenTrace,
   agentTraces = [],
-  activeTenantConfig
+  activeTenantConfig,
+  activeTabOverride
 }) => {
   // Live Data Simulation for "Static" fix
   const [occupancyRate, setOccupancyRate] = useState(92);
@@ -48,12 +48,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   // Extract Critical Logs from Traces for the Dashboard
   // This logic looks for specific keywords that trigger the "Guardian Protocol"
   const dashboardLogs = agentTraces
-    .filter(t => t.step === 'ERROR' || t.isError || t.content.includes('DENIED') || t.content.includes('ALERT') || t.content.includes('CODE_RED') || t.content.includes('MAYDAY'))
+    .filter(t => t.step === 'ERROR' || t.isError || (t.content && typeof t.content === 'string' && (t.content.includes('DENIED') || t.content.includes('ALERT') || t.content.includes('CODE_RED') || t.content.includes('MAYDAY'))))
     .map(t => ({
         timestamp: t.timestamp,
         source: t.node,
         message: t.content,
-        type: t.content.includes('CODE_RED') || t.content.includes('MAYDAY') ? 'CRITICAL_EMERGENCY' : 'critical'
+        type: (t.content && typeof t.content === 'string' && (t.content.includes('CODE_RED') || t.content.includes('MAYDAY'))) ? 'CRITICAL_EMERGENCY' : 'critical'
     }));
 
   // --- GUARDIAN PROTOCOL (Episode B) ---
@@ -66,7 +66,11 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // --- VIEW 1 & 2: VISITOR / MEMBER (LIFESTYLE DECK) ---
   if (userProfile.role === 'VISITOR' || userProfile.role === 'MEMBER') {
-      return <GuestDashboard userProfile={userProfile} />;
+      return (
+        <div className="h-full w-full overflow-hidden">
+            <GuestDashboard userProfile={userProfile} />
+        </div>
+      );
   }
 
   // --- VIEW 3: CAPTAIN (VESSEL DECK) ---
@@ -76,7 +80,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // --- VIEW 4: GM / OPERATOR (MASTER OPS) ---
   return (
-      <div className="h-full w-full pb-20 lg:pb-0">
+      <div className="h-full w-full pb-20 lg:pb-0 overflow-hidden">
         <GMDashboard 
             userProfile={userProfile}
             logs={dashboardLogs} // Passing dynamic logs derived from traces
@@ -88,6 +92,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             onOpenReport={onOpenReport || (() => {})}
             onOpenTrace={onOpenTrace || (() => {})}
             activeTenantConfig={activeTenantConfig}
+            activeTabOverride={activeTabOverride}
         />
       </div>
   );

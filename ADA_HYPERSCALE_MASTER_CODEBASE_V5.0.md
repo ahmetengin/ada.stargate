@@ -1,11 +1,10 @@
-
 # ⚓️ ADA STARGATE: HYPERSCALE MASTER CODEBASE (v5.0 - COGNITIVE ENTITY)
 
 **Architect:** Ada Core Team
 **Version:** 5.0 (Cognitive Entity - MAKER Activated)
 **Status:** Ready for Deployment (via Manual Copy-Paste)
 
-Bu dosya, Ada'yı bir frontend simülasyonundan gerçek bir **Bilişsel İşletim Sistemine** dönüştürmek için gereken Python kodlarını içerir.
+Bu dosya, Ada'yı bir frontend simülasyonundan gerçek bir **Bilişsel İşletim Sistemine** dönüştürmek için gereken tüm Python kodlarını içerir. Lütfen aşağıdaki kod bloklarını `backend/` klasörünüzdeki ilgili dosyalara kopyalayın.
 
 ---
 
@@ -98,21 +97,89 @@ python-dotenv>=1.0.1
 google-genai
 httpx>=0.26.0
 redis>=5.0.0
+# Cognitive Stack
 langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
 langchain-text-splitters
 qdrant-client
+# RAG & Offline Ops
 markdown
 beautifulsoup4
+sentence-transformers 
+# Diğer
 asyncpg
 pandas
 scikit-learn
 ```
 
+### Dosya: `backend/ingest.py`
+(Hafıza Yükleyici / Öğrenme Scripti)
+
+```python
+import os
+import glob
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from qdrant_client import QdrantClient, models
+from dotenv import load_dotenv
+
+load_dotenv()
+DOCS_DIR = "../docs"
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+COLLECTION_NAME = "ada_memory"
+
+print(f"🚀 Ingesting Knowledge Base...")
+
+# 1. Connect to Qdrant
+client = QdrantClient(url=QDRANT_URL)
+client.recreate_collection(
+    collection_name=COLLECTION_NAME, 
+    vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE)
+)
+
+# 2. Load Local Embeddings Model (Offline çalışabilmesi için)
+print("   -> Loading Local Embedding Model (all-MiniLM-L6-v2)...")
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+
+# 3. Read Files
+files = glob.glob(f"{DOCS_DIR}/**/*.md", recursive=True)
+print(f"📄 Found {len(files)} documents.")
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+points = []
+point_id = 0
+
+# 4. Process Files into Embeddable Chunks
+for file_path in files:
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+            chunks = text_splitter.create_documents([content])
+            
+            for chunk in chunks:
+                vector = embeddings.embed_query(chunk.page_content)
+                points.append(models.PointStruct(
+                    id=point_id,
+                    vector=vector,
+                    payload={"text": chunk.page_content, "source": os.path.basename(file_path)}
+                ))
+                point_id += 1
+        print(f"   -> Processed {os.path.basename(file_path)}: {len(chunks)} chunks.")
+    except Exception as e:
+        print(f"❌ Error processing {file_path}: {e}")
+
+# 5. Upload to Qdrant
+if points:
+    client.upsert(collection_name=COLLECTION_NAME, points=points, wait=True)
+    print(f"✅ SUCCESS: {len(points)} memories implanted into Qdrant.")
+else:
+    print("⚠️ No data found to ingest.")
+```
+
 ### Dosya: `backend/architecture_graph.py`
-**Bu dosya Ada'nın Beynidir.** LangGraph kullanarak niyet analizi (Router), kod yazma (MAKER), hafıza (RAG) ve öğrenme (SEAL) modüllerini yönetir.
+(Ada'nın Beyni: LangGraph + MAKER + SEAL + RAG)
 
 ```python
 import os
@@ -136,8 +203,9 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+COLLECTION_NAME = "ada_memory"
 
-# --- STATE DEFINITION ---
+# --- STATE ---
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], operator.add]
     intent: str
@@ -147,7 +215,7 @@ class AgentState(TypedDict):
     memories: List[str]
     final_response: str
 
-# --- LLM FACTORY ---
+# --- LLM ---
 def get_llm(model="gemini-2.5-flash", temp=0.1):
     return ChatGoogleGenerativeAI(model=model, google_api_key=API_KEY, temperature=temp)
 
@@ -158,26 +226,22 @@ async def router_node(state: AgentState):
     msg = state['messages'][-1].content.lower()
     print(f"--- [ROUTER] Analyzing: {msg[:50]}... ---")
     
-    # Matematik veya Hesaplama -> MAKER
-    if any(x in msg for x in ["calculate", "solve", "math", "hesapla", "topla", "çarp", "böl"]):
+    if any(x in msg for x in ["calculate", "solve", "math", "hesapla", "topla", "çarp"]):
         return {"intent": "MAKER", "next_node": "maker_agent"}
     
-    # Hukuk veya Kural -> RAG
     if any(x in msg for x in ["rule", "law", "contract", "kural", "yönetmelik", "nedir"]):
         return {"intent": "LEGAL", "next_node": "rag_retriever"}
-    
-    # Tahmin -> TabPFN (Simülasyon)
+        
     if any(x in msg for x in ["predict", "forecast", "tahmin", "gelecek"]):
         return {"intent": "ANALYTICS", "next_node": "tabpfn_predictor"}
 
-    # Yeni Kural Öğrenme -> SEAL
     if any(x in msg for x in ["update rule", "learn", "öğren", "yeni kural"]):
         return {"intent": "LEARNING", "next_node": "seal_learner"}
         
     return {"intent": "GENERAL", "next_node": "generator"}
 
 async def maker_agent_node(state: AgentState):
-    """MAKER: Problemi çözecek Python kodunu yazar."""
+    """MAKER: Python kodu yazar."""
     print("--- [MAKER] Writing Code ---")
     query = state['messages'][-1].content
     
@@ -204,10 +268,7 @@ async def executor_node(state: AgentState):
     code = state.get("generated_code", "")
     
     try:
-        # Güvenli Global Değişkenler
         safe_globals = {"math": math, "datetime": datetime, "json": json, "random": random}
-        
-        # Çıktıyı Yakala
         old_stdout = sys.stdout
         redirected_output = io.StringIO()
         sys.stdout = redirected_output
@@ -225,15 +286,13 @@ async def executor_node(state: AgentState):
         return {"execution_result": f"Error: {str(e)}", "next_node": "generator"}
 
 async def rag_retriever_node(state: AgentState):
-    """RAG: Vektör veritabanından bilgi çeker."""
+    """RAG: Hafızadan bilgi çeker."""
     print("--- [RAG] Searching Memory ---")
     try:
         client = QdrantClient(url=QDRANT_URL)
-        # Yerel model kullanıyoruz (İnternetsiz çalışabilir)
         embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        
         vector = embeddings.embed_query(state['messages'][-1].content)
-        hits = client.search(collection_name="ada_memory", query_vector=vector, limit=2)
+        hits = client.search(collection_name=COLLECTION_NAME, query_vector=vector, limit=2)
         memories = [hit.payload["text"] for hit in hits]
     except Exception as e:
         memories = [f"Memory offline: {e}"]
@@ -251,11 +310,10 @@ async def seal_learner_node(state: AgentState):
 async def tabpfn_predictor_node(state: AgentState):
     """TabPFN: İstatistiksel tahmin yapar."""
     print("--- [TabPFN] Forecasting ---")
-    # Mock Tahmin (Gerçek entegrasyon CSV gerektirir)
     return {"final_response": "**FORECAST:** Occupancy 94% (+/- 2%) with High Confidence.", "next_node": END}
 
 async def generator_node(state: AgentState):
-    """GENERATOR: Son cevabı üretir."""
+    """GENERATOR: Cevabı sentezler."""
     print("--- [GENERATOR] Speaking ---")
     
     context = ""
@@ -269,11 +327,10 @@ async def generator_node(state: AgentState):
     
     return {"final_response": res.content, "next_node": END}
 
-# --- GRAPH BUILDER ---
+# --- BUILD ---
 def build_graph():
     workflow = StateGraph(AgentState)
     
-    # Nodları Ekle
     workflow.add_node("router", router_node)
     workflow.add_node("maker_agent", maker_agent_node)
     workflow.add_node("executor", executor_node)
@@ -282,10 +339,8 @@ def build_graph():
     workflow.add_node("tabpfn_predictor", tabpfn_predictor_node)
     workflow.add_node("generator", generator_node)
     
-    # Giriş Noktası
     workflow.set_entry_point("router")
     
-    # Yönlendirmeler
     workflow.add_conditional_edges(
         "router",
         lambda x: x["next_node"],
@@ -298,7 +353,6 @@ def build_graph():
         }
     )
     
-    # Bağlantılar
     workflow.add_edge("maker_agent", "executor")
     workflow.add_edge("executor", "generator")
     workflow.add_edge("rag_retriever", "generator")
@@ -310,7 +364,7 @@ def build_graph():
 ```
 
 ### Dosya: `backend/main.py`
-API Sunucusu ve RPC endpointleri.
+(API Giriş Noktası)
 
 ```python
 import os
@@ -322,7 +376,6 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 from langchain_core.messages import HumanMessage
 
-# Graph Import (Yukarıdaki dosyadan)
 from architecture_graph import build_graph
 
 app = FastAPI(title="Ada Cognitive API", version="5.0")
@@ -354,7 +407,6 @@ async def trigger_learning(background_tasks: BackgroundTasks):
     background_tasks.add_task(run_ingestion_task)
     return {"status": "Learning protocol initiated."}
 
-# GENERIC CHAT ENDPOINT
 @app.post("/api/v1/chat")
 async def chat_endpoint(request: ChatRequest):
     try:
@@ -372,89 +424,13 @@ async def chat_endpoint(request: ChatRequest):
         
         return {
             "text": final_state.get("final_response", "System processing error."),
-            "traces": [
-                {"step": "INTENT", "node": "router", "content": final_state.get('intent', 'UNKNOWN')},
-                {"step": "EXECUTION", "node": final_state.get('next_node', 'unknown'), "content": final_state.get('execution_result', 'N/A')}
-            ]
+            "traces": []
         }
         
     except Exception as e:
         print(f"Graph Execution Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# SPECIALIZED SKILL ENDPOINTS (Agent Bridging)
-@app.post("/api/v1/agent/{agent}/{skill}")
-async def invoke_skill(agent: str, skill: str, params: dict):
-    """
-    Allows Frontend Agents (TypeScript) to call specific Backend capabilities via REST.
-    """
-    print(f"Skill Invocation: {agent}.{skill} | Params: {params}")
-    
-    if agent == "finance" and skill == "calculate_invoice":
-        # Route to MAKER for calculation
-        prompt = f"Calculate invoice: {params}"
-        inputs = {"messages": [HumanMessage(content=prompt)], "intent": "MAKER", "next_node": "maker_agent"}
-        res = await brain_graph.ainvoke(inputs)
-        return {"result": res.get("execution_result"), "trace": res.get("generated_code")}
-
-    if agent == "analytics" and skill == "predict_occupancy":
-        # Route to TabPFN
-        return {"result": "Occupancy: 94% (TabPFN Confidence 0.88)", "trace": "Inference time: 0.02s"}
-        
-    if agent == "legal" and skill == "rag_query":
-        # Route to RAG
-        prompt = params.get("query", "regulations")
-        inputs = {"messages": [HumanMessage(content=prompt)], "intent": "LEGAL", "next_node": "rag_retriever"}
-        res = await brain_graph.ainvoke(inputs)
-        return {"result": res.get("final_response"), "docs": res.get("memories")}
-
-    return {"error": "Skill not implemented or routed."}
-
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-```
-
-### Dosya: `backend/ingest.py`
-Hafıza yükleyici script.
-
-```python
-import os
-import glob
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient, models
-from dotenv import load_dotenv
-
-load_dotenv()
-DOCS_DIR = "../docs"
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-
-print(f"🚀 Ingesting Knowledge Base...")
-
-client = QdrantClient(url=QDRANT_URL)
-collection_name = "ada_memory"
-client.recreate_collection(collection_name=collection_name, vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
-
-print("-> Loading Embeddings...")
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-files = glob.glob(f"{DOCS_DIR}/**/*.md", recursive=True)
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-points = []
-
-for idx, file_path in enumerate(files):
-    with open(file_path, "r", encoding="utf-8") as f:
-        content = f.read()
-        chunks = text_splitter.create_documents([content])
-        for i, chunk in enumerate(chunks):
-            vector = embeddings.embed_query(chunk.page_content)
-            points.append(models.PointStruct(
-                id=idx * 1000 + i,
-                vector=vector,
-                payload={"text": chunk.page_content, "source": file_path}
-            ))
-
-if points:
-    client.upsert(collection_name=collection_name, points=points)
-    print(f"✅ {len(points)} memories implanted.")
 ```

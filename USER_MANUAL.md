@@ -1,4 +1,3 @@
-
 # 📘 Ada Stargate: Hyperscale User Manual
 
 **Version:** 5.0 (Cognitive Entity)
@@ -31,7 +30,7 @@ Backend'in ve bilişsel modüllerin aktif olup olmadığını kontrol eder.
 ```bash
 curl http://localhost:8000/health
 ```
-*Beklenen Çıktı:* `{"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "SEAL", "TabPFN"]}`
+*Beklenen Çıktı:* `{"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "RAG", "SEAL"]}`
 
 ### Hafıza Yüklemesi (Learning Protocol)
 `docs/` klasörüne yeni bir PDF/MD eklediğinizde veya bir kuralı değiştirdiğinizde Ada'nın hafızasını tazelemeniz gerekir.

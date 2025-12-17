@@ -1,13 +1,11 @@
-# 🧠 Ada Stargate: Hyperscale Implementation Guide (v5.0)
 
-Bu dosya, Ada Stargate'in "Cognitive Entity" (Bilişsel Varlık) sürümü için gerekli olan **tüm Python Backend kodlarını** içerir.
-Sistem kısıtlamaları nedeniyle bu dosyalar doğrudan oluşturulamamıştır. Lütfen aşağıdaki kod bloklarını belirtilen dosya isimleriyle `backend/` klasörüne kaydedin.
+# Ada Stargate Backend Source Code
+
+Due to system restrictions on generating `.py` files directly, please copy the content below into the respective files in your `backend/` directory.
 
 ---
 
-## 1. Gerekli Kütüphaneler
-
-Bu içeriği `backend/requirements.txt` dosyasına kaydedin.
+## 1. `backend/requirements.txt`
 
 ```text
 fastapi>=0.109.0
@@ -17,18 +15,14 @@ python-dotenv>=1.0.1
 google-genai
 httpx>=0.26.0
 redis>=5.0.0
-# Cognitive Stack
 langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
 langchain-text-splitters
 qdrant-client
-# RAG & Offline Ops
 markdown
 beautifulsoup4
-sentence-transformers 
-# Diğer
 asyncpg
 pandas
 scikit-learn
@@ -36,78 +30,141 @@ scikit-learn
 
 ---
 
-## 2. Hafıza Modülü (Learning Script)
-Bu kod, `docs/` klasöründeki tüm bilgileri okur ve Ada'nın uzun süreli hafızasına (Qdrant) yazar. Bu, Ada'nın kuralları ve kanunları "hatırlamasını" sağlar.
-
-**Dosya adı:** `backend/ingest.py`
+## 2. `backend/main.py`
 
 ```python
 import os
-import glob
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from qdrant_client import QdrantClient, models
-from dotenv import load_dotenv
+import uvicorn
+import subprocess
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
+from langchain_core.messages import HumanMessage
+import json
+import asyncio
+import random
 
-load_dotenv()
-DOCS_DIR = "../docs"
-QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-COLLECTION_NAME = "ada_memory"
+# Import the graph builder
+from architecture_graph import build_graph
 
-print(f"🚀 Ingesting Knowledge Base...")
+app = FastAPI(title="Ada Cognitive API", version="5.0")
 
-# 1. Connect to Qdrant
-client = QdrantClient(url=QDRANT_URL)
-client.recreate_collection(
-    collection_name=COLLECTION_NAME, 
-    vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# 2. Load Local Embeddings Model (Offline çalışabilmesi için)
-print("   -> Loading Local Embedding Model (all-MiniLM-L6-v2)...")
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+brain_graph = build_graph()
 
-# 3. Read Files
-files = glob.glob(f"{DOCS_DIR}/**/*.md", recursive=True)
-print(f"📄 Found {len(files)} documents.")
+# --- WEBSOCKET MANAGER ---
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
-points = []
-point_id = 0
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
-# 4. Process Files into Embeddable Chunks
-for file_path in files:
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(message)
+            except Exception:
+                pass
+
+manager = ConnectionManager()
+
+# --- TELEMETRY SIMULATION ---
+async def simulate_telemetry_stream():
+    """Simulates live NMEA2000/SignalK data stream."""
+    while True:
+        data = {
+            "ts": "LIVE",
+            "type": "VESSEL_TELEMETRY",
+            "severity": "info",
+            "source": "ada.marina.wim",
+            "marina_id": "WIM",
+            "payload": {
+                "battery": { "serviceBank": round(24.0 + random.uniform(0, 1.5), 1), "engineBank": 26.1, "status": "DISCHARGING" },
+                "tanks": { "fuel": 45, "freshWater": 80, "blackWater": int(15 + random.uniform(0, 1)) },
+                "shorePower": { "connected": True, "voltage": int(220 + random.uniform(-5, 5)), "amperage": 12.5 },
+                "environment": { "windSpeed": round(12 + random.uniform(-2, 5), 1), "windDir": "NW" }
+            }
+        }
+        await manager.broadcast(json.dumps(data))
+        await asyncio.sleep(2)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(simulate_telemetry_stream())
+
+@app.websocket("/ws/telemetry")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            chunks = text_splitter.create_documents([content])
-            
-            for chunk in chunks:
-                vector = embeddings.embed_query(chunk.page_content)
-                points.append(models.PointStruct(
-                    id=point_id,
-                    vector=vector,
-                    payload={"text": chunk.page_content, "source": os.path.basename(file_path)}
-                ))
-                point_id += 1
-        print(f"   -> Processed {os.path.basename(file_path)}: {len(chunks)} chunks.")
-    except Exception as e:
-        print(f"❌ Error processing {file_path}: {e}")
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
-# 5. Upload to Qdrant
-if points:
-    client.upsert(collection_name=COLLECTION_NAME, points=points, wait=True)
-    print(f"✅ SUCCESS: {len(points)} memories implanted into Qdrant.")
-else:
-    print("⚠️ No data found to ingest.")
+class ChatRequest(BaseModel):
+    prompt: str
+    context: Optional[Dict[str, Any]] = {}
+
+@app.get("/health")
+def health():
+    return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "RAG", "SEAL"]}
+
+def run_ingestion_task():
+    print("Triggering background memory ingestion...")
+    subprocess.run(["python", "ingest.py"], check=True)
+
+@app.post("/api/v1/learn")
+async def trigger_learning(background_tasks: BackgroundTasks):
+    background_tasks.add_task(run_ingestion_task)
+    return {"status": "Learning protocol initiated."}
+
+@app.post("/api/v1/chat")
+async def chat_endpoint(request: ChatRequest):
+    try:
+        inputs = {
+            "messages": [HumanMessage(content=request.prompt)],
+            "intent": "UNKNOWN",
+            "next_node": "router",
+            "generated_code": "",
+            "execution_result": "",
+            "memories": [],
+            "final_response": ""
+        }
+        
+        final_state = await brain_graph.ainvoke(inputs)
+        
+        return {
+            "text": final_state.get("final_response", "System processing error."),
+            "traces": [
+                {"step": "INTENT", "node": "router", "content": final_state.get('intent', 'UNKNOWN')},
+                {"step": "EXECUTION", "node": final_state.get('next_node', 'unknown'), "content": final_state.get('execution_result', 'N/A')}
+            ]
+        }
+        
+    except Exception as e:
+        print(f"Graph Execution Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
 ---
 
-## 3. Beyin & Bilişsel Mimari (Graph)
-Bu kod Ada'nın düşünme şeklidir (LangGraph). Hesap yapar (MAKER), tahmin eder (TabPFN), hafızasını sorgular (RAG) ve yeni kuralları öğrenir (SEAL).
-
-**Dosya adı:** `backend/architecture_graph.py`
+## 3. `backend/architecture_graph.py`
 
 ```python
 import os
@@ -131,9 +188,8 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
-COLLECTION_NAME = "ada_memory"
 
-# --- STATE ---
+# --- STATE DEFINITION ---
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], operator.add]
     intent: str
@@ -143,7 +199,7 @@ class AgentState(TypedDict):
     memories: List[str]
     final_response: str
 
-# --- LLM ---
+# --- LLM FACTORY ---
 def get_llm(model="gemini-2.5-flash", temp=0.1):
     return ChatGoogleGenerativeAI(model=model, google_api_key=API_KEY, temperature=temp)
 
@@ -154,12 +210,12 @@ async def router_node(state: AgentState):
     msg = state['messages'][-1].content.lower()
     print(f"--- [ROUTER] Analyzing: {msg[:50]}... ---")
     
-    if any(x in msg for x in ["calculate", "solve", "math", "hesapla", "topla", "çarp"]):
+    if any(x in msg for x in ["calculate", "solve", "math", "hesapla", "topla", "çarp", "böl"]):
         return {"intent": "MAKER", "next_node": "maker_agent"}
     
     if any(x in msg for x in ["rule", "law", "contract", "kural", "yönetmelik", "nedir"]):
         return {"intent": "LEGAL", "next_node": "rag_retriever"}
-        
+    
     if any(x in msg for x in ["predict", "forecast", "tahmin", "gelecek"]):
         return {"intent": "ANALYTICS", "next_node": "tabpfn_predictor"}
 
@@ -169,7 +225,7 @@ async def router_node(state: AgentState):
     return {"intent": "GENERAL", "next_node": "generator"}
 
 async def maker_agent_node(state: AgentState):
-    """MAKER: Python kodu yazar."""
+    """MAKER: Problemi çözecek Python kodunu yazar."""
     print("--- [MAKER] Writing Code ---")
     query = state['messages'][-1].content
     
@@ -214,13 +270,14 @@ async def executor_node(state: AgentState):
         return {"execution_result": f"Error: {str(e)}", "next_node": "generator"}
 
 async def rag_retriever_node(state: AgentState):
-    """RAG: Hafızadan bilgi çeker."""
+    """RAG: Vektör veritabanından bilgi çeker."""
     print("--- [RAG] Searching Memory ---")
     try:
         client = QdrantClient(url=QDRANT_URL)
         embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        
         vector = embeddings.embed_query(state['messages'][-1].content)
-        hits = client.search(collection_name=COLLECTION_NAME, query_vector=vector, limit=2)
+        hits = client.search(collection_name="ada_memory", query_vector=vector, limit=2)
         memories = [hit.payload["text"] for hit in hits]
     except Exception as e:
         memories = [f"Memory offline: {e}"]
@@ -241,7 +298,7 @@ async def tabpfn_predictor_node(state: AgentState):
     return {"final_response": "**FORECAST:** Occupancy 94% (+/- 2%) with High Confidence.", "next_node": END}
 
 async def generator_node(state: AgentState):
-    """GENERATOR: Cevabı sentezler."""
+    """GENERATOR: Son cevabı üretir."""
     print("--- [GENERATOR] Speaking ---")
     
     context = ""
@@ -293,76 +350,46 @@ def build_graph():
 
 ---
 
-## 4. API Giriş Noktası
-Bu dosya, LangGraph beynini sunar ve bir "Öğrenme" endpoint'i ekler.
-
-**Dosya adı:** `backend/main.py`
+## 4. `backend/ingest.py`
 
 ```python
 import os
-import uvicorn
-import subprocess
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from langchain_core.messages import HumanMessage
+import glob
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from qdrant_client import QdrantClient, models
+from dotenv import load_dotenv
 
-from architecture_graph import build_graph
+load_dotenv()
+DOCS_DIR = "../docs"
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 
-app = FastAPI(title="Ada Cognitive API", version="5.0")
+print(f"🚀 Ingesting Knowledge Base...")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+client = QdrantClient(url=QDRANT_URL)
+collection_name = "ada_memory"
+client.recreate_collection(collection_name=collection_name, vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE))
 
-brain_graph = build_graph()
+print("-> Loading Embeddings...")
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-class ChatRequest(BaseModel):
-    prompt: str
-    context: Optional[Dict[str, Any]] = {}
+files = glob.glob(f"{DOCS_DIR}/**/*.md", recursive=True)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+points = []
 
-@app.get("/health")
-def health():
-    return {"status": "COGNITIVE_SYSTEM_ONLINE", "modules": ["LangGraph", "MAKER", "RAG", "SEAL"]}
+for idx, file_path in enumerate(files):
+    with open(file_path, "r", encoding="utf-8") as f:
+        content = f.read()
+        chunks = text_splitter.create_documents([content])
+        for i, chunk in enumerate(chunks):
+            vector = embeddings.embed_query(chunk.page_content)
+            points.append(models.PointStruct(
+                id=idx * 1000 + i,
+                vector=vector,
+                payload={"text": chunk.page_content, "source": file_path}
+            ))
 
-def run_ingestion_task():
-    print("Triggering background memory ingestion...")
-    subprocess.run(["python", "ingest.py"], check=True)
-
-@app.post("/api/v1/learn")
-async def trigger_learning(background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_ingestion_task)
-    return {"status": "Learning protocol initiated."}
-
-@app.post("/api/v1/chat")
-async def chat_endpoint(request: ChatRequest):
-    try:
-        inputs = {
-            "messages": [HumanMessage(content=request.prompt)],
-            "intent": "UNKNOWN",
-            "next_node": "router",
-            "generated_code": "",
-            "execution_result": "",
-            "memories": [],
-            "final_response": ""
-        }
-        
-        final_state = await brain_graph.ainvoke(inputs)
-        
-        return {
-            "text": final_state.get("final_response", "System processing error."),
-            "traces": []
-        }
-        
-    except Exception as e:
-        print(f"Graph Execution Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+if points:
+    client.upsert(collection_name=collection_name, points=points)
+    print(f"✅ {len(points)} memories implanted.")
 ```
