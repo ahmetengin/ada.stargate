@@ -105,8 +105,11 @@ const App: React.FC = () => {
       id: `user_${Date.now()}`, role: MessageRole.User, text: text, timestamp: Date.now(),
     };
     
+    // Optimistic Update
     const newMessages = [...messages, newUserMessage];
     setMessages(newMessages);
+    
+    // Update Memory immediately
     coalaBrain.setHistory(newMessages);
 
     try {
@@ -135,7 +138,7 @@ const App: React.FC = () => {
             newMessagesList.push({
                 id: `mod_${Date.now()}`,
                 role: MessageRole.Model,
-                text: response.text,
+                text: response.text || "...",
                 timestamp: Date.now(),
                 nodePath: response.nodePath
             });
@@ -143,8 +146,15 @@ const App: React.FC = () => {
         
         setMessages(newMessagesList);
 
-    } catch (e) {
+    } catch (e: any) {
         console.error("CoALA Cycle Failed:", e);
+        // Visible Error Handling in Chat
+        setMessages(prev => [...prev, {
+            id: `err_${Date.now()}`,
+            role: MessageRole.Model,
+            text: `⚠️ **Sistem Hatası / System Error**\n\nBağlantı kurulamadı veya bir hata oluştu.\n*Detay: ${e.message || 'Unknown Error'}*`,
+            timestamp: Date.now()
+        }]);
     } finally {
         setIsLoading(false);
     }
@@ -251,6 +261,7 @@ const App: React.FC = () => {
                     onModelChange={setSelectedModel} onSend={handleSend}
                     onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
                     onTraceClick={() => setIsObserverOpen(true)}
+                    onRadioClick={() => setIsVoiceModalOpen(true)}
                     onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} // Simplified toggle for mobile
                     onToggleSidebar={() => setIsMobileMenuOpen(true)} 
                 />

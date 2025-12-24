@@ -7,8 +7,6 @@ import { aceService } from './aceService';
 import { marinaExpert } from './agents/marinaAgent';
 import { financeExpert } from './agents/financeAgent';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const scanSectorTool: FunctionDeclaration = {
   name: 'scan_sector',
   description: 'Scans the radar for vessels in a given sector.',
@@ -95,6 +93,12 @@ export const orchestratorService = {
 
         const systemInstruction = `You are ADA. Use the following EVOLVING PLAYBOOK for this domain:\n${activePlaybook}\n\nAdopt the tone of the Big 4 domains. When asked to check debt or scan sector, use the provided tools.`;
 
+        // Initialize AI Client Safely Here
+        if (!process.env.API_KEY) {
+            throw new Error("API Key is missing. Please check .env file.");
+        }
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
@@ -177,15 +181,21 @@ export const orchestratorService = {
 
         return finalResponse;
 
-    } catch (e) {
+    } catch (e: any) {
       onTrace({
         id: `err_${Date.now()}`,
         timestamp,
         node: 'ada.stargate',
         step: 'ERROR',
-        content: "Neural link unstable. Falling back to local reflexes.",
+        content: `Neural link unstable: ${e.message}`,
         isError: true
       } as any);
+      
+      // Fallback for Demo if API Key is missing
+      if (e.message.includes("API Key is missing")) {
+          return { text: "⚠️ **SYSTEM ALERT**\n\nGoogle Gemini API Anahtarı bulunamadı. Lütfen `.env` dosyasını kontrol edin ve sunucuyu yeniden başlatın." };
+      }
+
       return { text: "⚠️ **SİSTEM ALERTI**\n\nAna beyne ulaşılamıyor. ACE Playbook'ları pasif." };
     }
   }
