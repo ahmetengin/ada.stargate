@@ -1,3 +1,4 @@
+// components/chat/MessageBubble.tsx
 
 import React, { useState, useEffect, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -15,7 +16,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
   const [vesselProfiles, setVesselProfiles] = useState<Record<string, VesselIntelligenceProfile>>({});
 
   useEffect(() => {
-    if (message.role === MessageRole.Model && message.text) {
+    // UPDATED: Extract vessels from both Model AND User text for a more responsive UI
+    if (message.text) {
       const lowerText = message.text.toLowerCase();
       
       const allVessels = marinaExpert.getAllFleetVessels();
@@ -24,8 +26,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
       allVessels.forEach(vessel => {
           const fullName = vessel.name.toLowerCase();
           const nameParts = fullName.split(' ');
+          // Extract core name (e.g. "Phisedelia" from "S/Y Phisedelia")
           const coreName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : fullName;
 
+          // Check for exact matches or core name matches
           if (lowerText.includes(fullName) || (coreName.length >= 4 && lowerText.includes(coreName))) {
               foundProfiles[vessel.name] = vessel;
           }
@@ -86,8 +90,19 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
                         {message.text}
                     </ReactMarkdown>
                     
-                    {/* Injected Vessel Intelligence Cards */}
+                    {/* Injected Vessel Intelligence Cards - Appear immediately when a vessel is mentioned */}
                     <div className="space-y-4 mt-4">
+                        {Object.values(vesselProfiles).map((profile, idx) => (
+                            <VesselCard key={idx} profile={profile} />
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* If it's a user message and a vessel was mentioned, show the card below the user bubble too */}
+            {isUser && Object.keys(vesselProfiles).length > 0 && (
+                <div className="mt-4 space-y-4 text-left flex justify-end">
+                    <div className="w-full max-w-sm">
                         {Object.values(vesselProfiles).map((profile, idx) => (
                             <VesselCard key={idx} profile={profile} />
                         ))}

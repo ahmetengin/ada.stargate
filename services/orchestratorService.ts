@@ -1,5 +1,6 @@
+// services/orchestratorService.ts
 
-import { AgentAction, AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
+import { AgentTraceLog, UserProfile, OrchestratorResponse, NodeName, Tender, RegistryEntry, Message, TenantConfig } from '../types';
 import { getCurrentMaritimeTime } from './utils';
 import { sendToBackend } from './api';
 
@@ -14,10 +15,9 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
 
 export const orchestratorService = {
     /**
-     * PROCESS REQUEST v2.0 (HYPERSCALE BRIDGE)
-     * This function no longer contains business logic. It acts as a secure bridge,
-     * forwarding the user's prompt and the full operational context to the 
-     * Python backend where the LangGraph brain resides.
+     * PROCESS REQUEST v5.4 (COGNITIVE RECALL)
+     * Orchestrates the brain's reasoning while visualizing the 
+     * Retrieval-Augmented Generation (RAG) process for user memory.
      */
     async processRequest(
         prompt: string, 
@@ -29,41 +29,49 @@ export const orchestratorService = {
         activeTenantConfig: TenantConfig
     ): Promise<OrchestratorResponse> {
         
-        const traces: AgentTraceLog[] = [createLog('ada.stargate', 'ROUTING', `[EDGE] Request received. Transmitting to Hyperscale Core...`, 'ORCHESTRATOR')];
+        const traces: AgentTraceLog[] = [
+            createLog('ada.stargate', 'ROUTING', `[EDGE] Input received: "${prompt.substring(0, 30)}..."`, 'ORCHESTRATOR'),
+            // NEW: Cognitive Recall Visual Trace
+            createLog('ada.legal', 'THINKING', `Retrieving historical interaction logs for ${user.name} from Qdrant Neural Memory...`, 'EXPERT'),
+        ];
 
-        // Package the entire current state for the backend brain
+        // Simulate RAG Hit for the trace - in a live backend this is a real semantic search
+        const isRegisteredUser = user.name === 'Ahmet Engin' || user.name === 'Kpt. Barbaros';
+        if (isRegisteredUser) {
+            traces.push(createLog('ada.legal', 'OUTPUT', `Context match found: User history and S/Y Phisedelia metadata recovered.`, 'WORKER'));
+        } else {
+            traces.push(createLog('ada.legal', 'OUTPUT', `No specific history found for ${user.name}. Initializing guest context.`, 'WORKER'));
+        }
+
         const context = {
             user_profile: user,
             active_tenant: activeTenantConfig,
             marina_state: {
                 vessels_in_port: vesselsInPort,
-                pending_movements: registry.length,
+                pending_movements: registry.length || 0,
                 active_tenders: tenders.filter(t => t.status === 'Busy').length
             },
-            chat_history: messages.slice(-5) // Send last 5 messages for context
+            chat_history: messages.slice(-5)
         };
 
         try {
             const backendResponse = await sendToBackend(prompt, user, context);
 
             if (backendResponse) {
-                traces.push(createLog('ada.stargate', 'OUTPUT', `[CORE] Response received from Python Backend.`, 'ORCHESTRATOR'));
                 return {
-                    text: backendResponse.text || "An unexpected error occurred in the backend.",
+                    text: backendResponse.text || "Cognitive error in Hyperscale Core.",
                     actions: backendResponse.actions || [],
-                    // Combine traces from backend and frontend
                     traces: [...traces, ...(backendResponse.traces || [])]
                 };
             }
 
-            // Fallback if backend is unreachable
-            throw new Error("Backend communication failed, response was null.");
+            throw new Error("Core Timeout");
 
         } catch (error) {
-            console.error("Orchestrator to Backend failed:", error);
-            const errorTrace = createLog('ada.stargate', 'CRITICAL', 'Neural link to Hyperscale Core is unstable. Operating in limited Edge mode.', 'ORCHESTRATOR');
+            console.error("Orchestrator failed:", error);
+            const errorTrace = createLog('ada.stargate', 'CRITICAL', 'Neural link unstable. Switching to local survival mode.', 'ORCHESTRATOR');
             return {
-                text: "⚠️ **SYSTEM ALERT**\n\nAna beyinle bağlantı kurulamadı. Sistem, sınırlı yeteneklerle (Dağ Modu) çalışıyor.\n\nLütfen sistem yöneticisi ile görüşün.",
+                text: "⚠️ **SİSTEM ALERTI**\n\nAna beyne ulaşılamıyor. Sistem yerel 'survival' modunda çalışıyor.\n\n*Not: Geçmiş kayıtlarınızı veya tekne detaylarınızı şu an tam olarak hatırlayamıyor olabilirim.*",
                 actions: [],
                 traces: [...traces, errorTrace]
             };

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { X, ScanLine, AlertTriangle, CameraOff, CreditCard, UserSquare2, Focus, MoveDown, CheckCircle2, UploadCloud, ShieldCheck } from 'lucide-react';
+import { X, ScanLine, AlertTriangle, CameraOff, CreditCard, UserSquare2, Focus, MoveDown } from 'lucide-react';
 
 interface ScanResult {
     type: 'PASSPORT' | 'CARD';
@@ -40,13 +40,30 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({ isOpen, onClos
 
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
+      // First attempt: High-res environment facing (Ideal for mobile OCR)
+      const primaryConstraints: MediaStreamConstraints = { 
           video: { 
               facingMode: 'environment',
-              width: { ideal: 1920 }, // Prefer High Res for OCR
+              width: { ideal: 1920 },
               height: { ideal: 1080 } 
           } 
-      });
+      };
+
+      let mediaStream: MediaStream;
+
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia(primaryConstraints);
+      } catch (e: any) {
+        console.warn("Environment camera not found or constraints failed, falling back to default camera...", e);
+        // Fallback: Any available video device with standard constraints
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+            video: {
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        });
+      }
+
       setStream(mediaStream);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
@@ -54,12 +71,23 @@ export const PassportScanner: React.FC<PassportScannerProps> = ({ isOpen, onClos
       setScanning(true);
       simulateScanning();
     } catch (err: any) {
-      console.error("Camera access denied", err);
+      console.error("Camera access error:", err);
+      
+      let errorMessage = "Unable to access camera.";
+      
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-          setError("Camera permission was denied.");
+          errorMessage = "Camera permission was denied. Please check browser settings.";
+      } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          errorMessage = "No camera device found on this system.";
+      } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          errorMessage = "Camera is already in use by another application.";
+      } else if (err.name === 'OverconstrainedError') {
+          errorMessage = "The requested camera features are not supported by your hardware.";
       } else {
-          setError("Unable to access camera.");
+          errorMessage = `Camera error: ${err.message || 'Unknown error'}`;
       }
+      
+      setError(errorMessage);
       setScanning(false);
     }
   };

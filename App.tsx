@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast, VhfLog } from './types';
+import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast, VhfLog, GroundingSource } from './types';
 import { Sidebar, SidebarTabId } from './components/layout/Sidebar';
 import { ChatInterface } from './components/chat/ChatInterface';
 import { Canvas } from './components/dashboards/Canvas';
@@ -53,11 +53,10 @@ const App: React.FC = () => {
   const [showAuthOverlay, setShowAuthOverlay] = useState(false);
   const [targetRole, setTargetRole] = useState<string>('');
   
-  // Theme State Initialization
   const [theme, setTheme] = useState<ThemeMode>(persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
   
   const [messages, setMessages] = useState<Message[]>([]);
-  const isInitialLoad = useRef(true); // Ref to track initial load vs. role change
+  const isInitialLoad = useRef(true);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
   const [nodeStates, setNodeStates] = useState<Record<string, 'connected' | 'working' | 'disconnected'>>({'ada.marina': 'connected', 'ada.finance': 'connected', 'ada.legal': 'connected', 'ada.sea': 'connected', 'ada.technic': 'connected', 'ada.customer': 'connected', 'ada.security': 'connected', 'ada.orchestrator': 'working'});
@@ -77,12 +76,10 @@ const App: React.FC = () => {
   const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
   useEffect(() => {
-    // Increase boot time slightly to show off the new sequence
     const timer = setTimeout(() => setShowBootSequence(false), 4500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Theme Handling Effect
   useEffect(() => {
     const applyTheme = () => {
       const root = window.document.documentElement;
@@ -107,31 +104,25 @@ const App: React.FC = () => {
     }
   }, [theme]);
 
-  // EFFECT TO HANDLE INITIAL WELCOME MESSAGE AND ROLE CHANGES
   useEffect(() => {
     const initialSystemMessage: Message = {
       id: 'init', role: MessageRole.System, text: "Bilişsel Sistem Aktif.", timestamp: Date.now()
     };
 
     if (showBootSequence) {
-      // While booting, only have the system message ready
       setMessages([initialSystemMessage]);
       return;
     }
     
-    // After boot sequence is complete
     if (isInitialLoad.current) {
-      // This is the first time after boot, set the full welcome message
       const welcomeMessage: Message = {
         id: `model_welcome_initial_${Date.now()}`, role: MessageRole.Model,
-        text: `**ADA.STARGATE (HYPERSCALE)**\n\nSistem Başlatıldı. Bilişsel Varlık Modu devrede.\n\nHoş geldiniz, **Sayın ${userProfile.name}**.\nŞu an **${userProfile.role}** yetkisiyle operasyon merkezindesiniz.\n\n*LangGraph, SEAL ve MAKER modülleri emrinize amade.*`,
+        text: `**ADA.STARGATE (HYPERSCALE)**\n\nSistem Başlatıldı. Bilişsel Varlık Modu devrede.\n\nHoş geldiniz, **Sayın ${userProfile.name}**.\nŞu an **${userProfile.role}** yetkisiyle operasyon merkezindesiniz.\n\n*Hafızamdaki verileri tarıyorum. Sizi ve teknenizi tanımaya hazırım.*`,
         timestamp: Date.now()
       };
       setMessages([initialSystemMessage, welcomeMessage]);
       isInitialLoad.current = false;
     } else {
-      // This is a subsequent role change, not the initial load.
-      // Append a system message instead of wiping the chat history to preserve context.
       const roleChangeMessage: Message = {
         id: `sys_role_change_${Date.now()}`,
         role: MessageRole.System,
@@ -142,7 +133,6 @@ const App: React.FC = () => {
     }
   }, [showBootSequence, userProfile.name, userProfile.role]);
 
-  // PROACTIVE ARRIVAL TRIGGER FOR CAPTAIN BARBAROS
   useEffect(() => {
       if (userProfile.role === 'CAPTAIN' && userProfile.name.includes('Barbaros') && !hasAnnouncedArrival) {
           const timer = setTimeout(async () => {
@@ -195,12 +185,15 @@ const App: React.FC = () => {
     persistenceService.save(STORAGE_KEYS.THEME, newTheme);
   };
 
-  // --- PRESENTER LOGIC ---
   const activatePresenterMode = () => {
       setPresentationState({ isActive: true, slide: 'intro', transcript: '', analysisResults: null });
       setAppMode('presentation');
   };
 
+  /**
+   * RE-ENABLED STREAMING:
+   * Using streamChatResponse to provide real-time cognitive feedback.
+   */
   const handleSend = async (text: string, attachments: File[]) => {
     setIsLoading(true);
     const newUserMessage: Message = {
@@ -209,32 +202,47 @@ const App: React.FC = () => {
     const newMessages = [...messages, newUserMessage];
     setMessages(newMessages);
 
-    // Call the new backend-connected orchestrator
-    const res = await orchestratorService.processRequest(
-      text, userProfile, tenders, registry, vesselsInPort, newMessages, activeTenantConfig
-    );
-    
-    // Update traces from backend
-    setAgentTraces(prev => [...res.traces, ...prev].sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
-
-    // Execute any UI actions returned from the backend
-    if (res.actions && res.actions.length > 0) {
-        res.actions.forEach(action => {
-            if (action.name === 'ada.mission_control.start_presentation') {
-                activatePresenterMode();
-            }
-        });
-    }
-
-    // ARCHITECTURE CHANGE: Streaming logic is removed.
-    // The new orchestrator always returns a complete response.
-    const newModelMessage: Message = {
-        id: `model_${Date.now()}`,
-        role: MessageRole.Model,
-        text: res.text,
-        timestamp: Date.now(),
+    // Initial Trace Log to show Ada is thinking
+    const initialTrace: AgentTraceLog = {
+        id: `tr_${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString(),
+        node: 'ada.stargate',
+        step: 'THINKING',
+        content: `İşlem başlatılıyor: ${text.substring(0, 30)}...`,
+        persona: 'ORCHESTRATOR'
     };
-    setMessages(prev => [...prev, newModelMessage]);
+    setAgentTraces(prev => [initialTrace, ...prev]);
+
+    let modelResponseText = "";
+    const modelMessageId = `model_${Date.now()}`;
+
+    // Add empty placeholder message for streaming
+    setMessages(prev => [...prev, {
+        id: modelMessageId,
+        role: MessageRole.Model,
+        text: "",
+        timestamp: Date.now()
+    }]);
+
+    await streamChatResponse(
+        newMessages,
+        selectedModel,
+        false, // useSearch default
+        false, // useVision default
+        registry,
+        tenders,
+        userProfile,
+        vesselsInPort,
+        activeTenantConfig,
+        (chunk, grounding) => {
+            modelResponseText += chunk;
+            setMessages(prev => prev.map(m => 
+                m.id === modelMessageId 
+                ? { ...m, text: modelResponseText, groundingSources: grounding } 
+                : m
+            ));
+        }
+    );
     
     setIsLoading(false);
   };
@@ -264,13 +272,11 @@ const App: React.FC = () => {
         return;
     }
     
-    // Dashboard Logic
     if (tabId === 'crm') setGmDashboardTab('customer');
-    else if (tabId === 'tech') setGmDashboardTab('commercial'); // Mapping tech to commercial/tech as placeholder
+    else if (tabId === 'tech') setGmDashboardTab('commercial'); 
     else if (tabId === 'hr') setGmDashboardTab('hr');
     else setGmDashboardTab(undefined);
 
-    // Expand canvas if needed for dashboard views
     if (['crm', 'tech', 'hr'].includes(tabId) && window.innerWidth > 1024 && canvasWidth < 100) {
         setCanvasWidth(500); 
     }
@@ -278,13 +284,12 @@ const App: React.FC = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // Determine active sidebar tab based on state
   const getActiveSidebarTab = (): SidebarTabId => {
       if (isObserverOpen) return 'observer';
       if (appMode === 'presentation') return 'presenter';
       if (isVoiceModalOpen) return 'vhf';
       if (gmDashboardTab === 'customer') return 'crm';
-      if (gmDashboardTab === 'commercial') return 'tech'; // Approximate map
+      if (gmDashboardTab === 'commercial') return 'tech';
       if (gmDashboardTab === 'hr') return 'hr';
       return 'none';
   };

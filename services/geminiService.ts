@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 import { Message, ModelType, GroundingSource, RegistryEntry, Tender, UserProfile, TenantConfig, MessageRole } from "../types";
 import { generateBaseSystemInstruction, generateContextBlock } from "./prompts";
@@ -9,12 +8,15 @@ const createClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 // COST OPTIMIZATION: Max history length to send to API
 export const MAX_HISTORY_LENGTH = 10; 
 
-// @FIX: Implemented streamChatResponse with the correct signature to match the call in App.tsx.
+/**
+ * Handles real-time streaming from Gemini with Search Grounding support.
+ * Injected context ensures Ada remembers users (e.g. Ahmet Engin, Kpt. Barbaros).
+ */
 export const streamChatResponse = async (
   messages: Message[],
   modelType: ModelType,
   useSearch: boolean,
-  _useVision: boolean, // Not used, but keeping for signature match
+  _useVision: boolean, 
   registry: RegistryEntry[],
   tenders: Tender[],
   userProfile: UserProfile,
@@ -24,16 +26,20 @@ export const streamChatResponse = async (
 ) => {
   try {
     const ai = createClient();
-    const modelName = modelType === ModelType.Pro ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
+    // Use gemini-3-flash-preview for speed in basic tasks, Pro for complex ones
+    const modelName = modelType === ModelType.Pro ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
     
     const systemInstruction = generateBaseSystemInstruction(tenantConfig);
     const contextBlock = generateContextBlock(registry, tenders, userProfile, vesselsInPort);
-    const history = formatHistory(messages);
+    
+    // Format history and limit length for token efficiency
+    const history = formatHistory(messages.slice(-MAX_HISTORY_LENGTH));
 
     const lastMessage = history.pop();
     if (!lastMessage) return;
 
-    // Inject live context into the last user message
+    // INJECT RAG CONTEXT: We place the live operational context into the latest message
+    // so the model is always aware of the user's specific state and history.
     lastMessage.parts.unshift({ text: contextBlock });
 
     const contents = [...history, lastMessage];
@@ -43,6 +49,10 @@ export const streamChatResponse = async (
       contents: contents,
       config: {
         systemInstruction: systemInstruction,
+        // Pro model handles complex reasoning and larger context better
+        ...(modelType === ModelType.Pro && {
+            thinkingConfig: { thinkingBudget: 0 } // Disable thinking for lowest latency in chat
+        }),
         tools: useSearch ? [{ googleSearch: {} }] : undefined,
       },
     });
@@ -52,6 +62,7 @@ export const streamChatResponse = async (
       const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata;
       let sources: GroundingSource[] = [];
 
+      // Extract Grounding Sources (Search Results)
       if (groundingMetadata?.groundingChunks) {
         sources = groundingMetadata.groundingChunks
           .filter((c: any) => c.web)
@@ -64,11 +75,10 @@ export const streamChatResponse = async (
     }
   } catch (error) {
     handleGeminiError(error);
-    onChunk("Sorry, I encountered an error while processing your request.");
+    onChunk("⚠️ Bilişsel bağlantı hatası. Lütfen tekrar deneyin.");
   }
 };
 
-// @FIX: Implemented and exported generateSimpleResponse, which was missing.
 export const generateSimpleResponse = async (
     prompt: string,
     userProfile: UserProfile,
@@ -79,42 +89,33 @@ export const generateSimpleResponse = async (
     tenantConfig: TenantConfig
 ): Promise<string> => {
     const ai = createClient();
-    // Executive agent tasks are complex and benefit from the Pro model
     const modelName = 'gemini-3-pro-preview';
     const systemInstruction = generateBaseSystemInstruction(tenantConfig);
     
-    const fullMessages: Message[] = [...messages, {id: 'current', role: MessageRole.User, text: prompt, timestamp: Date.now()}];
-    const history = formatHistory(fullMessages);
     const contextBlock = generateContextBlock(registry, tenders, userProfile, vesselsInPort);
+    const history = formatHistory(messages);
     
-    const lastMessage = history.pop();
-    if (!lastMessage) return "Error: No message to process.";
-    
-    lastMessage.parts.unshift({ text: contextBlock });
-    const contents = [...history, lastMessage];
+    const contents = [...history, { role: 'user', parts: [{ text: contextBlock }, { text: prompt }] }];
 
     try {
         const response = await ai.models.generateContent({
             model: modelName,
             contents,
-            config: {
-                systemInstruction,
-            },
+            config: { systemInstruction },
         });
-        return response.text ?? "No response text was generated.";
+        return response.text ?? "Yanıt üretilemedi.";
     } catch (error) {
         handleGeminiError(error);
-        return "An error occurred while generating the response.";
+        return "Bir hata oluştu.";
     }
 };
 
-// @FIX: Implemented and exported generateSpeech, which was missing.
 export const generateSpeech = async (text: string): Promise<string | null> => {
     const ai = createClient();
     try {
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
-            contents: [{ parts: [{ text: `Say with a calm, professional tone: ${text}` }] }],
+            contents: [{ parts: [{ text: `Profesyonel bir sesle söyle: ${text}` }] }],
             config: {
                 responseModalities: [Modality.AUDIO],
                 speechConfig: {
@@ -127,8 +128,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
         const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         return base64Audio || null;
     } catch (error) {
-        console.error("Speech generation failed:", error);
-        handleGeminiError(error);
+        console.error("Ses sentezleme hatası:", error);
         return null;
     }
 };

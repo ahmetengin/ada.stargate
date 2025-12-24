@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, LiveServerMessage, Modality, Blob, Tool } from "@google/genai";
 import { UserProfile, TenantConfig } from '../types';
 import { getVoiceSystemInstruction } from './voicePrompts';
@@ -213,7 +212,8 @@ export class LiveSession {
     }
 
     private handleSessionError(e: ErrorEvent) {
-        console.error("Live session error:", e);
+        // Use a string template to prevent '[object Object]' logging
+        console.error(`[Live Session] Error encountered: ${e.message || 'Connection reset or protocol violation'}`);
         this.setStatus('error');
         this.disconnect();
     }
