@@ -1,5 +1,8 @@
+
+// App.tsx
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast, VhfLog, GroundingSource } from './types';
+import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast } from './types';
 import { Sidebar, SidebarTabId } from './components/layout/Sidebar';
 import { ChatInterface } from './components/chat/ChatInterface';
 import { Canvas } from './components/dashboards/Canvas';
@@ -10,15 +13,12 @@ import { AuthOverlay } from './components/layout/AuthOverlay';
 import { PresentationOverlay } from './components/PresentationOverlay';
 import { ObserverOverlay } from './components/ObserverOverlay'; 
 import { VoiceModal } from './components/modals/VoiceModal';
-import { orchestratorService } from './services/orchestratorService';
-import { executiveExpert } from './services/agents/executiveExpert';
+import { coalaBrain } from './services/coalaBrain';
 import { persistenceService, STORAGE_KEYS } from './services/persistence';
-import { streamChatResponse } from './services/geminiService';
 import { FEDERATION_REGISTRY, TENANT_CONFIG } from './services/config';
 import { telemetryStream } from './services/telemetryStream';
 import { DraggableSplitter } from './components/layout/DraggableSplitter';
 import { StatusBar } from './components/layout/StatusBar';
-import { marinaExpert } from './services/agents/marinaAgent'; 
 import { MOCK_USER_DATABASE } from './services/mockData';
 
 const MIN_PANEL_WIDTH = 280;
@@ -55,11 +55,19 @@ const App: React.FC = () => {
   
   const [theme, setTheme] = useState<ThemeMode>(persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
   
-  const [messages, setMessages] = useState<Message[]>([]);
+  // INITIALIZE WITH SYSTEM PROTOCOL MESSAGE
+  const [messages, setMessages] = useState<Message[]>([
+    {
+        id: 'sys_init',
+        role: MessageRole.System,
+        text: 'Protocol Initialized',
+        timestamp: Date.now()
+    }
+  ]);
+
   const isInitialLoad = useRef(true);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
-  const [nodeStates, setNodeStates] = useState<Record<string, 'connected' | 'working' | 'disconnected'>>({'ada.marina': 'connected', 'ada.finance': 'connected', 'ada.legal': 'connected', 'ada.sea': 'connected', 'ada.technic': 'connected', 'ada.customer': 'connected', 'ada.security': 'connected', 'ada.orchestrator': 'working'});
   const [registry, setRegistry] = useState<RegistryEntry[]>([]);
   const [tenders, setTenders] = useState<Tender[]>([]);
   const [agentTraces, setAgentTraces] = useState<AgentTraceLog[]>([]);
@@ -71,8 +79,6 @@ const App: React.FC = () => {
   const [presentationState, setPresentationState] = useState<PresentationState>({ isActive: false, slide: 'intro', transcript: '', analysisResults: null });
   const [weatherData, setWeatherData] = useState<WeatherForecast | null>(null);
   
-  const [hasAnnouncedArrival, setHasAnnouncedArrival] = useState(false);
-
   const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
   useEffect(() => {
@@ -84,80 +90,11 @@ const App: React.FC = () => {
     const applyTheme = () => {
       const root = window.document.documentElement;
       const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      
-      if (isDark) {
-        root.classList.add('dark');
-        root.style.colorScheme = 'dark';
-      } else {
-        root.classList.remove('dark');
-        root.style.colorScheme = 'light';
-      }
+      if (isDark) root.classList.add('dark');
+      else root.classList.remove('dark');
     };
-
     applyTheme();
-
-    if (theme === 'auto') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => applyTheme();
-      mediaQuery.addEventListener('change', handleChange);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
   }, [theme]);
-
-  useEffect(() => {
-    const initialSystemMessage: Message = {
-      id: 'init', role: MessageRole.System, text: "Bilişsel Sistem Aktif.", timestamp: Date.now()
-    };
-
-    if (showBootSequence) {
-      setMessages([initialSystemMessage]);
-      return;
-    }
-    
-    if (isInitialLoad.current) {
-      const welcomeMessage: Message = {
-        id: `model_welcome_initial_${Date.now()}`, role: MessageRole.Model,
-        text: `**ADA.STARGATE (HYPERSCALE)**\n\nSistem Başlatıldı. Bilişsel Varlık Modu devrede.\n\nHoş geldiniz, **Sayın ${userProfile.name}**.\nŞu an **${userProfile.role}** yetkisiyle operasyon merkezindesiniz.\n\n*Hafızamdaki verileri tarıyorum. Sizi ve teknenizi tanımaya hazırım.*`,
-        timestamp: Date.now()
-      };
-      setMessages([initialSystemMessage, welcomeMessage]);
-      isInitialLoad.current = false;
-    } else {
-      const roleChangeMessage: Message = {
-        id: `sys_role_change_${Date.now()}`,
-        role: MessageRole.System,
-        text: `Kimlik değiştirildi. Yeni oturum: ${userProfile.name} (${userProfile.role}).`,
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, roleChangeMessage]);
-    }
-  }, [showBootSequence, userProfile.name, userProfile.role]);
-
-  useEffect(() => {
-      if (userProfile.role === 'CAPTAIN' && userProfile.name.includes('Barbaros') && !hasAnnouncedArrival) {
-          const timer = setTimeout(async () => {
-              const hail = await marinaExpert.generateProactiveHail("S/Y Phisedelia", activeTenantConfig);
-              setMessages(prev => [...prev, {
-                  id: `proactive_hail_${Date.now()}`,
-                  role: MessageRole.Model,
-                  text: hail,
-                  timestamp: Date.now()
-              }]);
-              setHasAnnouncedArrival(true);
-          }, 1500); 
-          return () => clearTimeout(timer);
-      }
-  }, [userProfile, hasAnnouncedArrival, activeTenantConfig]);
-
-  useEffect(() => {
-    const unsubscribe = telemetryStream.subscribe(data => {
-      if (data.type === 'VESSEL_TELEMETRY' && data.payload?.environment) {
-        const { windSpeed, windDir } = data.payload.environment;
-        setWeatherData(prev => ({ ...prev, temp: 24, condition: 'Sunny', windSpeed, windDir }));
-      }
-    });
-    return unsubscribe;
-  }, []);
 
   const handleRoleChange = (role: string) => {
     setShowAuthOverlay(true);
@@ -167,120 +104,75 @@ const App: React.FC = () => {
   const handleAuthComplete = () => {
     setUserProfile(MOCK_USER_DATABASE[targetRole as keyof typeof MOCK_USER_DATABASE] || MOCK_USER_DATABASE['VISITOR']);
     setShowAuthOverlay(false);
-    setHasAnnouncedArrival(false);
   };
   
-  const handleTenantSwitch = (tenantId: string) => {
-      setActiveTenantId(tenantId);
-      persistenceService.save(STORAGE_KEYS.ACTIVE_TENANT_ID, tenantId);
-      const tenant = FEDERATION_REGISTRY.peers.find(p => p.id === tenantId);
-      setMessages(prev => [...prev, {
-          id: `sys_${Date.now()}`, role: MessageRole.System,
-          text: `Bağlam değiştirildi: ${tenant?.name || 'Bilinmeyen Düğüm'}.`, timestamp: Date.now()
-      }]);
-  };
-  
-  const handleThemeChange = (newTheme: ThemeMode) => {
-    setTheme(newTheme);
-    persistenceService.save(STORAGE_KEYS.THEME, newTheme);
-  };
-
-  const activatePresenterMode = () => {
-      setPresentationState({ isActive: true, slide: 'intro', transcript: '', analysisResults: null });
-      setAppMode('presentation');
-  };
-
-  /**
-   * RE-ENABLED STREAMING:
-   * Using streamChatResponse to provide real-time cognitive feedback.
-   */
   const handleSend = async (text: string, attachments: File[]) => {
     setIsLoading(true);
     const newUserMessage: Message = {
       id: `user_${Date.now()}`, role: MessageRole.User, text: text, timestamp: Date.now(),
     };
+    
     const newMessages = [...messages, newUserMessage];
     setMessages(newMessages);
+    coalaBrain.setHistory(newMessages);
 
-    // Initial Trace Log to show Ada is thinking
-    const initialTrace: AgentTraceLog = {
-        id: `tr_${Date.now()}`,
-        timestamp: new Date().toLocaleTimeString(),
-        node: 'ada.stargate',
-        step: 'THINKING',
-        content: `İşlem başlatılıyor: ${text.substring(0, 30)}...`,
-        persona: 'ORCHESTRATOR'
-    };
-    setAgentTraces(prev => [initialTrace, ...prev]);
+    try {
+        const stats = { vessels: vesselsInPort, tenders: tenders.length };
+        const response = await coalaBrain.cycle(
+            text, 
+            userProfile, 
+            activeTenantConfig, 
+            stats, 
+            (trace) => setAgentTraces(prev => [trace, ...prev])
+        );
 
-    let modelResponseText = "";
-    const modelMessageId = `model_${Date.now()}`;
-
-    // Add empty placeholder message for streaming
-    setMessages(prev => [...prev, {
-        id: modelMessageId,
-        role: MessageRole.Model,
-        text: "",
-        timestamp: Date.now()
-    }]);
-
-    await streamChatResponse(
-        newMessages,
-        selectedModel,
-        false, // useSearch default
-        false, // useVision default
-        registry,
-        tenders,
-        userProfile,
-        vesselsInPort,
-        activeTenantConfig,
-        (chunk, grounding) => {
-            modelResponseText += chunk;
-            setMessages(prev => prev.map(m => 
-                m.id === modelMessageId 
-                ? { ...m, text: modelResponseText, groundingSources: grounding } 
-                : m
-            ));
-        }
-    );
-    
-    setIsLoading(false);
+        setMessages(prev => [...prev, {
+            id: `mod_${Date.now()}`,
+            role: MessageRole.Model,
+            text: response.text,
+            timestamp: Date.now()
+        }]);
+    } catch (e) {
+        console.error("CoALA Cycle Failed:", e);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
-  const handleTranscriptReceived = (userText: string, modelText: string) => {
-      const newEntries: Message[] = [];
-      if (userText) {
-          newEntries.push({ id: `user_voice_${Date.now()}`, role: MessageRole.User, text: `(VHF) ${userText}`, timestamp: Date.now() });
-      }
-      if (modelText) {
-          newEntries.push({ id: `model_voice_${Date.now()}`, role: MessageRole.Model, text: modelText, timestamp: Date.now() });
-      }
-      setMessages(prev => [...prev, ...newEntries]);
+  const handleVoiceTranscript = (userText: string, modelText: string) => {
+    if (!userText && !modelText) return;
+    
+    const timestamp = Date.now();
+    const newMsgs: Message[] = [];
+    
+    if (userText) {
+      newMsgs.push({
+        id: `vuser_${timestamp}`,
+        role: MessageRole.User,
+        text: `[VHF_RADIO]: ${userText}`,
+        timestamp: timestamp
+      });
+    }
+    
+    if (modelText) {
+      newMsgs.push({
+        id: `vada_${timestamp + 1}`,
+        role: MessageRole.Model,
+        text: modelText,
+        timestamp: timestamp + 1
+      });
+    }
+    
+    setMessages(prev => [...prev, ...newMsgs]);
   };
 
   const handleSidebarTabChange = (tabId: SidebarTabId) => {
-    if (tabId === 'observer') {
-        setIsObserverOpen(true);
-        return;
-    }
-    if (tabId === 'presenter') {
-        activatePresenterMode();
-        return;
-    }
-    if (tabId === 'vhf') {
-        setIsVoiceModalOpen(true);
-        return;
-    }
-    
-    if (tabId === 'crm') setGmDashboardTab('customer');
+    if (tabId === 'observer') setIsObserverOpen(true);
+    else if (tabId === 'vhf') setIsVoiceModalOpen(true);
+    else if (tabId === 'crm') setGmDashboardTab('customer');
     else if (tabId === 'tech') setGmDashboardTab('commercial'); 
     else if (tabId === 'hr') setGmDashboardTab('hr');
     else setGmDashboardTab(undefined);
-
-    if (['crm', 'tech', 'hr'].includes(tabId) && window.innerWidth > 1024 && canvasWidth < 100) {
-        setCanvasWidth(500); 
-    }
-    
     setIsMobileMenuOpen(false);
   };
 
@@ -294,25 +186,6 @@ const App: React.FC = () => {
       return 'none';
   };
 
-  const handleClosePresentation = () => {
-    setPresentationState({ isActive: false, slide: 'intro', transcript: '', analysisResults: null });
-    setAppMode('main');
-  };
-  
-  const handleStartMeeting = () => setPresentationState(prev => ({ ...prev, slide: 'scribe' }));
-  const handleScribeInput = (text: string) => setPresentationState(prev => ({ ...prev, transcript: prev.transcript + `\n[MANUAL]: ${text}` }));
-
-  const handleEndMeeting = async () => {
-    if (presentationState.transcript.trim().length === 0) {
-        handleClosePresentation();
-        return;
-    }
-    setIsLoading(true);
-    const results = await executiveExpert.analyzeMeeting(presentationState.transcript, 'Değerli Müşteri', (trace: AgentTraceLog) => setAgentTraces(prev => [trace, ...prev]));
-    setPresentationState(prev => ({ ...prev, slide: 'analysis', analysisResults: results }));
-    setIsLoading(false);
-  };
-
   return (
     <div className="w-screen h-screen font-sans flex flex-col transition-colors duration-300">
       {showBootSequence && <BootSequence />}
@@ -324,49 +197,48 @@ const App: React.FC = () => {
         traces={agentTraces} 
       />
 
-      {appMode === 'presentation' && (
-          <PresentationOverlay 
-              state={presentationState}
-              userProfile={userProfile}
-              onClose={handleClosePresentation}
-              onStartMeeting={handleStartMeeting}
-              onEndMeeting={handleEndMeeting}
-              onScribeInput={handleScribeInput}
-              onStateChange={setPresentationState}
-              agentTraces={agentTraces}
-              activeTenantConfig={activeTenantConfig}
-          />
-      )}
+      <VoiceModal 
+        isOpen={isVoiceModalOpen}
+        onClose={() => setIsVoiceModalOpen(false)}
+        userProfile={userProfile}
+        activeTenantConfig={activeTenantConfig}
+        onTranscriptReceived={handleVoiceTranscript}
+        channel="72"
+      />
+
+      <DailyReportModal 
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        registry={registry}
+        logs={agentTraces}
+        vesselsInPort={vesselsInPort}
+        userProfile={userProfile}
+        weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }}
+        activeTenantConfig={activeTenantConfig}
+        tenders={tenders}
+        agentTraces={agentTraces}
+        aisTargets={aisTargets}
+        onOpenReport={() => setIsReportModalOpen(true)}
+        onOpenTrace={() => setIsObserverOpen(true)}
+      />
+
+      <PassportScanner 
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanComplete={(result) => {
+          handleSend(`Kimlik/Pasaport tarandı: ${result.data.name}`, []);
+        }}
+      />
 
       {appMode === 'main' && !showBootSequence && !showAuthOverlay && (
         <>
             <main className="flex-1 flex overflow-hidden relative">
-            
-            {isMobileMenuOpen && (
-                <div className="fixed inset-0 z-50 bg-black/80 lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-                    <div className="w-72 h-full bg-[var(--glass-bg)] backdrop-blur-xl border-r border-[var(--border-color)] animate-in slide-in-from-left duration-300 shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <Sidebar 
-                            nodeStates={nodeStates} 
-                            userProfile={userProfile}
-                            onRoleChange={handleRoleChange} 
-                            onTenantSwitch={handleTenantSwitch}
-                            activeTab={getActiveSidebarTab()}
-                            onTabChange={handleSidebarTabChange}
-                            activeTenantId={activeTenantId}
-                        />
-                    </div>
-                </div>
-            )}
-
             <div className="hidden lg:flex flex-col flex-shrink-0 border-r border-[var(--border-color)]" style={{ width: `${sidebarWidth}px` }}>
                 <Sidebar 
-                    nodeStates={nodeStates} 
                     userProfile={userProfile}
                     onRoleChange={handleRoleChange} 
-                    onTenantSwitch={handleTenantSwitch}
                     activeTab={getActiveSidebarTab()}
                     onTabChange={handleSidebarTabChange}
-                    activeTenantId={activeTenantId}
                 />
             </div>
             
@@ -382,7 +254,7 @@ const App: React.FC = () => {
                     onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
                     onRadioClick={() => setIsVoiceModalOpen(true)} 
                     onTraceClick={() => setIsObserverOpen(true)}
-                    onThemeChange={handleThemeChange}
+                    onThemeChange={setTheme}
                     onToggleSidebar={() => setIsMobileMenuOpen(true)} 
                 />
             </div>
@@ -400,30 +272,11 @@ const App: React.FC = () => {
                 />
             </div>
             </main>
-
             <div className="flex-shrink-0">
                 <StatusBar userProfile={userProfile} onToggleAuth={() => handleRoleChange('GENERAL_MANAGER')} />
             </div>
         </>
       )}
-
-      <PassportScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScanComplete={(res) => console.log(res)} />
-      <DailyReportModal 
-          isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}
-          registry={registry} logs={agentTraces} vesselsInPort={vesselsInPort}
-          userProfile={userProfile} 
-          weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' } as WeatherForecast} activeTenantConfig={activeTenantConfig}
-          tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
-          onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
-      />
-      <VoiceModal
-          isOpen={isVoiceModalOpen}
-          onClose={() => setIsVoiceModalOpen(false)}
-          userProfile={userProfile}
-          onTranscriptReceived={handleTranscriptReceived}
-          channel="72"
-          activeTenantConfig={activeTenantConfig}
-      />
     </div>
   );
 };

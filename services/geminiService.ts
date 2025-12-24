@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, GenerateContentResponse, Modality } from "@google/genai";
 import { Message, ModelType, GroundingSource, RegistryEntry, Tender, UserProfile, TenantConfig, MessageRole } from "../types";
 import { generateBaseSystemInstruction, generateContextBlock } from "./prompts";
@@ -30,7 +31,8 @@ export const streamChatResponse = async (
     const modelName = modelType === ModelType.Pro ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
     
     const systemInstruction = generateBaseSystemInstruction(tenantConfig);
-    const contextBlock = generateContextBlock(registry, tenders, userProfile, vesselsInPort);
+    // Fix: Match generateContextBlock signature (UserProfile, any)
+    const contextBlock = generateContextBlock(userProfile, { vessels: vesselsInPort, tenders: tenders.length });
     
     // Format history and limit length for token efficiency
     const history = formatHistory(messages.slice(-MAX_HISTORY_LENGTH));
@@ -92,7 +94,8 @@ export const generateSimpleResponse = async (
     const modelName = 'gemini-3-pro-preview';
     const systemInstruction = generateBaseSystemInstruction(tenantConfig);
     
-    const contextBlock = generateContextBlock(registry, tenders, userProfile, vesselsInPort);
+    // Fix: Match generateContextBlock signature (UserProfile, any)
+    const contextBlock = generateContextBlock(userProfile, { vessels: vesselsInPort, tenders: tenders.length });
     const history = formatHistory(messages);
     
     const contents = [...history, { role: 'user', parts: [{ text: contextBlock }, { text: prompt }] }];

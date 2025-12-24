@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { GitBranch, RefreshCw, AlertCircle, User, Cpu } from 'lucide-react';
+import { GitBranch, User, AlertCircle, Sparkles, Activity } from 'lucide-react';
 import { UserProfile } from '../../types';
 
 interface StatusBarProps {
@@ -8,66 +8,45 @@ interface StatusBarProps {
   onToggleAuth: () => void;
 }
 
-interface ItemProps {
-  children: React.ReactNode;
-  border?: boolean;
-  hover?: boolean;
-}
-
-const Item: React.FC<ItemProps> = ({ children, border = true, hover = true }) => (
-  <div className={`flex items-center h-full gap-2 px-3 ${border ? 'border-r border-border-light dark:border-border-dark' : ''} ${hover ? 'hover:bg-zinc-100 dark:hover:bg-zinc-800/50 cursor-pointer' : ''}`}>
-      {children}
-  </div>
-);
-
-export const StatusBar: React.FC<StatusBarProps> = ({ 
-  userProfile, 
-  onToggleAuth
-}) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ userProfile, onToggleAuth }) => {
   const isGM = userProfile.role === 'GENERAL_MANAGER';
   const isLegalRed = userProfile.legalStatus === 'RED';
 
   return (
-    <div className="h-7 w-full flex items-center justify-between select-none font-mono text-xs bg-panel-light dark:bg-panel-dark border-t border-border-light dark:border-border-dark text-zinc-500 dark:text-zinc-400 z-50 transition-colors duration-300">
+    <div className="h-7 w-full flex items-center justify-between select-none font-mono text-[10px] bg-[#020617] border-t border-white/10 text-slate-500 z-50">
       
-      {/* LEFT: System Info */}
       <div className="flex items-center h-full">
-        <Item border={true}>
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="font-semibold text-emerald-600 dark:text-emerald-400">wim/main</span>
-          <GitBranch size={12} />
-        </Item>
+        <div className="flex items-center px-3 border-r border-white/10 gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="font-bold text-emerald-400">node/wim-alpha</span>
+          <GitBranch size={10} />
+        </div>
         
-        <Item border={true}>
-           <RefreshCw size={12} className={'text-emerald-400'} />
-           <span>v5.1.0</span>
-        </Item>
+        <div className="flex items-center px-3 border-r border-white/10 gap-2">
+           <Activity size={10} className="text-slate-600" />
+           <span>v5.5-STABLE</span>
+        </div>
 
-        <Item border={true}>
-            <Cpu size={12} className="text-amber-500" />
-            <span className="font-bold text-amber-500">EDGE MODE (BROWSER)</span>
-        </Item>
+        <div className="flex items-center px-3 border-r border-white/10 gap-2 text-purple-400">
+            <Sparkles size={10} className="animate-pulse" />
+            <span className="font-bold">SEAL_ADAPTATION: READY</span>
+        </div>
       </div>
 
-      {/* RIGHT: Metrics & User */}
       <div className="flex items-center h-full">
-        {/* Auth Trigger */}
          <button 
            onClick={onToggleAuth}
-           className={`flex items-center gap-2 px-3 h-full border-r border-border-light dark:border-border-dark hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all uppercase font-bold tracking-wider ${
-             isLegalRed ? 'text-red-500 bg-red-500/10' : isGM ? 'text-indigo-600 dark:text-indigo-400' : 'text-zinc-500 dark:text-zinc-400'
+           className={`flex items-center gap-2 px-3 h-full border-l border-white/10 hover:bg-white/5 transition-all uppercase font-bold tracking-wider ${
+             isLegalRed ? 'text-red-500 bg-red-500/10' : isGM ? 'text-indigo-400' : 'text-slate-400'
            }`}
-           title="Switch Identity"
          >
-            <User size={12} />
+            <User size={10} />
             <span>{userProfile.name}</span>
          </button>
 
-        {/* Notifications */}
-        <Item border={false}>
-           <AlertCircle size={12} className={isLegalRed ? 'text-red-500 animate-pulse' : 'text-zinc-500 dark:text-zinc-400'} />
-        </Item>
-
+         <div className="flex items-center px-3 border-l border-white/10">
+            <AlertCircle size={10} className={isLegalRed ? 'text-red-500 animate-pulse' : 'text-slate-600'} />
+         </div>
       </div>
     </div>
   );

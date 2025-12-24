@@ -1,8 +1,9 @@
 {
-  "name": "Copy of Ada stargate",
-  "description": "Ada is an AI-powered multi-agent ecosystem for the maritime and hospitality industry. Built on 15+ years of real-world experience.",
+  "name": "Ada Stargate Hyperscale",
+  "description": "A Cognitive Operating System for Marinas and Vessels, featuring the Big 4 Sovereign Domains, SEAL self-adaptation, and MAKER zero-error execution.",
   "requestFramePermissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "geolocation"
   ]
 }

@@ -10,7 +10,7 @@ interface DailyReportModalProps {
   logs: any[];
   vesselsInPort: number;
   userProfile: UserProfile;
-  weatherData: WeatherForecast[];
+  weatherData: WeatherForecast;
   activeTenantConfig: TenantConfig;
 }
 
@@ -27,7 +27,8 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
   if (!isOpen) return null;
 
   const today = new Date();
-  const currentWx = weatherData[0] || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' };
+  // Adjusted currentWx to use weatherData directly as it is now typed as a single object
+  const currentWx = weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' };
 
   const handlePrint = () => {
     window.print();

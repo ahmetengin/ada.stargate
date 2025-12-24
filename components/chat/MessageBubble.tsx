@@ -1,3 +1,4 @@
+
 // components/chat/MessageBubble.tsx
 
 import React, { useState, useEffect, memo } from 'react';
@@ -16,7 +17,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
   const [vesselProfiles, setVesselProfiles] = useState<Record<string, VesselIntelligenceProfile>>({});
 
   useEffect(() => {
-    // UPDATED: Extract vessels from both Model AND User text for a more responsive UI
     if (message.text) {
       const lowerText = message.text.toLowerCase();
       
@@ -26,10 +26,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
       allVessels.forEach(vessel => {
           const fullName = vessel.name.toLowerCase();
           const nameParts = fullName.split(' ');
-          // Extract core name (e.g. "Phisedelia" from "S/Y Phisedelia")
           const coreName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : fullName;
 
-          // Check for exact matches or core name matches
           if (lowerText.includes(fullName) || (coreName.length >= 4 && lowerText.includes(coreName))) {
               foundProfiles[vessel.name] = vessel;
           }
@@ -45,14 +43,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
       return (
           <div className="flex justify-center my-12">
               <div className="text-center font-mono flex flex-col items-center">
-                  <div className="w-12 h-12 rounded-xl bg-[#020617] border border-cyan-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(6,182,212,0.1)] mb-4 animate-pulse-slow">
-                    <Anchor className="text-cyan-400" size={24} />
+                  <div className="w-12 h-12 rounded-xl bg-[#020617] border border-indigo-500/20 flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.1)] mb-4 animate-pulse-slow">
+                    <Anchor className="text-indigo-400" size={24} />
                   </div>
-                  <div className="text-[9px] font-bold text-cyan-600/70 uppercase tracking-[0.25em] mb-2">ADA MARINA <span className="text-slate-700 mx-2">——</span> <span className="text-cyan-400">v5.1</span></div>
+                  <div className="text-[9px] font-bold text-indigo-600/70 uppercase tracking-[0.25em] mb-2">ADA MARINA <span className="text-slate-700 mx-2">——</span> <span className="text-indigo-400">v5.5 HYPERSCALE</span></div>
                   <div className="max-w-md text-[10px] text-slate-500 leading-relaxed font-medium">
-                      <span className="text-slate-400 font-bold">Protocol Initialized</span><br/>
-                      [ <span className="text-emerald-500 font-bold">OK</span> ] Core System. [ <span className="text-emerald-500 font-bold">OK</span> ] COLREGs. [ <span className="text-emerald-500 font-bold">OK</span> ] Secure Mesh.<br/>
-                      <span className="italic opacity-50 mt-2 block">System is operating in Distributed Mode via FastRTC.</span>
+                      <span className="text-slate-400 font-bold">Cognitive Architecture Initialized</span><br/>
+                      [ <span className="text-emerald-500 font-bold">OK</span> ] CoALA Brain. [ <span className="text-emerald-500 font-bold">OK</span> ] ACE Playbooks. [ <span className="text-emerald-500 font-bold">OK</span> ] Secure Mesh.<br/>
+                      <span className="italic opacity-50 mt-2 block">Sovereign Domain Control Active. Waiting for Operator Command...</span>
                   </div>
               </div>
           </div>
@@ -90,7 +88,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
                         {message.text}
                     </ReactMarkdown>
                     
-                    {/* Injected Vessel Intelligence Cards - Appear immediately when a vessel is mentioned */}
                     <div className="space-y-4 mt-4">
                         {Object.values(vesselProfiles).map((profile, idx) => (
                             <VesselCard key={idx} profile={profile} />
@@ -99,7 +96,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
                 </div>
             )}
 
-            {/* If it's a user message and a vessel was mentioned, show the card below the user bubble too */}
             {isUser && Object.keys(vesselProfiles).length > 0 && (
                 <div className="mt-4 space-y-4 text-left flex justify-end">
                     <div className="w-full max-w-sm">

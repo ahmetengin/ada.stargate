@@ -1,4 +1,3 @@
-
 // types.ts
 
 export enum MessageRole {
@@ -15,9 +14,18 @@ export enum LiveConnectionState {
 }
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
-
-// --- TELEMETRY TYPES ---
 export type Severity = 'critical' | 'error' | 'warn' | 'info' | 'debug';
+
+export interface GroundingSource {
+  uri: string;
+  title: string;
+}
+
+export interface Attachment {
+  name?: string;
+  mimeType: string;
+  data: string; // base64
+}
 
 export interface TelemetryEvent {
     ts: string;
@@ -25,24 +33,8 @@ export interface TelemetryEvent {
     severity: Severity;
     source: string;
     marina_id: string;
-    berth_id?: string;
-    zone?: string;
-    correlation_id?: string;
-    actor?: { role: string; id?: string };
-    asset?: { kind: string; id?: string; name?: string };
     payload: Record<string, any>;
-}
-
-// ... Rest of the existing types ...
-export interface Attachment {
-  mimeType: string;
-  data: string; // Base64
-  name?: string;
-}
-
-export interface GroundingSource {
-  uri: string;
-  title: string;
+    berth_id?: string;
 }
 
 export interface Message {
@@ -50,15 +42,11 @@ export interface Message {
   role: MessageRole;
   text: string;
   timestamp: number;
-  attachments?: Attachment[];
+  generatedCode?: string;
+  executionResult?: string;
   groundingSources?: GroundingSource[];
-  generatedImage?: string; // Base64
-  parts?: any[];
-}
-
-export enum ModelType {
-  Pro = 'GEMINI_PRO',
-  Flash = 'GEMINI_FLASH'
+  generatedImage?: string; // base64 image
+  attachments?: Attachment[];
 }
 
 export type UserRole = 'VISITOR' | 'MEMBER' | 'CAPTAIN' | 'GENERAL_MANAGER';
@@ -69,242 +57,141 @@ export interface UserProfile {
   role: UserRole;
   clearanceLevel: number;
   legalStatus: 'GREEN' | 'AMBER' | 'RED';
-  loyalty?: {
-    tier: 'ADMIRAL' | 'COMMANDER' | 'SAILOR';
-    totalMiles: number;
-    spendableMiles: number;
-    nextTierProgress: number;
-    milesToNextTier: number;
-    memberSince: string;
-    cardNumber: string;
-  };
+  loyalty?: any;
+  loyaltyScore?: number;
+}
+
+// --- CoALA (Cognitive Architectures for Language Agents) Types ---
+export type MemoryModule = 'working' | 'episodic' | 'semantic' | 'procedural';
+
+export interface AgentTraceLog {
+  id: string;
+  timestamp: string;
+  node: string;
+  module?: MemoryModule; // CoALA Module alignment
+  step: 'OBSERVE' | 'PLAN' | 'ACT' | 'REFLECT' | 'ROUTING' | 'THINKING' | 'CODE_OUTPUT' | 'ERROR' | 'ACE_UPDATE' | 'TOOL_EXECUTION' | 'OUTPUT' | 'PLANNING' | 'TOOL_CALL' | 'FINAL_ANSWER' | 'VOTING' | 'WARNING' | 'CRITICAL' | 'ACE_REFLECTION' | 'ACE_UPDATE';
+  content: string | any;
+  persona?: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER';
+  code?: string;
+  result?: string;
+  isError?: boolean;
+}
+
+export interface PlaybookStrategy {
+    id: string;
+    domain: 'MARINA' | 'FINANCE' | 'LEGAL' | 'STARGATE';
+    title: string;
+    content: string;
+    successRate: number;
+    usageCount: number;
+}
+
+export interface TenantConfig {
+  id: string;
+  name: string;
+  fullName: string;
+  network: string;
+  doctrine: string;
+  masterData: any;
+  node_address: string;
+  status?: string;
+  region?: string;
+  tier?: string;
+  mission?: string;
+  contextSources?: string[];
+  rules?: Record<string, any>;
+  api_endpoint?: string;
+}
+
+export enum ModelType {
+  Pro = 'gemini-3-pro-preview',
+  Flash = 'gemini-3-flash-preview'
+}
+
+export interface WeatherForecast {
+  temp: number;
+  condition: string;
+  windSpeed: number;
+  windDir: string;
 }
 
 export interface RegistryEntry {
   id: string;
-  timestamp: string;
-  vessel: string;
-  type: 'ARRIVAL' | 'DEPARTURE';
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
-  priority: number;
+  vesselName: string;
+  status: string;
+  arrivalTime: string;
 }
 
 export interface Tender {
   id: string;
   name: string;
-  callsign?: string;
-  status: 'Idle' | 'Busy' | 'Maintenance';
-  type: 'RIB' | 'Workboat' | 'Palamar Botu';
+  status: string;
   assignment?: string;
+  type?: string;
   serviceCount?: number;
   sensors?: string[];
-}
-
-export interface VhfLog {
-    id: string;
-    timestamp: string;
-    channel: string;
-    speaker: 'CONTROL' | 'VESSEL';
-    message: string;
+  callsign?: string;
 }
 
 export interface AisTarget {
-    name: string;
-    type: string;
-    distance: string;
-    squawk: string;
-    status: string;
-    speed: string;
-    coordinates: {
-        lat: number;
-        lng: number;
-    };
-    source?: string;
-}
-
-export interface VesselSystemsStatus {
-  battery: { serviceBank: number, engineBank: number, status: string };
-  tanks: { fuel: number, freshWater: number, blackWater: number };
-  bilge: { forward: string, aft: string, pumpStatus: string };
-  shorePower: { connected: boolean, voltage: number, amperage: number };
-  comfort?: {
-    climate: { zone: string, setPoint: number, currentTemp: number, mode: string, fanSpeed: string };
-    lighting: { salon: boolean, deck: boolean, underwater: boolean };
-    security: { mode: string, camerasActive: boolean };
-  }
-}
-
-export interface VesselIntelligenceProfile {
   name: string;
-  imo: string;
   type: string;
-  flag: string;
-  ownerName?: string;
-  ownerId?: string;
-  ownerEmail?: string;
-  ownerPhone?: string;
-  dwt: number;
-  loa: number;
-  beam: number;
-  status: 'DOCKED' | 'AT_ANCHOR' | 'INBOUND' | 'UNDERWAY';
-  relationship: 'CONTRACT_HOLDER' | 'RESERVATION' | 'VISITOR';
-  location?: string;
-  coordinates?: { lat: number, lng: number };
-  voyage: { lastPort: string, nextPort: string, eta: string };
-  paymentHistoryStatus?: 'REGULAR' | 'RECENTLY_LATE' | 'CHRONICALLY_LATE';
-  adaSeaOneStatus?: 'ACTIVE' | 'INACTIVE';
-  utilities?: {
-      electricityKwh: number;
-      waterM3: number;
-      lastReading: string;
-      status: 'ACTIVE' | 'DISCONNECTED';
+  distance: string;
+  coordinates: { lat: number; lng: number };
+  squawk?: string;
+  status?: string;
+  speed?: string;
+  source?: string;
+}
+
+export interface PresentationState {
+  isActive: boolean;
+  slide: 'intro' | 'scribe' | 'analysis';
+  transcript: string;
+  analysisResults: any;
+}
+
+export interface MasterDataStructure {
+  identity: any;
+  assets?: {
+    tenders: Tender[];
+    charter_fleet: any[];
   };
-  outstandingDebt?: number;
-  loyaltyScore?: number;
-}
-
-export interface WeatherForecast {
-    temp: number;
-    condition: 'Sunny' | 'Cloudy' | 'Rain' | 'Storm';
-    windSpeed: number;
-    windDir: 'N' | 'S' | 'E' | 'W' | 'NE' | 'NW' | 'SE' | 'SW';
-}
-
-export type NodeName = 
-  | 'ada.stargate'
-  | 'ada.marina'
-  | 'ada.finance'
-  | 'ada.legal'
-  | 'ada.sea'
-  | 'ada.vhf'
-  | 'ada.technic'
-  | 'ada.customer'
-  | 'ada.concierge'
-  | 'ada.security'
-  | 'ada.passkit'
-  | 'ada.executive'
-  | 'ada.presenter'
-  | 'ada.travel'
-  | 'ada.congress'
-  | 'ada.facility'
-  | 'ada.energy'
-  | 'ada.shield'
-  | 'ada.hr'
-  | 'ada.commercial'
-  | 'ada.analytics'
-  | 'ada.berth'
-  | 'ada.reservations'
-  | 'ada.federation'
-  | 'ada.it'
-  | 'ada.robotics'
-  | 'ada.yield';
-
-export interface AgentTraceLog {
-  id: string;
-  timestamp: string;
-  node: NodeName;
-  step: 'ROUTING' | 'THINKING' | 'PLANNING' | 'TOOL_CALL' | 'TOOL_EXECUTION' | 'CODE_OUTPUT' | 'OUTPUT' | 'FINAL_ANSWER' | 'ERROR' | 'WARNING' | 'CRITICAL' | 'VOTING';
-  content: string | any;
-  isError?: boolean;
-  persona?: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER';
+  marina_portfolio?: Record<string, any[]>;
+  loyalty_program?: any;
+  ocean_guardians?: any;
+  digital_services?: any;
+  commercial_tenants?: any;
+  technical_facilities?: any;
+  hr_management?: any;
+  analytics_data?: any;
+  services?: any;
+  legal_framework?: any;
+  event_calendar?: any[];
+  campus_stats?: any;
+  concierge_services?: any;
+  facility_management?: any;
+  strategic_partners?: any;
 }
 
 export interface AgentAction {
-    id: string;
-    kind: 'internal' | 'external';
-    name: string;
-    params: any;
+  id: string;
+  kind: 'internal' | 'external';
+  name: string;
+  params: any;
 }
 
-export interface OrchestratorResponse {
-  text: string;
-  actions: AgentAction[];
-  traces: AgentTraceLog[];
-}
-
-export interface MaintenanceLogEntry {
-    timestamp: string;
-    stage: 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'PARTS_ORDERED' | 'PARTS_ARRIVED' | 'COMPLETED' | 'CANCELLED';
-    details: string;
-}
-
-export interface MaintenanceJob {
-    id: string;
-    vesselName: string;
-    jobType: 'ENGINE_SERVICE' | 'HAUL_OUT' | 'ANTIFOULING' | 'GENERAL_REPAIR';
-    status: 'SCHEDULED' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED' | 'CANCELLED';
-    scheduledDate: string;
-    contractor: string;
-    partsStatus: 'N/A' | 'ORDERED' | 'ARRIVED';
-    notes: string;
-    logs: MaintenanceLogEntry[];
-}
-
-export interface CustomerRiskProfile {
-    totalScore: number;
-    segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
-    breakdown: {
-        financial: number;
-        operational: number;
-        commercial: number;
-        social: number;
-    };
-    flags: string[];
-    lastAssessmentDate: string;
-}
-
-export interface CongressEvent {
-    id: string;
-    name: string;
-    dates: { start: string, end: string };
-    venues: string[];
-    status: 'LIVE' | 'UPCOMING' | 'COMPLETED';
-    delegateCount: number;
-}
-
-export interface Delegate {
-    id: string;
-    name: string;
-    company: string;
-    status: 'REGISTERED' | 'CHECKED_IN' | 'IN_TRANSIT' | 'CANCELLED';
-    location: string;
-}
-
+// Added EnergyGridStatus interface to resolve import error in facilityAgent.ts
 export interface EnergyGridStatus {
-    loadPercentage: number;
-    gridStability: 'STABLE' | 'FLUCTUATING';
-    activeConsumers: number;
-    peakShavingActive: boolean;
-    carbonFootprint: number;
+  loadPercentage: number;
+  gridStability: 'STABLE' | 'FLUCTUATING' | 'CRITICAL';
+  activeConsumers: number;
+  peakShavingActive: boolean;
+  carbonFootprint: number;
 }
 
-export interface SecurityThreat {
-    id: string;
-    type: 'DRONE' | 'DIVER' | 'SPEEDBOAT';
-    coordinates: { lat: number, lng: number };
-    altitudeDepth: number;
-    speed: number;
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-    detectedBy: 'RADAR' | 'SONAR' | 'RF_SCANNER' | 'CCTV_YOLO';
-    timestamp: string;
-}
-
-export interface GuestProfile {
-    id: string;
-    fullName: string;
-    nationality: string;
-    dob: string;
-    vesselName: string;
-}
-
-export interface FederatedBerthAvailability {
-    marinaId: string;
-    date: string;
-    totalBerths: number;
-    availableBerths: number;
-    occupancyRate: number;
-    message: string;
-}
+// Expanded NodeName union type to include missing node identifiers used in agent services
+export type NodeName = 'ada.marina' | 'ada.sea' | 'ada.technic' | 'ada.energy' | 'ada.robotics' | 'ada.finance' | 'ada.commercial' | 'ada.customer' | 'ada.legal' | 'ada.security' | 'ada.shield' | 'ada.stargate' | 'ada.orchestrator' | 'ada.federation' | 'ada.hr' | 'ada.it' | 'ada.executive' | 'ada.reservations' | 'ada.analytics' | 'ada.concierge' | 'ada.congress' | 'ada.berth' | 'ada.travel' | 'ada.passkit' | 'ada.facility' | 'ada.yield';
 
 export interface TravelItinerary {
   id: string;
@@ -317,53 +204,122 @@ export interface TravelItinerary {
   transfers: any[];
 }
 
-export interface PresentationState {
-  isActive: boolean;
-  slide: 'intro' | 'scribe' | 'analysis' | 'observer';
-  transcript: string;
-  language?: 'en' | 'tr';
-  analysisResults: {
-    minutes: string;
-    proposal: string;
-  } | null;
+export interface VesselIntelligenceProfile {
+  name: string;
+  imo: string;
+  type: string;
+  flag: string;
+  ownerName?: string;
+  ownerId?: string;
+  ownerEmail?: string;
+  ownerPhone?: string;
+  dwt?: number;
+  loa: number;
+  beam: number;
+  status?: string;
+  location?: string;
+  relationship?: 'VISITOR' | 'CONTRACT_HOLDER' | 'RESERVATION';
+  coordinates?: { lat: number; lng: number };
+  voyage?: { lastPort: string, nextPort: string, eta: string };
+  paymentHistoryStatus?: string;
+  adaSeaOneStatus?: 'ACTIVE' | 'INACTIVE';
+  utilities?: { electricityKwh: number, waterM3: number, lastReading: string, status: string };
+  loyaltyScore?: number;
+  outstandingDebt?: number;
 }
 
-export interface MasterDataStructure {
-  identity: any;
-  assets: {
-    tenders: Tender[];
-    charter_fleet?: any[];
-  };
-  campus_stats?: any;
-  commercial_tenants?: any;
-  strategic_partners?: any;
-  loyalty_program?: any;
-  technical_facilities?: any;
-  facility_management?: any;
-  analytics_data?: any;
-  legal_framework?: any;
-  concierge_services?: any;
-  hr_management?: any;
-  marina_portfolio?: any;
-  ocean_guardians?: any;
-  digital_services?: any;
-  event_calendar?: any;
-  services?: any;
+export interface VesselSystemsStatus {
+  battery: { serviceBank: number; engineBank: number; status: string };
+  tanks: { fuel: number; freshWater: number; blackWater: number };
+  bilge: { forward: string; aft: string; pumpStatus: string };
+  shorePower: { connected: boolean; voltage: number; amperage: number };
+  comfort?: {
+    climate: { zone: string; setPoint: number; currentTemp: number; mode: string; fanSpeed: string };
+    lighting: { salon: boolean; deck: boolean; underwater: boolean };
+    security: { mode: string; camerasActive: boolean };
+  }
 }
 
-export interface TenantConfig {
+export interface SecurityThreat {
+  id: string;
+  type: 'DRONE' | 'DIVER' | 'VESSEL' | 'PERSON';
+  coordinates: { lat: number, lng: number };
+  altitudeDepth: number;
+  speed: number;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  detectedBy: string;
+  timestamp: string;
+}
+
+export interface CongressEvent {
   id: string;
   name: string;
+  dates: { start: string, end: string };
+  venues: string[];
+  status: 'LIVE' | 'UPCOMING' | 'COMPLETED';
+  delegateCount: number;
+}
+
+export interface Delegate {
+  id: string;
+  name: string;
+  company: string;
+  status: 'CHECKED_IN' | 'IN_TRANSIT' | 'REGISTERED';
+  location: string;
+}
+
+export interface CustomerRiskProfile {
+  totalScore: number;
+  segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
+  breakdown: {
+      financial: number;
+      operational: number;
+      commercial: number;
+      social: number;
+  };
+  flags: string[];
+  lastAssessmentDate: string;
+}
+
+export interface GuestProfile {
+  id: string;
   fullName: string;
-  network: string;
-  node_address: string;
-  status: 'ONLINE' | 'OFFLINE';
-  api_endpoint?: string;
-  region?: string;
-  tier?: string;
-  mission: string;
-  contextSources: string[];
-  rules: any;
-  doctrine: string;
-  masterData: MasterDataStructure;
+  nationality: string;
+  dob: string;
+  vesselName: string;
+}
+
+export interface FederatedBerthAvailability {
+  marinaId: string;
+  date: string;
+  totalBerths: number;
+  availableBerths: number;
+  occupancyRate: number;
+  message: string;
+}
+
+export interface MaintenanceLogEntry {
+  timestamp: string;
+  stage: 'SCHEDULED' | 'PARTS_ORDERED' | 'PARTS_ARRIVED' | 'IN_PROGRESS' | 'COMPLETED';
+  details: string;
+}
+
+export interface MaintenanceJob {
+  id: string;
+  vesselName: string;
+  jobType: 'HAUL_OUT' | 'ENGINE_SERVICE' | 'GENERAL_REPAIR' | 'ELECTRICAL' | 'HULL_CLEANING';
+  status: 'SCHEDULED' | 'WAITING_PARTS' | 'IN_PROGRESS' | 'COMPLETED';
+  scheduledDate: string;
+  contractor: string;
+  partsStatus: 'N/A' | 'ORDERED' | 'ARRIVED';
+  notes: string;
+  logs: MaintenanceLogEntry[];
+}
+
+export interface VhfLog {
+  id: string;
+  timestamp: string;
+  channel: string;
+  from: string;
+  message: string;
 }
