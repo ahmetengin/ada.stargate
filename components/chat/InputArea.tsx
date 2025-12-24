@@ -126,7 +126,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
           }
           ${isDictating ? 'ring-2 ring-red-500/50 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : ''}`}>
           
-          <div className="flex flex-col justify-end gap-1 pr-2 border-r border-[var(--border-color)] mr-2 mb-1.5 h-full">
+          <div className="flex items-center gap-1 pr-2 border-r border-[var(--border-color)] mr-2 mb-1.5">
               <button onClick={onScanClick} className="p-2 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors group" title="Tarayıcı">
                   <ScanLine size={18} className="group-hover:scale-110 transition-transform"/>
               </button>

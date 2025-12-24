@@ -9,17 +9,15 @@ The system consists of three main services orchestrated via Docker Compose:
 1.  **`ada-frontend`**:
     *   **Tech**: React 18 + TypeScript + Vite.
     *   **Server**: Nginx (serving static assets & reverse proxying API calls).
-    *   **Port**: 80 (HTTP).
+    *   **Port**: 80 (HTTP) or 3000 (configurable).
 
 2.  **`ada-backend`**:
     *   **Tech**: Python FastAPI.
-    *   **Role**: Orchestrator, Expert Nodes, and Workers.
+    *   **Role**: Orchestrator (LangGraph), Expert Nodes (MAKER/SEAL), and API Gateway.
     *   **Port**: 8000 (Internal).
 
-3.  **`ada-redis`**:
-    *   **Tech**: Redis.
-    *   **Role**: Message Broker / Event Bus for observability.
-    *   **Port**: 6379 (Internal).
+3.  **`ada-redis`**, **`ada-qdrant`**, **`ada-postgres`**:
+    *   **Role**: The Nervous System (Event Bus), Memory (Vector DB), and Truth (Relational DB).
 
 ---
 
@@ -39,6 +37,8 @@ The system consists of three main services orchestrated via Docker Compose:
     ```bash
     # .env
     API_KEY=AIzaSyYourActualKeyHere
+    # Optional: Set to 'true' to enable debug logging
+    ADA_DEBUG=true
     ```
 
     *Note: This key is injected into the containers at build time and runtime.*
@@ -52,7 +52,7 @@ The system consists of three main services orchestrated via Docker Compose:
 Run the following command in the project root:
 
 ```bash
-docker-compose up --build -d
+docker-compose -f docker-compose.hyperscale.yml up --build -d
 ```
 
 *   `--build`: Forces a rebuild of the Docker images (ensures latest code & env vars are used).
@@ -63,19 +63,28 @@ docker-compose up --build -d
 Check if all containers are healthy:
 
 ```bash
-docker-compose ps
+docker-compose -f docker-compose.hyperscale.yml ps
 ```
 
 You should see:
-*   `ada_frontend` (Up)
-*   `ada_backend` (Up)
-*   `ada_redis_broker` (Up)
+*   `ada_frontend_hyperscale` (Up)
+*   `ada_core_hyperscale` (Up)
+*   `ada_redis` (Up)
+*   `ada_qdrant` (Up)
 
-### 3. Access the Application
+### 3. Initialize Memory (First Run Only)
 
-*   **Main Interface**: [http://localhost](http://localhost)
-*   **Backend API Docs (ReDoc)**: [http://localhost/api/redoc](http://localhost/api/redoc) (Preferred Style)
-*   **Backend API Docs (Swagger)**: [http://localhost/api/docs](http://localhost/api/docs)
+To make Ada "intelligent", you must ingest the documentation into the Vector Database.
+
+```bash
+docker exec -it ada_core_hyperscale python ingest.py
+```
+
+### 4. Access the Application
+
+*   **Main Interface**: [http://localhost:3000](http://localhost:3000) (or port 80 depending on configuration).
+*   **Backend API Docs (ReDoc)**: [http://localhost:3000/api/redoc](http://localhost:3000/api/redoc).
+*   **Backend Health Check**: [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
 ---
 
@@ -83,15 +92,15 @@ You should see:
 
 **Issue: "API Key Missing"**
 *   Ensure `.env` exists in the root.
-*   Rebuild containers: `docker-compose up --build -d`.
+*   Rebuild containers: `docker-compose -f docker-compose.hyperscale.yml up --build -d`.
 
 **Issue: Frontend cannot connect to Backend**
 *   The Frontend uses `/api/...` relative paths.
-*   Nginx is configured to proxy `/api/` to `http://ada-backend:8000`.
-*   Check Nginx logs: `docker logs ada_frontend`.
+*   Nginx is configured to proxy `/api/` to `http://ada-core:8000`.
+*   Check Nginx logs: `docker logs ada_frontend_hyperscale`.
 
-**Issue: "Port 80 is already allocated"**
-*   Stop other web servers or modify `docker-compose.yml` to map to a different port (e.g., `"8080:80"`).
+**Issue: "Port 80/3000 is already allocated"**
+*   Stop other web servers or modify `docker-compose.hyperscale.yml` to map to a different port.
 
 ---
 
@@ -99,15 +108,15 @@ You should see:
 
 **Stop Services:**
 ```bash
-docker-compose down
+docker-compose -f docker-compose.hyperscale.yml down
 ```
 
 **View Logs:**
 ```bash
-docker-compose logs -f
+docker-compose -f docker-compose.hyperscale.yml logs -f
 ```
 
 **Restart Specific Service:**
 ```bash
-docker-compose restart ada-backend
+docker-compose -f docker-compose.hyperscale.yml restart ada-core
 ```

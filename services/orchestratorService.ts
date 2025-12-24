@@ -1,10 +1,41 @@
+
 // services/orchestratorService.ts
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type, FunctionDeclaration, Tool } from "@google/genai";
 import { AgentTraceLog, UserProfile, Message, TenantConfig } from '../types';
 import { aceService } from './aceService';
+import { marinaExpert } from './agents/marinaAgent';
+import { financeExpert } from './agents/financeAgent';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+const scanSectorTool: FunctionDeclaration = {
+  name: 'scan_sector',
+  description: 'Scans the radar for vessels in a given sector.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      lat: { type: Type.NUMBER, description: 'Latitude of the center point' },
+      lng: { type: Type.NUMBER, description: 'Longitude of the center point' },
+      radius: { type: Type.NUMBER, description: 'Radius in nautical miles' }
+    },
+    required: ['lat', 'lng', 'radius']
+  }
+};
+
+const checkDebtTool: FunctionDeclaration = {
+  name: 'check_debt',
+  description: 'Checks the financial debt status of a vessel.',
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      vesselName: { type: Type.STRING, description: 'Name of the vessel' }
+    },
+    required: ['vesselName']
+  }
+};
+
+const tools: Tool[] = [{ functionDeclarations: [scanSectorTool, checkDebtTool] }];
 
 export const orchestratorService = {
   async processRequest(
@@ -59,29 +90,77 @@ export const orchestratorService = {
 
     // 2. GENERATION
     try {
-        // Fetch ACE Context for the relevant domain
         const domain = isMath ? 'MARINA' : 'STARGATE';
         const activePlaybook = aceService.getPlaybookForDomain(domain);
+
+        const systemInstruction = `You are ADA. Use the following EVOLVING PLAYBOOK for this domain:\n${activePlaybook}\n\nAdopt the tone of the Big 4 domains. When asked to check debt or scan sector, use the provided tools.`;
 
         const response = await ai.models.generateContent({
             model: 'gemini-3-flash-preview',
             contents: prompt,
             config: {
-                systemInstruction: `You are ADA. Use the following EVOLVING PLAYBOOK for this domain:\n${activePlaybook}\n\nAdopt the tone of the Big 4 domains.`,
-                thinkingConfig: { thinkingBudget: 0 }
+                systemInstruction: systemInstruction,
+                thinkingConfig: { thinkingBudget: 0 },
+                tools: tools
             }
         });
 
+        let responseText = response.text || "";
+
+        // Handle Function Calls
+        if (response.functionCalls && response.functionCalls.length > 0) {
+            const functionCall = response.functionCalls[0];
+            const name = functionCall.name;
+            const args = functionCall.args as any;
+
+            onTrace({
+                id: `tr_fc_${Date.now()}`,
+                timestamp: new Date().toLocaleTimeString(),
+                node: 'ada.stargate',
+                step: 'TOOL_CALL',
+                content: `Invoking Tool: ${name}`,
+                persona: 'ORCHESTRATOR'
+            });
+
+            let toolResult: any = { error: "Tool not found" };
+            
+            if (name === 'scan_sector') {
+                toolResult = await marinaExpert.scanSector(args.lat, args.lng, args.radius, onTrace);
+            } else if (name === 'check_debt') {
+                toolResult = await financeExpert.checkDebt(args.vesselName);
+            }
+
+            // Second turn to get natural language response
+            const contents = [
+                { role: 'user', parts: [{ text: prompt }] },
+                { role: 'model', parts: [{ functionCall: functionCall }] },
+                { role: 'user', parts: [{ functionResponse: { name: name, response: { result: toolResult } } }] }
+            ];
+
+            const response2 = await ai.models.generateContent({
+                model: 'gemini-3-flash-preview',
+                contents: contents,
+                config: {
+                    systemInstruction: systemInstruction,
+                    tools: tools
+                }
+            });
+
+            responseText = response2.text || "Tool execution completed.";
+        }
+
+        if (!responseText && !makerCode) {
+             responseText = "Cognitive error in Hyperscale Core.";
+        }
+
         const finalResponse = {
-            text: response.text || "Cognitive error in Hyperscale Core.",
-            code: makerCode,
-            result: makerResult
+            text: responseText,
+            code: makerCode || undefined,
+            result: makerResult || undefined
         };
 
         // 3. ACE REFLECTION: Trigger self-improvement loop
         setTimeout(async () => {
-            // Fix: aceService.reflect expected 4 arguments, but got 2.
-            // Also truthiness check fix.
             if (makerCode && makerResult) {
                 await aceService.reflect(prompt, makerCode, makerResult, onTrace);
                 

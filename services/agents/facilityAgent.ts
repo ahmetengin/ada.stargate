@@ -43,7 +43,6 @@ export const facilityExpert = {
             color = "Amber/White";
         } else if (mode === 'WELCOME') {
             effect = "Steady Glow + Pedestal Text: 'WELCOME HOME'";
-            // Fun Logic: Determine color based on "vessel metadata" (simulated)
             color = vesselName.includes('Red') ? 'Red' : 'Cyan'; 
         }
 
@@ -65,6 +64,7 @@ export const facilityExpert = {
         const load = 88; // High load scenario
         const active = 142; 
         
+        // Fixed: EnergyGridStatus now includes activeConsumers and peakShavingActive
         const status: EnergyGridStatus = {
             loadPercentage: load,
             gridStability: load > 90 ? 'FLUCTUATING' : 'STABLE',
@@ -91,7 +91,6 @@ export const facilityExpert = {
 
         addTrace(createLog('ada.facility', 'TOOL_EXECUTION', `Sending encoded signal to Pedestal Controller (PLC)...`, 'WORKER'));
         
-        // Determine state for messaging
         let newState = 'UNKNOWN';
         if (action.toLowerCase() === 'toggle') newState = 'ON (Toggled)';
         else if (action.toLowerCase() === 'on') newState = 'ON';
@@ -107,17 +106,16 @@ export const facilityExpert = {
     generateZeroWasteReport: async (addTrace: (t: AgentTraceLog) => void): Promise<{ compliance: string, recyclingRate: number, nextAudit: string, message: string }> => {
         addTrace(createLog('ada.facility', 'THINKING', `Compiling Zero Waste (Sıfır Atık) Compliance Report for Ministry Audit...`, 'EXPERT'));
 
-        // Mock Data - In real life, this comes from IoT scales on waste bins
         const stats = {
-            paper: 1250, // kg
+            paper: 1250, 
             plastic: 840,
             metal: 320,
             glass: 450,
             organic: 600,
-            hazardous: 45 // Waste oil etc.
+            hazardous: 45 
         };
         const total = Object.values(stats).reduce((a,b) => a+b, 0);
-        const recycled = total - stats.organic; // Simplified logic
+        const recycled = total - stats.organic; 
         const rate = Math.round((recycled / total) * 100);
 
         addTrace(createLog('ada.facility', 'TOOL_EXECUTION', `Querying Waste Management DB... Total Vol: ${total}kg. Recyclables: ${recycled}kg.`, 'WORKER'));
@@ -144,13 +142,11 @@ export const facilityExpert = {
     checkSeaWaterQuality: async (addTrace: (t: AgentTraceLog) => void): Promise<{ status: 'BLUE' | 'RED', data: any, message: string }> => {
         addTrace(createLog('ada.facility', 'THINKING', `Retrieving latest Sea Water Analysis (Ministry of Health Lab Result)...`, 'EXPERT'));
         
-        // Simulated Lab Data
-        // E. Coli limit: 250, Enterococci limit: 100
         const analysis = {
             date: new Date().toISOString().split('T')[0],
             location: "Kumsal Beach Sample Point 1",
-            e_coli: 12, // cfu/100ml (Very Clean)
-            enterococci: 5, // cfu/100ml (Very Clean)
+            e_coli: 12, 
+            enterococci: 5, 
             ph: 8.1,
             transparency: "Clear > 2m"
         };

@@ -1,8 +1,9 @@
+
 // components/ObserverOverlay.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-    Activity, Brain, X, Terminal, Cpu, Code, Zap, Sparkles, Layers, Play, CheckCircle, Database, BookOpen, GitBranch
+    Activity, Brain, X, Terminal, Cpu, Code, Zap, Sparkles, Layers, Play, CheckCircle, Database, BookOpen, GitBranch, Share2
 } from 'lucide-react';
 import { AgentTraceLog } from '../types';
 import { aceService } from '../services/aceService';
@@ -14,7 +15,7 @@ interface ObserverOverlayProps {
 }
 
 export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClose, traces }) => {
-  const [activeView, setActiveView] = useState<'stream' | 'coala' | 'playbook'>('stream');
+  const [activeView, setActiveView] = useState<'stream' | 'network' | 'playbook'>('stream');
   const scrollRef = useRef<HTMLDivElement>(null);
   const strategies = aceService.getAll();
 
@@ -40,7 +41,7 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
             <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
                 {[
                     { id: 'stream', label: 'Event_Stream', icon: Activity },
-                    { id: 'coala', label: 'Architecture', icon: Layers },
+                    { id: 'network', label: 'Neural_Mesh', icon: Share2 },
                     { id: 'playbook', label: 'ACE_Playbook', icon: BookOpen }
                 ].map(tab => (
                     <button 
@@ -100,37 +101,52 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
                                         {trace.step}
                                     </span>
                                     <span className="text-indigo-400 font-bold">@{trace.node}</span>
-                                    {trace.module && <span className="text-[8px] text-zinc-600 uppercase">Module: {trace.module}</span>}
                                 </div>
-                                <div className="text-zinc-400 text-sm">{typeof trace.content === 'string' ? trace.content : JSON.stringify(trace.content)}</div>
+                                <div className="text-zinc-400 text-sm leading-relaxed">{typeof trace.content === 'string' ? trace.content : JSON.stringify(trace.content)}</div>
                             </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {activeView === 'coala' && (
-                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                    <div className="relative w-full max-w-2xl h-96 flex items-center justify-center">
-                        {/* Visualization of the Loop */}
-                        <div className="absolute inset-0 border-2 border-dashed border-indigo-500/20 rounded-full animate-[spin_20s_linear_infinite]"></div>
-                        <div className="relative z-10 grid grid-cols-2 gap-12">
-                            <div className="p-8 bg-zinc-900 border border-indigo-500/50 rounded-2xl shadow-2xl">
-                                <div className="text-indigo-400 font-black text-xl mb-2">DECISION CYCLE</div>
-                                <div className="space-y-2 text-zinc-500 font-bold text-[10px] uppercase">
-                                    <div className="flex items-center gap-2"><CheckCircle size={10} className="text-emerald-500"/> Observe</div>
-                                    <div className="flex items-center gap-2"><CheckCircle size={10} className="text-emerald-500"/> Plan</div>
-                                    <div className="flex items-center gap-2"><CheckCircle size={10} className="text-emerald-500"/> Act</div>
-                                    <div className="flex items-center gap-2 text-white animate-pulse"><Zap size={10} className="text-amber-500"/> Reflect</div>
+            {activeView === 'network' && (
+                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-10 bg-grid-pattern"></div>
+                    
+                    <div className="relative z-10 w-full max-w-2xl h-96 flex items-center justify-center">
+                        {/* Domain Nodes Viz */}
+                        <div className="grid grid-cols-2 gap-24 relative">
+                            {[
+                                { id: 'ada.marina', label: 'OPERATOR', color: 'bg-cyan-500' },
+                                { id: 'ada.finance', label: 'CFO', color: 'bg-emerald-500' },
+                                { id: 'ada.legal', label: 'COUNSEL', color: 'bg-indigo-500' },
+                                { id: 'ada.stargate', label: 'ORCHESTRATOR', color: 'bg-purple-500' }
+                            ].map(node => (
+                                <div key={node.id} className="flex flex-col items-center gap-3">
+                                    <div className={`w-16 h-16 rounded-2xl ${node.color} flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.2)] border border-white/20 animate-pulse`}>
+                                        <Cpu size={32} className="text-white" />
+                                    </div>
+                                    <div>
+                                        <div className="text-[10px] font-black text-white">{node.id}</div>
+                                        <div className="text-[8px] text-zinc-500 uppercase tracking-widest">{node.label}</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="p-8 bg-zinc-900 border border-emerald-500/50 rounded-2xl shadow-2xl">
-                                <div className="text-emerald-400 font-black text-xl mb-2">MEMORY MESH</div>
-                                <div className="text-xs text-zinc-400 leading-relaxed">
-                                    Continuous synchronization between Working, Episodic, and Semantic modules.
-                                </div>
+                            ))}
+                            
+                            {/* Animated Connection Lines (Simulated) */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <div className="w-full h-px bg-indigo-500/20 absolute rotate-45 animate-pulse"></div>
+                                <div className="w-full h-px bg-indigo-500/20 absolute -rotate-45 animate-pulse"></div>
                             </div>
                         </div>
+                    </div>
+                    
+                    <div className="mt-12 max-w-lg">
+                        <h4 className="text-indigo-400 font-bold mb-2">Omni-Presence Matrix Active</h4>
+                        <p className="text-zinc-500 text-[10px] leading-relaxed uppercase tracking-wider">
+                            Real-time federated communication detected across 4 sovereign domains. 
+                            COLREGs & ACE Playbooks synchronized.
+                        </p>
                     </div>
                 </div>
             )}
@@ -138,7 +154,7 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
             {activeView === 'playbook' && (
                 <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                     <div className="max-w-4xl mx-auto space-y-6">
-                        <h3 className="text-2xl font-black text-white tracking-tight border-b border-white/10 pb-4">Agentic Context Playbook</h3>
+                        <h3 className="text-2xl font-black text-white tracking-tight border-b border-white/10 pb-4">Agentic Context Playbook (ACE)</h3>
                         {strategies.map(strat => (
                             <div key={strat.id} className="bg-[#0b101b] border border-white/5 rounded-2xl p-5 hover:border-indigo-500/30 transition-all">
                                 <div className="flex justify-between items-start mb-2">

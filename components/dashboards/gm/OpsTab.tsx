@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Target, Ship, Cpu } from 'lucide-react';
+import { Target, Ship, Cpu, ShieldAlert, Radio } from 'lucide-react';
 import { RegistryEntry, Tender, AisTarget } from '../../../types';
 import { LiveMap } from './LiveMap';
 import { BreachRadar } from './BreachRadar';
@@ -15,6 +16,12 @@ interface OpsTabProps {
 
 export const OpsTab: React.FC<OpsTabProps> = ({ vesselsInPort, registry, criticalLogs, tenders, aisTargets = [] }) => {
   
+  // Mock Navtex Data
+  const navtexAlerts = [
+      { id: 'NAV-382', type: 'GUNNERY', sector: 'AEGEAN', coord: '38°45N - 025°21E', status: 'ACTIVE' },
+      { id: 'NAV-385', type: 'SAR OPS', sector: 'MARMARA', coord: '40°55N - 028°50E', status: 'ACTIVE' }
+  ];
+
   return (
     <div className="h-full w-full flex">
         {/* MAIN VISUALIZATION AREA */}
@@ -30,12 +37,25 @@ export const OpsTab: React.FC<OpsTabProps> = ({ vesselsInPort, registry, critica
                 
                 {/* Top Stats */}
                 <div className="flex justify-between items-start">
-                    <div className="glass-panel rounded-lg p-2 flex items-center gap-4 animate-in slide-in-from-left duration-700">
+                    <div className="glass-panel rounded-lg p-2 flex items-center gap-4 animate-in slide-in-from-left duration-700 pointer-events-auto">
                         <div className="text-[10px] font-mono text-cyan-400 px-2 border-r border-white/10">LIVE FEED</div>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
                             <span className="text-xs font-bold text-white tracking-widest">RECORDING</span>
                         </div>
+                    </div>
+
+                    {/* NAVTEX ALERTS MINI-HUD */}
+                    <div className="flex flex-col gap-2 pointer-events-auto">
+                        {navtexAlerts.map(alert => (
+                            <div key={alert.id} className="glass-panel bg-amber-950/40 border-amber-500/30 rounded-lg p-2 flex items-center gap-3 animate-in slide-in-from-right duration-500">
+                                <div className="text-amber-500 animate-pulse"><Radio size={14} /></div>
+                                <div>
+                                    <div className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">NAVTEX {alert.id} ({alert.type})</div>
+                                    <div className="text-[9px] font-mono text-amber-200/70">{alert.sector} • {alert.coord}</div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 

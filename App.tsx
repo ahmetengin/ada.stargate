@@ -1,5 +1,5 @@
 
-// App.tsx
+// App.tsx (Updated for Episodes)
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Message, MessageRole, ModelType, RegistryEntry, Tender, UserProfile, AisTarget, ThemeMode, TenantConfig, PresentationState, AgentTraceLog, WeatherForecast } from './types';
@@ -55,7 +55,6 @@ const App: React.FC = () => {
   
   const [theme, setTheme] = useState<ThemeMode>(persistenceService.load(STORAGE_KEYS.THEME, 'dark'));
   
-  // INITIALIZE WITH SYSTEM PROTOCOL MESSAGE
   const [messages, setMessages] = useState<Message[]>([
     {
         id: 'sys_init',
@@ -65,7 +64,6 @@ const App: React.FC = () => {
     }
   ]);
 
-  const isInitialLoad = useRef(true);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType>(ModelType.Flash);
   const [registry, setRegistry] = useState<RegistryEntry[]>([]);
@@ -76,8 +74,6 @@ const App: React.FC = () => {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-  const [presentationState, setPresentationState] = useState<PresentationState>({ isActive: false, slide: 'intro', transcript: '', analysisResults: null });
-  const [weatherData, setWeatherData] = useState<WeatherForecast | null>(null);
   
   const activeTenantConfig = FEDERATION_REGISTRY.peers.find(p => p.id === activeTenantId) || TENANT_CONFIG;
 
@@ -87,13 +83,10 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const applyTheme = () => {
-      const root = window.document.documentElement;
-      const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-      if (isDark) root.classList.add('dark');
-      else root.classList.remove('dark');
-    };
-    applyTheme();
+    const root = window.document.documentElement;
+    const isDark = theme === 'dark' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (isDark) root.classList.add('dark');
+    else root.classList.remove('dark');
   }, [theme]);
 
   const handleRoleChange = (role: string) => {
@@ -126,12 +119,30 @@ const App: React.FC = () => {
             (trace) => setAgentTraces(prev => [trace, ...prev])
         );
 
-        setMessages(prev => [...prev, {
-            id: `mod_${Date.now()}`,
-            role: MessageRole.Model,
-            text: response.text,
-            timestamp: Date.now()
-        }]);
+        const newMessagesList = [...newMessages];
+
+        // If an episode is detected, add a cinematic message
+        if (response.episodeId && response.episodeId !== 'NONE') {
+            newMessagesList.push({
+                id: `epi_${Date.now()}`,
+                role: MessageRole.Episode,
+                text: response.text,
+                timestamp: Date.now(),
+                episodeId: response.episodeId,
+                nodePath: response.nodePath
+            });
+        } else {
+            newMessagesList.push({
+                id: `mod_${Date.now()}`,
+                role: MessageRole.Model,
+                text: response.text,
+                timestamp: Date.now(),
+                nodePath: response.nodePath
+            });
+        }
+        
+        setMessages(newMessagesList);
+
     } catch (e) {
         console.error("CoALA Cycle Failed:", e);
     } finally {
@@ -141,29 +152,11 @@ const App: React.FC = () => {
 
   const handleVoiceTranscript = (userText: string, modelText: string) => {
     if (!userText && !modelText) return;
-    
     const timestamp = Date.now();
-    const newMsgs: Message[] = [];
-    
-    if (userText) {
-      newMsgs.push({
-        id: `vuser_${timestamp}`,
-        role: MessageRole.User,
-        text: `[VHF_RADIO]: ${userText}`,
-        timestamp: timestamp
-      });
-    }
-    
-    if (modelText) {
-      newMsgs.push({
-        id: `vada_${timestamp + 1}`,
-        role: MessageRole.Model,
-        text: modelText,
-        timestamp: timestamp + 1
-      });
-    }
-    
-    setMessages(prev => [...prev, ...newMsgs]);
+    setMessages(prev => [...prev, 
+        { id: `vuser_${timestamp}`, role: MessageRole.User, text: `[VHF_RADIO]: ${userText}`, timestamp },
+        { id: `vada_${timestamp + 1}`, role: MessageRole.Model, text: modelText, timestamp: timestamp + 1 }
+    ]);
   };
 
   const handleSidebarTabChange = (tabId: SidebarTabId) => {
@@ -173,7 +166,7 @@ const App: React.FC = () => {
     else if (tabId === 'tech') setGmDashboardTab('commercial'); 
     else if (tabId === 'hr') setGmDashboardTab('hr');
     else setGmDashboardTab(undefined);
-    setIsMobileMenuOpen(false);
+    setIsMobileMenuOpen(false); // Close mobile menu after selection
   };
 
   const getActiveSidebarTab = (): SidebarTabId => {
@@ -191,54 +184,59 @@ const App: React.FC = () => {
       {showBootSequence && <BootSequence />}
       {showAuthOverlay && <AuthOverlay targetRole={targetRole} onComplete={handleAuthComplete} />}
       
-      <ObserverOverlay 
-        isOpen={isObserverOpen} 
-        onClose={() => setIsObserverOpen(false)} 
-        traces={agentTraces} 
-      />
+      <ObserverOverlay isOpen={isObserverOpen} onClose={() => setIsObserverOpen(false)} traces={agentTraces} />
 
       <VoiceModal 
-        isOpen={isVoiceModalOpen}
-        onClose={() => setIsVoiceModalOpen(false)}
-        userProfile={userProfile}
-        activeTenantConfig={activeTenantConfig}
-        onTranscriptReceived={handleVoiceTranscript}
-        channel="72"
+        isOpen={isVoiceModalOpen} onClose={() => setIsVoiceModalOpen(false)}
+        userProfile={userProfile} activeTenantConfig={activeTenantConfig}
+        onTranscriptReceived={handleVoiceTranscript} channel="72"
       />
 
       <DailyReportModal 
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        registry={registry}
-        logs={agentTraces}
-        vesselsInPort={vesselsInPort}
-        userProfile={userProfile}
-        weatherData={weatherData || { temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }}
-        activeTenantConfig={activeTenantConfig}
-        tenders={tenders}
-        agentTraces={agentTraces}
-        aisTargets={aisTargets}
-        onOpenReport={() => setIsReportModalOpen(true)}
-        onOpenTrace={() => setIsObserverOpen(true)}
+        isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}
+        registry={registry} logs={agentTraces} vesselsInPort={vesselsInPort}
+        userProfile={userProfile} activeTenantConfig={activeTenantConfig}
+        weatherData={[{ temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }]}
+        tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
+        onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
       />
 
       <PassportScanner 
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onScanComplete={(result) => {
-          handleSend(`Kimlik/Pasaport tarandı: ${result.data.name}`, []);
-        }}
+        isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)}
+        onScanComplete={(result) => handleSend(`Kimlik/Pasaport tarandı: ${result.data.name}`, [])}
       />
 
       {appMode === 'main' && !showBootSequence && !showAuthOverlay && (
         <>
-            <main className="flex-1 flex overflow-hidden relative">
-            <div className="hidden lg:flex flex-col flex-shrink-0 border-r border-[var(--border-color)]" style={{ width: `${sidebarWidth}px` }}>
-                <Sidebar 
-                    userProfile={userProfile}
+            {/* MOBILE MENU OVERLAY */}
+            {isMobileMenuOpen && (
+              <div className="fixed inset-0 z-[100] lg:hidden flex">
+                <div 
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                ></div>
+                
+                <div className="relative w-[80%] max-w-[300px] h-full bg-[#020617] border-r border-white/10 shadow-2xl animate-in slide-in-from-left duration-300 flex flex-col">
+                  <Sidebar 
+                    userProfile={userProfile} 
                     onRoleChange={handleRoleChange} 
-                    activeTab={getActiveSidebarTab()}
+                    activeTab={getActiveSidebarTab()} 
                     onTabChange={handleSidebarTabChange}
+                    onPulseClick={() => {
+                        // Optional pulse logic
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            <main className="flex-1 flex overflow-hidden relative">
+            
+            {/* Desktop Sidebar */}
+            <div className="hidden lg:flex flex-col flex-shrink-0 border-r border-white/5" style={{ width: `${sidebarWidth}px` }}>
+                <Sidebar 
+                    userProfile={userProfile} onRoleChange={handleRoleChange} 
+                    activeTab={getActiveSidebarTab()} onTabChange={handleSidebarTabChange}
                 />
             </div>
             
@@ -252,9 +250,8 @@ const App: React.FC = () => {
                     userRole={userProfile.role} theme={theme} activeTenantConfig={activeTenantConfig}
                     onModelChange={setSelectedModel} onSend={handleSend}
                     onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
-                    onRadioClick={() => setIsVoiceModalOpen(true)} 
                     onTraceClick={() => setIsObserverOpen(true)}
-                    onThemeChange={setTheme}
+                    onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} // Simplified toggle for mobile
                     onToggleSidebar={() => setIsMobileMenuOpen(true)} 
                 />
             </div>
@@ -263,7 +260,7 @@ const App: React.FC = () => {
                 <DraggableSplitter onDrag={handleCanvasDrag} />
             </div>
             
-            <div className="hidden xl:flex flex-col border-l border-[var(--border-color)] bg-[var(--bg-secondary)]" style={{ width: `${canvasWidth}px` }}>
+            <div className="hidden xl:flex flex-col border-l border-white/5 bg-[var(--bg-secondary)]" style={{ width: `${canvasWidth}px` }}>
                 <Canvas 
                     vesselsInPort={vesselsInPort} registry={registry} tenders={tenders} userProfile={userProfile}
                     onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}

@@ -1,3 +1,4 @@
+
 // services/telemetryStream.ts
 
 export type TelemetryCallback = (data: any) => void;
@@ -16,7 +17,8 @@ class TelemetryStreamService {
 
     /**
      * Initiates a connection to the telemetry WebSocket endpoint.
-     * Uses relative URL construction to adapt to Nginx/Vite proxies automatically.
+     * Crucially forces wss: if the page is loaded over https: to prevent 
+     * Mixed Content security errors in browser.
      */
     connect() {
         if (this.isConnecting) return;
@@ -33,24 +35,28 @@ class TelemetryStreamService {
 
         this.isConnecting = true;
 
-        // --- DYNAMIC URL CONSTRUCTION ---
-        // Prevents localhost:8000 errors by hitting the app's own gateway
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // --- SECURE PROTOCOL SELECTION ---
+        // Force wss: if the page is loaded over https:
+        // Use strict check against 'https:' which is the standard value of window.location.protocol
+        const isSecure = window.location.protocol === 'https:';
+        const protocol = isSecure ? 'wss:' : 'ws:';
         const host = window.location.host; 
+        
+        // Construct the URL using standard relative logic
         const wsUrl = `${protocol}//${host}/ws/telemetry`;
 
         try {
-            console.debug(`[Telemetry] Attempting connection to ${wsUrl} (Attempt ${this.retryCount + 1})`);
+            console.debug(`[Telemetry] Initializing WebSocket connection: ${wsUrl}`);
             this.socket = new WebSocket(wsUrl);
-            this.setupSocketHandlers(wsUrl);
+            this.setupSocketHandlers();
         } catch (error) {
             this.isConnecting = false;
-            console.error(`[Telemetry] WebSocket initialization failed:`, error);
+            console.error(`[Telemetry] WebSocket instance creation failed:`, error);
             this.handleReconnect();
         }
     }
 
-    private setupSocketHandlers(wsUrl: string) {
+    private setupSocketHandlers() {
         if (!this.socket) return;
 
         this.socket.onopen = () => {
@@ -72,7 +78,7 @@ class TelemetryStreamService {
                 const data = JSON.parse(event.data);
                 this.notifyListeners(data);
             } catch (e) {
-                // Ignore non-JSON system messages
+                // Ignore silent parsing errors for non-telemetry packets
             }
         };
 
@@ -80,9 +86,9 @@ class TelemetryStreamService {
             this.isConnecting = false;
             this.notifyStatusListeners(false);
             
-            // Don't retry if the code is 1000 (Normal Closure)
+            // Retry unless closed intentionally (code 1000)
             if (event.code !== 1000) { 
-                console.warn(`[Telemetry] Connection lost (Code ${event.code}). Initiating jittered backoff.`);
+                console.warn(`[Telemetry] Connection closed (Code ${event.code}). Retrying...`);
                 this.handleReconnect();
             }
             this.socket = null;
@@ -90,20 +96,15 @@ class TelemetryStreamService {
 
         this.socket.onerror = (error) => {
             this.isConnecting = false;
-            console.error(`[Telemetry] WebSocket Transport Error.`);
+            console.error(`[Telemetry] WebSocket transport error detected.`);
         };
     }
 
-    /**
-     * Exponential backoff with Full Jitter.
-     * Prevents synchronized retry storms from multiple clients.
-     */
     private handleReconnect() {
         if (this.reconnectTimer) return;
 
-        const exponentialDelay = Math.min(this.baseDelay * Math.pow(2, this.retryCount), this.maxRetryDelay);
-        // FULL JITTER: Random distribution between 0 and exponentialDelay
-        const jitteredDelay = Math.random() * exponentialDelay;
+        const delay = Math.min(this.baseDelay * Math.pow(2, this.retryCount), this.maxRetryDelay);
+        const jitteredDelay = delay * (0.5 + Math.random());
 
         this.reconnectTimer = setTimeout(() => {
             this.retryCount++;
@@ -119,7 +120,7 @@ class TelemetryStreamService {
             this.socket.onclose = null;
             this.socket.onerror = null;
             if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) {
-                this.socket.close(1000, "Cleanup");
+                this.socket.close(1000, "Component Cleanup");
             }
             this.socket = null;
         }
@@ -130,6 +131,7 @@ class TelemetryStreamService {
             this.listeners.push(callback);
         }
         
+        // Auto-connect on first subscriber
         if (!this.socket && !this.reconnectTimer) {
             this.connect();
         }
@@ -141,6 +143,7 @@ class TelemetryStreamService {
     
     onStatusChange(callback: StatusCallback): () => void {
         this.statusListeners.push(callback);
+        // Instant sync for new listener
         callback(this.socket?.readyState === WebSocket.OPEN);
         return () => {
             this.statusListeners = this.statusListeners.filter(l => l !== callback);
@@ -149,7 +152,7 @@ class TelemetryStreamService {
 
     private notifyListeners(data: any) {
         this.listeners.forEach(l => {
-            try { l(data); } catch (e) { console.error("[Telemetry] Listener fault:", e); }
+            try { l(data); } catch (e) {}
         });
     }
 

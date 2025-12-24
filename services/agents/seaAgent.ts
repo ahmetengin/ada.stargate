@@ -1,5 +1,5 @@
 
-import { AgentAction, AgentTraceLog, NodeName } from '../../types';
+import { AgentAction, AgentTraceLog, NodeName, NavtexMessage } from '../../types';
 import { getCurrentMaritimeTime } from '../utils';
 // import { FromPgn } from '@canboat/canboatjs'; 
 // import { PostgSail } from '@xbgmsharp/postgsail-mcp-server';
@@ -76,6 +76,66 @@ export const seaExpert = {
     addTrace(createLog('ada.sea', 'OUTPUT', `Decision: ${action} [${rule}]`, 'EXPERT'));
 
     return { action, rule, status };
+  },
+
+  // Skill: Fetch and Parse NAVTEX Messages (SHOD / NAVAREA III)
+  fetchActiveNavtex: async (region: 'MARMARA' | 'AEGEAN' | 'MED', addTrace: (t: AgentTraceLog) => void): Promise<{ messages: NavtexMessage[], summary: string }> => {
+      addTrace(createLog('ada.sea', 'THINKING', `Scanning 518 kHz (International) & 490 kHz (National) for MSI... Region: ${region}`, 'EXPERT'));
+      
+      // Simulate Radio/Web Fetch Latency
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const mockMessages: NavtexMessage[] = [];
+
+      if (region === 'MARMARA' || region === 'AEGEAN') {
+          // Message 1: Gunnery Exercise (Standard Turkish Navy warning)
+          mockMessages.push({
+              id: 'NAVTEX-382/25',
+              stationCode: 'I', // Izmir
+              messageType: 'A', // Navigational Warning
+              content: `TURNHOS N/W : 0382/25
+AEGEAN SEA
+1. GUNNERY EXERCISE, ON 21 NOV 25 FROM 0500Z TO 0900Z IN AREA BOUNDED BY:
+38 45.00 N - 025 21.00 E
+38 45.00 N - 024 52.00 E
+38 18.00 N - 024 52.00 E
+38 18.00 N - 025 21.00 E
+CAUTION ADVISED.`,
+              coordinates: { lat: 38.75, lng: 25.35 },
+              status: 'ACTIVE',
+              timestamp: getCurrentMaritimeTime()
+          });
+
+          // Message 2: Conflicting Greek Message (The Ege Dispute Simulation)
+          mockMessages.push({
+              id: 'LA88-245/25',
+              stationCode: 'L', // Limnos
+              messageType: 'A',
+              content: `ZCZC LA88
+201000 UTC NOV 25
+LIMNOS RADIO NAVWARN 245/25
+AEGEAN SEA
+UNAUTHORIZED STATION "IZMIR" BROADCAST NAVTEX MESSAGE NUMBER FA67-0382/25 IN GREEK NAVTEX SERVICE AREA.
+THE SAID MESSAGE IS NULL AND VOID.
+ONLY LIMNOS RADIO HAS AUTHORITY TO BROADCAST NAVTEX MESSAGES IN THIS AREA.
+NNNN`,
+              status: 'ACTIVE',
+              timestamp: getCurrentMaritimeTime()
+          });
+      }
+
+      addTrace(createLog('ada.sea', 'TOOL_EXECUTION', `Parsed 2 active messages from 518kHz stream.`, 'WORKER'));
+      
+      // Ada's Cognitive Summary of the Situation
+      const summary = `**NAVTEX INTELLIGENCE REPORT**\n` +
+                      `Active Warnings: **${mockMessages.length}**\n` +
+                      `> **Critical:** Gunnery Exercise in Central Aegean (0500Z-0900Z).\n` +
+                      `> **Notice:** Detected overlapping broadcast from Station Limnos (L) regarding Station Izmir (I). Protocol: Follow Safety Zone coordinates regardless of jurisdiction dispute.\n\n` +
+                      `*Disclaimer: This data is for situational awareness only. Official navigation requires certified NAVTEX receiver.*`;
+
+      addTrace(createLog('ada.sea', 'OUTPUT', `NAVTEX Briefing prepared. Conflicting mandates highlighted for Captain.`, 'EXPERT'));
+
+      return { messages: mockMessages, summary };
   },
 
   // Skill: Analyze Raw NMEA 2000 Protocol (CanboatJS)

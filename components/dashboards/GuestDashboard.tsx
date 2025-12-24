@@ -5,7 +5,7 @@ import {
     PartyPopper, QrCode, MapPin, Scan, LogIn, Lock, 
     Award, Plane, ChevronRight, Anchor, CreditCard, 
     Signal, Fingerprint, Snowflake, ShoppingBag, Coffee,
-    LifeBuoy, Ship, Wallet
+    LifeBuoy, Ship, Wallet, ShieldAlert, Radio
 } from 'lucide-react';
 import { UserProfile, TenantConfig } from '../../types';
 import { wimMasterData } from '../../services/wimMasterData';
@@ -31,6 +31,11 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
       status: "SECURE",
       balance: 0
   } : null;
+
+  // Mock Active Navtex Summary for Guests (Simplified from Technical Data)
+  const activeNavtexAlerts = [
+      { id: 'NAV-382', type: 'EXERCISE', message: 'Gunnery Exercise in Central Aegean', impact: 'Avoid Sector Bravo', severity: 'HIGH' }
+  ];
 
   // Generate a mock QR Data string unique to the user
   const qrData = JSON.stringify({
@@ -150,6 +155,27 @@ export const GuestDashboard: React.FC<GuestDashboardProps> = ({ userProfile }) =
                             </div>
                         </div>
                     </div>
+
+                    {/* MARITIME SAFETY & NAVTEX ALERT (NEW SECTION FOR GUESTS) */}
+                    {activeNavtexAlerts.length > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex items-center gap-4 shadow-sm animate-in slide-in-from-bottom-2">
+                            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-500">
+                                <ShieldAlert size={24} className="animate-pulse" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex justify-between items-center mb-1">
+                                    <h4 className="text-sm font-bold text-amber-900 dark:text-amber-400 uppercase tracking-wide">Maritime Safety Alert</h4>
+                                    <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 px-2 py-0.5 rounded">NAVTEX ACTIVE</span>
+                                </div>
+                                <div className="text-xs text-amber-800 dark:text-amber-200/80">
+                                    {activeNavtexAlerts[0].message}. <span className="font-bold">{activeNavtexAlerts[0].impact}.</span>
+                                </div>
+                            </div>
+                            <button className="text-[10px] underline text-amber-600 dark:text-amber-400 font-bold hover:text-amber-800">
+                                View Details
+                            </button>
+                        </div>
+                    )}
 
                     {/* MIDDLE ROW: CONCIERGE & VESSEL */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
