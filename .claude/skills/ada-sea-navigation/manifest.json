@@ -1,0 +1,30 @@
+{
+  "name": "ada-sea-navigation",
+  "version": "1.0.0",
+  "description": "Autonomous vessel capabilities including route planning, COLREGs analysis, and telemetry monitoring.",
+  "tools": [
+    {
+      "name": "analyze_collision_risk",
+      "description": "Evaluates CPA (Closest Point of Approach) and determines right-of-way based on COLREGs.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "own_course": { "type": "number" },
+          "target_bearing": { "type": "number" },
+          "target_range": { "type": "number" }
+        },
+        "required": ["own_course", "target_bearing"]
+      }
+    },
+    {
+      "name": "get_live_telemetry_stream",
+      "description": "Connects to the SignalK/OneNet stream for real-time sensor data.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "data_points": { "type": "array", "items": { "type": "string" }, "description": "e.g. ['navigation.speedOverGround', 'environment.wind.speedApparent']" }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "ada-legal-compliance",
+  "version": "1.0.0",
+  "description": "Legal and compliance capabilities including contract analysis, regulation lookup, and privacy checks.",
+  "tools": [
+    {
+      "name": "consult_rag_knowledge",
+      "description": "Semantic search in the Vector Database (Qdrant) for regulations, contracts, and laws.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "The legal question or keyword." },
+          "domain": { "type": "string", "enum": ["CONTRACT", "MARITIME_LAW", "KVKK", "ENVIRONMENT"] }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "audit_vessel_documents",
+      "description": "Checks if a vessel has all mandatory documents for the requested operation.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "operation": { "type": "string", "enum": ["CHECK_IN", "CHECK_OUT", "RACE_ENTRY"] },
+          "vessel_documents": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["operation"]
+      }
+    }
+  ]
+}

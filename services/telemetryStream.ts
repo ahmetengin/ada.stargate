@@ -36,9 +36,9 @@ class TelemetryStreamService {
         this.isConnecting = true;
 
         // --- SECURE PROTOCOL SELECTION ---
-        // Force wss: if the page is loaded over https:
-        // Use strict check against 'https:' which is the standard value of window.location.protocol
-        const isSecure = window.location.protocol === 'https:';
+        // Robust check for HTTPS to force WSS
+        // Checks if protocol is 'https:' (standard) or just 'https' (some proxies/env)
+        const isSecure = window.location.protocol === 'https:' || window.location.protocol === 'https';
         const protocol = isSecure ? 'wss:' : 'ws:';
         const host = window.location.host; 
         
@@ -51,7 +51,7 @@ class TelemetryStreamService {
             this.setupSocketHandlers();
         } catch (error) {
             this.isConnecting = false;
-            console.error(`[Telemetry] WebSocket instance creation failed:`, error);
+            console.error(`[Telemetry] WebSocket instance creation failed for ${wsUrl}:`, error);
             this.handleReconnect();
         }
     }

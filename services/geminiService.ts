@@ -27,11 +27,10 @@ export const streamChatResponse = async (
 ) => {
   try {
     const ai = createClient();
-    // Use gemini-3-flash-preview for speed in basic tasks, Pro for complex ones
+    // Using gemini-3-flash-preview for standard tasks and gemini-3-pro-preview for complex reasoning
     const modelName = modelType === ModelType.Pro ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
     
     const systemInstruction = generateBaseSystemInstruction(tenantConfig);
-    // Fix: Match generateContextBlock signature (UserProfile, any)
     const contextBlock = generateContextBlock(userProfile, { vessels: vesselsInPort, tenders: tenders.length });
     
     // Format history and limit length for token efficiency
@@ -46,17 +45,20 @@ export const streamChatResponse = async (
 
     const contents = [...history, lastMessage];
 
+    const config: any = {
+      systemInstruction: systemInstruction,
+      tools: useSearch ? [{ googleSearch: {} }] : undefined,
+    };
+
+    // Add Thinking Config only for 2.5 and 3 series models
+    if (modelType === ModelType.Pro) {
+       config.thinkingConfig = { thinkingBudget: 1024 }; // Enable moderate thinking for Pro
+    }
+
     const responseStream = await ai.models.generateContentStream({
       model: modelName,
       contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-        // Pro model handles complex reasoning and larger context better
-        ...(modelType === ModelType.Pro && {
-            thinkingConfig: { thinkingBudget: 0 } // Disable thinking for lowest latency in chat
-        }),
-        tools: useSearch ? [{ googleSearch: {} }] : undefined,
-      },
+      config: config
     });
 
     for await (const chunk of responseStream) {
@@ -91,10 +93,10 @@ export const generateSimpleResponse = async (
     tenantConfig: TenantConfig
 ): Promise<string> => {
     const ai = createClient();
+    // Default to the most capable model for internal reasoning tasks
     const modelName = 'gemini-3-pro-preview';
     const systemInstruction = generateBaseSystemInstruction(tenantConfig);
     
-    // Fix: Match generateContextBlock signature (UserProfile, any)
     const contextBlock = generateContextBlock(userProfile, { vessels: vesselsInPort, tenders: tenders.length });
     const history = formatHistory(messages);
     
@@ -104,7 +106,10 @@ export const generateSimpleResponse = async (
         const response = await ai.models.generateContent({
             model: modelName,
             contents,
-            config: { systemInstruction },
+            config: { 
+                systemInstruction,
+                thinkingConfig: { thinkingBudget: 1024 } 
+            },
         });
         return response.text ?? "Yanıt üretilemedi.";
     } catch (error) {

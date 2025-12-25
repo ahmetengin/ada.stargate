@@ -2,25 +2,18 @@ fastapi>=0.109.0
 uvicorn>=0.27.0
 pydantic>=2.6.0
 python-dotenv>=1.0.1
-google-genai>=0.14.0
+google-genai
 httpx>=0.26.0
 redis>=5.0.0
-# Cognitive Stack
 langgraph>=0.0.10
 langchain-core
 langchain-community
 langchain-google-genai
 langchain-text-splitters
 qdrant-client
-asyncpg
 markdown
 beautifulsoup4
+asyncpg
 pandas
 scikit-learn
-# Live API Client
-opencv-python
-pyaudio
-pillow
-mss
-# IoT & Real-Time
-paho-mqtt
+websockets

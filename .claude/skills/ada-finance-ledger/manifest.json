@@ -1,0 +1,45 @@
+{
+  "name": "ada-finance-ledger",
+  "version": "1.0.0",
+  "description": "Financial management capabilities including invoicing, debt tracking, and dynamic pricing.",
+  "tools": [
+    {
+      "name": "calculate_mooring_fee",
+      "description": "Calculates the exact mooring fee using MAKER protocol (Zero Error Math).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "loa": { "type": "number" },
+          "beam": { "type": "number" },
+          "days": { "type": "number" },
+          "season": { "type": "string", "enum": ["HIGH", "LOW", "MID"] }
+        },
+        "required": ["loa", "beam", "days"]
+      }
+    },
+    {
+      "name": "check_account_status",
+      "description": "Checks the debt and payment history of a vessel.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "vessel_name": { "type": "string" }
+        },
+        "required": ["vessel_name"]
+      }
+    },
+    {
+      "name": "generate_payment_link",
+      "description": "Creates a secure 3D-Secure payment link via Iyzico.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "number" },
+          "currency": { "type": "string", "default": "EUR" },
+          "description": { "type": "string" }
+        },
+        "required": ["amount", "description"]
+      }
+    }
+  ]
+}

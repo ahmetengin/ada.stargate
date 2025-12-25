@@ -17,19 +17,9 @@ services:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
-      - OLLAMA_URL=http://ada-local-llm:11434
-      - MCP_SIGNALK_URL=http://ada-signalk-mcp:3002/sse
-      - MQTT_BROKER_HOST=ada-mqtt
-      - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
-      - INFLUXDB_ORG=${INFLUXDB_ORG}
-      - INFLUXDB_BUCKET=signalk
     depends_on:
       - ada-redis
       - ada-qdrant
-      - ada-local-llm
-      - ada-signalk-mcp
-      - influxdb
     volumes:
       - ./backend:/app
       - ./docs:/docs
@@ -47,18 +37,7 @@ services:
     networks:
       - ada_onenet
 
-  # 3. LOCAL BRAIN (Ollama - Offline AI)
-  ada-local-llm:
-    image: ollama/ollama
-    container_name: ada_local_llm
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - ada_onenet
-
-  # 4. EVENT BUS (Redis)
+  # 3. EVENT BUS (Redis)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
@@ -69,7 +48,7 @@ services:
     networks:
       - ada_onenet
 
-  # 5. TRUTH (Postgres)
+  # 4. TRUTH (Postgres)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -84,7 +63,7 @@ services:
     networks:
       - ada_onenet
 
-  # 6. FRONTEND (React)
+  # 5. FRONTEND (React)
   ada-frontend:
     build:
       context: .
@@ -99,85 +78,7 @@ services:
     networks:
       - ada_onenet
 
-  # 7. SIGNALK SERVER (NMEA Hub + Plugins)
-  ada-signalk:
-    image: signalk/signalk-server
-    container_name: ada_signalk
-    ports:
-      - "3001:3000"
-    environment:
-      - SECURITYSTRATEGY=./node_modules/@signalk/server-admin/lib/security/never
-    entrypoint: sh -c "cd /home/node/.signalk && npm install signalk-marinetraffic-public @signalk/course-provider openweather-signalk signalk-mosquitto signalk-windy-plugin signalk-weatherflow signalk-racer signalk-postgsail && cd /home/node/signalk && ./startup.sh"
-    volumes:
-      - signalk_data:/home/node/.signalk
-    restart: always
-    networks:
-      - ada_onenet
-
-  # 8. SIGNALK MCP BRIDGE (The AI Interface)
-  ada-signalk-mcp:
-    image: node:18-alpine
-    container_name: ada_signalk_mcp
-    command: sh -c "npx -y signalk-mcp-server --signalk-url http://ada-signalk:3000 --port 3002 --transport sse"
-    depends_on:
-      - ada-signalk
-    ports:
-      - "3002:3002"
-    restart: always
-    networks:
-      - ada_onenet
-
-  # 9. IOT SENSORY SYSTEM (MQTT Broker)
-  ada-mqtt:
-    image: eclipse-mosquitto:2
-    container_name: ada_mqtt_broker
-    ports:
-      - "1883:1883"
-      - "9001:9001"
-    volumes:
-      - mqtt_data:/mosquitto/data
-      - mqtt_log:/mosquitto/log
-    networks:
-      - ada_onenet
-
-  # --- TIME-SERIES DATABASE (Sensor History) ---
-  influxdb:
-    image: influxdb:2.7
-    container_name: influxdb
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb_data:/var/lib/influxdb2
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=ada
-      - DOCKER_INFLUXDB_INIT_PASSWORD=adapassword
-      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-wim}
-      - DOCKER_INFLUXDB_INIT_BUCKET=signalk
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN:-ada-super-secret-token}
-    networks:
-      - ada_onenet
-
-  # --- DATA BRIDGE (MQTT to InfluxDB) ---
-  telegraf:
-    image: telegraf:1.28
-    container_name: telegraf
-    volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-    depends_on:
-      - ada-mqtt
-      - influxdb
-    environment:
-      - INFLUX_TOKEN=${INFLUXDB_TOKEN:-ada-super-secret-token}
-    networks:
-      - ada_onenet
-
 volumes:
   postgres_data:
   qdrant_data:
   redis_data:
-  ollama_data:
-  signalk_data:
-  mqtt_data:
-  mqtt_log:
-  influxdb_data:

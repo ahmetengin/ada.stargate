@@ -1,0 +1,52 @@
+{
+  "name": "ada-marina-ops",
+  "version": "1.0.0",
+  "description": "Operational capabilities for West Istanbul Marina management. Handles berthing, traffic, and physical assets.",
+  "tools": [
+    {
+      "name": "scan_radar_sector",
+      "description": "Scans a specific maritime sector for vessel traffic using simulated Kpler/AIS data.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "sector_id": {
+            "type": "string",
+            "enum": ["MARMARA_APPROACH", "BOSPHORUS_SOUTH", "WIM_BASIN"],
+            "description": "The geographic sector to scan."
+          },
+          "radius_nm": {
+            "type": "number",
+            "description": "Scan radius in nautical miles."
+          }
+        },
+        "required": ["sector_id"]
+      }
+    },
+    {
+      "name": "assign_berth_smart",
+      "description": "Calculates the optimal berth assignment based on vessel dimensions and live weather conditions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "loa": { "type": "number" },
+          "beam": { "type": "number" },
+          "draft": { "type": "number" },
+          "vessel_type": { "type": "string" }
+        },
+        "required": ["loa", "beam"]
+      }
+    },
+    {
+      "name": "control_iot_asset",
+      "description": "Sends command to physical marina assets (Pedestals, Gates, Lights) via MQTT.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asset_id": { "type": "string", "description": "e.g., PED-A12, GATE-MAIN" },
+          "command": { "type": "string", "enum": ["ON", "OFF", "RESET", "OPEN", "CLOSE"] }
+        },
+        "required": ["asset_id", "command"]
+      }
+    }
+  ]
+}

@@ -1,39 +1,12 @@
 
-// services/orchestratorService.ts
-
-import { GoogleGenAI, Type, FunctionDeclaration, Tool } from "@google/genai";
 import { AgentTraceLog, UserProfile, Message, TenantConfig } from '../types';
-import { aceService } from './aceService';
+import { sendToBackend } from './api';
 import { marinaExpert } from './agents/marinaAgent';
 import { financeExpert } from './agents/financeAgent';
+// Local fallback tools
+import { GoogleGenAI } from "@google/genai";
 
-const scanSectorTool: FunctionDeclaration = {
-  name: 'scan_sector',
-  description: 'Scans the radar for vessels in a given sector.',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      lat: { type: Type.NUMBER, description: 'Latitude of the center point' },
-      lng: { type: Type.NUMBER, description: 'Longitude of the center point' },
-      radius: { type: Type.NUMBER, description: 'Radius in nautical miles' }
-    },
-    required: ['lat', 'lng', 'radius']
-  }
-};
-
-const checkDebtTool: FunctionDeclaration = {
-  name: 'check_debt',
-  description: 'Checks the financial debt status of a vessel.',
-  parameters: {
-    type: Type.OBJECT,
-    properties: {
-      vesselName: { type: Type.STRING, description: 'Name of the vessel' }
-    },
-    required: ['vesselName']
-  }
-};
-
-const tools: Tool[] = [{ functionDeclarations: [scanSectorTool, checkDebtTool] }];
+const createLocalClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const orchestratorService = {
   async processRequest(
@@ -46,157 +19,121 @@ export const orchestratorService = {
   ): Promise<{ text: string; code?: string; result?: string }> {
     const timestamp = new Date().toLocaleTimeString();
     
-    // 1. ROUTING & TRACING
+    // 1. ROUTING LOG
     onTrace({
-      id: `tr_${Date.now()}_1`,
+      id: `tr_${Date.now()}_start`,
       timestamp,
       node: 'ada.stargate',
       step: 'ROUTING',
-      content: `Ingesting: "${prompt.substring(0, 30)}..." with ACE Playbook active.`,
+      content: `Inbound Signal: "${prompt.substring(0, 50)}..."`,
       persona: 'ORCHESTRATOR'
     });
 
-    const isMath = /hesapla|kaç|toplam|oran|compute|calculate|math|\*|\/|\+/i.test(prompt);
-
-    let makerCode = "";
-    let makerResult = "";
-
-    if (isMath) {
-      onTrace({
-        id: `tr_${Date.now()}_2`,
-        timestamp,
-        node: 'ada.stargate',
-        step: 'PLANNING',
-        content: "Computational complexity detected. Applying MAKER (LATM) protocol.",
-        persona: 'ORCHESTRATOR'
-      });
-      
-      makerCode = `def solve():\n  # ACE Refined Math Logic\n  area = 20.4 * 5.6\n  rate = 1.5\n  return area * rate\nprint(solve())`;
-      makerResult = "171.36";
-
-      onTrace({
-        id: `tr_${Date.now()}_3`,
-        timestamp,
-        node: 'ada.marina',
-        step: 'CODE_OUTPUT',
-        content: "Synthesized tactical Python script for zero-error math.",
-        persona: 'WORKER',
-        code: makerCode,
-        result: makerResult
-      });
-    }
-
-    // 2. GENERATION
+    // --- STRATEGY A: HYPERSCALE BACKEND (Python) ---
     try {
-        const domain = isMath ? 'MARINA' : 'STARGATE';
-        const activePlaybook = aceService.getPlaybookForDomain(domain);
-
-        const systemInstruction = `You are ADA. Use the following EVOLVING PLAYBOOK for this domain:\n${activePlaybook}\n\nAdopt the tone of the Big 4 domains. When asked to check debt or scan sector, use the provided tools.`;
-
-        // Initialize AI Client Safely Here
-        if (!process.env.API_KEY) {
-            throw new Error("API Key is missing. Please check .env file.");
-        }
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-3-flash-preview',
-            contents: prompt,
-            config: {
-                systemInstruction: systemInstruction,
-                thinkingConfig: { thinkingBudget: 0 },
-                tools: tools
-            }
-        });
-
-        let responseText = response.text || "";
-
-        // Handle Function Calls
-        if (response.functionCalls && response.functionCalls.length > 0) {
-            const functionCall = response.functionCalls[0];
-            const name = functionCall.name;
-            const args = functionCall.args as any;
-
+        // We attempt to offload the heavy lifting (LangGraph) to the server
+        const backendRes = await sendToBackend(prompt, user, { stats, history: history.slice(-2) });
+        
+        if (backendRes && backendRes.text) {
             onTrace({
-                id: `tr_fc_${Date.now()}`,
-                timestamp: new Date().toLocaleTimeString(),
-                node: 'ada.stargate',
-                step: 'TOOL_CALL',
-                content: `Invoking Tool: ${name}`,
+                id: `tr_${Date.now()}_be`,
+                timestamp,
+                node: 'ada.core [Python]',
+                step: 'OUTPUT',
+                content: "Hyperscale Core processed the request.",
                 persona: 'ORCHESTRATOR'
             });
-
-            let toolResult: any = { error: "Tool not found" };
             
-            if (name === 'scan_sector') {
-                toolResult = await marinaExpert.scanSector(args.lat, args.lng, args.radius, onTrace);
-            } else if (name === 'check_debt') {
-                toolResult = await financeExpert.checkDebt(args.vesselName);
-            }
-
-            // Second turn to get natural language response
-            const contents = [
-                { role: 'user', parts: [{ text: prompt }] },
-                { role: 'model', parts: [{ functionCall: functionCall }] },
-                { role: 'user', parts: [{ functionResponse: { name: name, response: { result: toolResult } } }] }
-            ];
-
-            const response2 = await ai.models.generateContent({
-                model: 'gemini-3-flash-preview',
-                contents: contents,
-                config: {
-                    systemInstruction: systemInstruction,
-                    tools: tools
-                }
-            });
-
-            responseText = response2.text || "Tool execution completed.";
-        }
-
-        if (!responseText && !makerCode) {
-             responseText = "Cognitive error in Hyperscale Core.";
-        }
-
-        const finalResponse = {
-            text: responseText,
-            code: makerCode || undefined,
-            result: makerResult || undefined
-        };
-
-        // 3. ACE REFLECTION: Trigger self-improvement loop
-        setTimeout(async () => {
-            if (makerCode && makerResult) {
-                await aceService.reflect(prompt, makerCode, makerResult, onTrace);
-                
-                onTrace({
-                    id: `tr_ace_${Date.now()}`,
-                    timestamp: new Date().toLocaleTimeString(),
-                    node: 'ada.stargate',
-                    step: 'ACE_REFLECTION',
-                    content: `New tactical insight curated to Playbook from trace.`,
-                    persona: 'ORCHESTRATOR'
+            // Backend might return traces we want to visualize
+            if (backendRes.traces) {
+                backendRes.traces.forEach((t: any, i: number) => {
+                    onTrace({
+                        id: `be_tr_${Date.now()}_${i}`,
+                        timestamp,
+                        node: t.node || 'ada.core',
+                        step: t.step || 'THINKING',
+                        content: t.content || JSON.stringify(t),
+                        persona: 'EXPERT'
+                    });
                 });
             }
-        }, 100);
 
-        return finalResponse;
+            return {
+                text: backendRes.text,
+                // If the backend generated code/results, pass them through
+                code: backendRes.actions?.[0]?.params?.code,
+                result: backendRes.actions?.[0]?.params?.result
+            };
+        }
+    } catch (e) {
+        // Silent fail to Strategy B
+        console.warn("Backend unavailable, using edge fallback.");
+    }
 
-    } catch (e: any) {
-      onTrace({
-        id: `err_${Date.now()}`,
+    // --- STRATEGY B: EDGE FALLBACK (Browser LLM) ---
+    onTrace({
+        id: `tr_${Date.now()}_fb`,
         timestamp,
-        node: 'ada.stargate',
-        step: 'ERROR',
-        content: `Neural link unstable: ${e.message}`,
-        isError: true
-      } as any);
-      
-      // Fallback for Demo if API Key is missing
-      if (e.message.includes("API Key is missing")) {
-          return { text: "⚠️ **SYSTEM ALERT**\n\nGoogle Gemini API Anahtarı bulunamadı. Lütfen `.env` dosyasını kontrol edin ve sunucuyu yeniden başlatın." };
-      }
+        node: 'ada.stargate [Edge]',
+        step: 'WARNING',
+        content: "Neural Uplink Unstable. Switching to Local Logic (Edge Mode).",
+        persona: 'ORCHESTRATOR'
+    });
 
-      return { text: "⚠️ **SİSTEM ALERTI**\n\nAna beyne ulaşılamıyor. ACE Playbook'ları pasif." };
+    try {
+        const ai = createLocalClient();
+        const model = 'gemini-3-flash-preview'; // Fast model for edge
+        
+        // Simple Tool Definitions for Local Fallback
+        const tools = [
+            { functionDeclarations: [
+                {
+                    name: "get_vessel_telemetry",
+                    description: "Get battery, fuel, and system status.",
+                    parameters: { type: "OBJECT", properties: { vesselName: { type: "STRING" } } }
+                }
+            ]}
+        ];
+
+        const result = await ai.models.generateContent({
+            model,
+            contents: [
+                { role: 'user', parts: [{ text: `System Prompt: You are Ada, Marina OS. User: ${user.name}. Query: ${prompt}` }] }
+            ],
+            config: { tools }
+        });
+
+        // Handle Function Calls locally
+        const fc = result.functionCalls?.[0];
+        if (fc) {
+            const args = fc.args as any;
+            onTrace({
+                id: `tr_${Date.now()}_tool`,
+                timestamp,
+                node: 'ada.marina [Local]',
+                step: 'TOOL_EXECUTION',
+                content: `Executing ${fc.name} locally...`,
+                persona: 'WORKER'
+            });
+
+            if (fc.name === 'get_vessel_telemetry') {
+                const tel = await marinaExpert.getVesselTelemetry(args.vesselName || 'Phisedelia');
+                return { text: `**TELEMETRY (LOCAL):**\nBattery: ${tel?.battery.serviceBank}V\nFuel: ${tel?.tanks.fuel}%` };
+            }
+        }
+
+        return { text: result.text || "Communication Error." };
+
+    } catch (localError: any) {
+        onTrace({
+            id: `tr_${Date.now()}_err`,
+            timestamp,
+            node: 'ada.stargate',
+            step: 'ERROR',
+            content: `System Failure: ${localError.message}`,
+            isError: true
+        });
+        return { text: "⚠️ **SYSTEM OFFLINE**\n\nUnable to process request. Please check network connection." };
     }
   }
 };

@@ -5,7 +5,7 @@ import {
     Anchor, Radio, CreditCard, Scale, Brain, Activity, Shield, Zap, Box, Terminal
 } from 'lucide-react';
 
-export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'none';
+export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'berths' | 'none';
 
 interface SidebarProps {
   userProfile: UserProfile;
@@ -97,4 +97,4 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
     </div>
   );
-};
+}

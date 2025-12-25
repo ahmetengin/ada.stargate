@@ -206,7 +206,7 @@ const App: React.FC = () => {
         isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)}
         registry={registry} logs={agentTraces} vesselsInPort={vesselsInPort}
         userProfile={userProfile} activeTenantConfig={activeTenantConfig}
-        weatherData={[{ temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }]}
+        weatherData={{ temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }}
         tenders={tenders} agentTraces={agentTraces} aisTargets={aisTargets}
         onOpenReport={() => setIsReportModalOpen(true)} onOpenTrace={() => setIsObserverOpen(true)}
       />
@@ -262,7 +262,7 @@ const App: React.FC = () => {
                     onQuickAction={(text) => handleSend(text, [])} onScanClick={() => setIsScannerOpen(true)}
                     onTraceClick={() => setIsObserverOpen(true)}
                     onRadioClick={() => setIsVoiceModalOpen(true)}
-                    onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} // Simplified toggle for mobile
+                    onThemeChange={setTheme}
                     onToggleSidebar={() => setIsMobileMenuOpen(true)} 
                 />
             </div>
