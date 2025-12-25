@@ -16,4 +16,4 @@ beautifulsoup4
 asyncpg
 pandas
 scikit-learn
-websockets
+sentence-transformers

@@ -1,3 +1,4 @@
+
 version: '3.9'
 
 networks:
@@ -5,14 +6,12 @@ networks:
     driver: bridge
 
 services:
-  # 1. THE BRAIN (Python LangGraph + MAKER + SEAL)
+  # 1. THE BRAIN
   ada-core:
     build: 
       context: ./backend
       dockerfile: Dockerfile
     container_name: ada_core_hyperscale
-    ports:
-      - "8000:8000"
     environment:
       - API_KEY=${API_KEY}
       - REDIS_URL=redis://ada-redis:6379
@@ -20,13 +19,11 @@ services:
     depends_on:
       - ada-redis
       - ada-qdrant
-    volumes:
-      - ./backend:/app
-      - ./docs:/docs
     networks:
       - ada_onenet
+    restart: always
 
-  # 2. MEMORY (Vector DB)
+  # 2. MEMORY
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
@@ -37,7 +34,7 @@ services:
     networks:
       - ada_onenet
 
-  # 3. EVENT BUS (Redis)
+  # 3. EVENT BUS
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
@@ -48,22 +45,7 @@ services:
     networks:
       - ada_onenet
 
-  # 4. TRUTH (Postgres)
-  ada-postgres:
-    image: postgres:15-alpine
-    container_name: ada_postgres
-    environment:
-      POSTGRES_USER: ada
-      POSTGRES_PASSWORD: adapassword
-      POSTGRES_DB: wim_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ada_onenet
-
-  # 5. FRONTEND (React)
+  # 4. FRONTEND
   ada-frontend:
     build:
       context: .
@@ -79,6 +61,6 @@ services:
       - ada_onenet
 
 volumes:
-  postgres_data:
   qdrant_data:
   redis_data:
+  postgres_data:

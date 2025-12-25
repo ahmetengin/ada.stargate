@@ -2,8 +2,6 @@
 import { AgentTraceLog, UserProfile, Message, TenantConfig } from '../types';
 import { sendToBackend } from './api';
 import { marinaExpert } from './agents/marinaAgent';
-import { financeExpert } from './agents/financeAgent';
-// Local fallback tools
 import { GoogleGenAI } from "@google/genai";
 
 const createLocalClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -29,81 +27,91 @@ export const orchestratorService = {
       persona: 'ORCHESTRATOR'
     });
 
+    let backendResponse = null;
+
     // --- STRATEGY A: HYPERSCALE BACKEND (Python) ---
     try {
-        // We attempt to offload the heavy lifting (LangGraph) to the server
-        const backendRes = await sendToBackend(prompt, user, { stats, history: history.slice(-2) });
-        
-        if (backendRes && backendRes.text) {
-            onTrace({
-                id: `tr_${Date.now()}_be`,
-                timestamp,
-                node: 'ada.core [Python]',
-                step: 'OUTPUT',
-                content: "Hyperscale Core processed the request.",
-                persona: 'ORCHESTRATOR'
-            });
-            
-            // Backend might return traces we want to visualize
-            if (backendRes.traces) {
-                backendRes.traces.forEach((t: any, i: number) => {
-                    onTrace({
-                        id: `be_tr_${Date.now()}_${i}`,
-                        timestamp,
-                        node: t.node || 'ada.core',
-                        step: t.step || 'THINKING',
-                        content: t.content || JSON.stringify(t),
-                        persona: 'EXPERT'
-                    });
-                });
-            }
-
-            return {
-                text: backendRes.text,
-                // If the backend generated code/results, pass them through
-                code: backendRes.actions?.[0]?.params?.code,
-                result: backendRes.actions?.[0]?.params?.result
-            };
-        }
+        // Attempt to connect to the Python Brain
+        backendResponse = await sendToBackend(prompt, user, { stats, history: history.slice(-2) });
     } catch (e) {
-        // Silent fail to Strategy B
-        console.warn("Backend unavailable, using edge fallback.");
+        console.warn("Backend connection failed, preparing fallback...", e);
+    }
+
+    // If Backend Responded Successfully
+    if (backendResponse && backendResponse.text) {
+        onTrace({
+            id: `tr_${Date.now()}_be`,
+            timestamp,
+            node: 'ada.core [Python]',
+            step: 'OUTPUT',
+            content: "Hyperscale Core processed the request.",
+            persona: 'ORCHESTRATOR'
+        });
+        
+        // Visualize Backend Traces if available
+        if (backendResponse.traces) {
+            backendResponse.traces.forEach((t: any, i: number) => {
+                onTrace({
+                    id: `be_tr_${Date.now()}_${i}`,
+                    timestamp: new Date().toLocaleTimeString(),
+                    node: t.node || 'ada.core',
+                    step: t.step || 'THINKING',
+                    content: t.content || JSON.stringify(t),
+                    persona: 'EXPERT'
+                });
+            });
+        }
+
+        return {
+            text: backendResponse.text,
+            // Map legacy fields if needed, or rely on text response
+            code: backendResponse.actions?.[0]?.params?.code,
+            result: backendResponse.actions?.[0]?.params?.result
+        };
     }
 
     // --- STRATEGY B: EDGE FALLBACK (Browser LLM) ---
+    // If we are here, Backend failed or is offline. Ada takes over locally.
     onTrace({
         id: `tr_${Date.now()}_fb`,
         timestamp,
         node: 'ada.stargate [Edge]',
         step: 'WARNING',
-        content: "Neural Uplink Unstable. Switching to Local Logic (Edge Mode).",
+        content: "Neural Uplink Unstable (Backend Offline). Switching to Local Logic (Edge Mode).",
         persona: 'ORCHESTRATOR'
     });
 
     try {
         const ai = createLocalClient();
-        const model = 'gemini-3-flash-preview'; // Fast model for edge
+        // Use Flash model for speed in fallback mode
+        const model = 'gemini-2.0-flash-lite-preview-02-05'; 
         
-        // Simple Tool Definitions for Local Fallback
+        // Define simple tools for local execution
         const tools = [
             { functionDeclarations: [
                 {
                     name: "get_vessel_telemetry",
-                    description: "Get battery, fuel, and system status.",
+                    description: "Get battery, fuel, and system status for a vessel.",
                     parameters: { type: "OBJECT", properties: { vesselName: { type: "STRING" } } }
                 }
             ]}
         ];
 
+        const systemPrompt = `You are Ada, the Maritime AI for ${tenant.name}.
+        The primary brain is currently offline, so you are operating in 'Safe Mode'.
+        User: ${user.name} (${user.role}).
+        Operational Status: ${stats.vessels} vessels in port.
+        Be helpful but brief.`;
+
         const result = await ai.models.generateContent({
             model,
             contents: [
-                { role: 'user', parts: [{ text: `System Prompt: You are Ada, Marina OS. User: ${user.name}. Query: ${prompt}` }] }
+                { role: 'user', parts: [{ text: `${systemPrompt}\n\nQuery: ${prompt}` }] }
             ],
             config: { tools }
         });
 
-        // Handle Function Calls locally
+        // Handle Function Calls locally if needed
         const fc = result.functionCalls?.[0];
         if (fc) {
             const args = fc.args as any;
@@ -122,9 +130,10 @@ export const orchestratorService = {
             }
         }
 
-        return { text: result.text || "Communication Error." };
+        return { text: result.text || "I am here, but I cannot process that request right now." };
 
     } catch (localError: any) {
+        console.error("Local Fallback Failed:", localError);
         onTrace({
             id: `tr_${Date.now()}_err`,
             timestamp,
@@ -133,7 +142,7 @@ export const orchestratorService = {
             content: `System Failure: ${localError.message}`,
             isError: true
         });
-        return { text: "⚠️ **SYSTEM OFFLINE**\n\nUnable to process request. Please check network connection." };
+        return { text: "⚠️ **SYSTEM ALERT**\n\nBoth Cloud and Edge nodes are unresponsive. Check your API Key and Network connection." };
     }
   }
 };
