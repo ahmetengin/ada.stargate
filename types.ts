@@ -125,16 +125,27 @@ export interface TravelItinerary {
   transfers: any[];
 }
 
+// NEW: Scoring History Item
+export interface ATSHistoryItem {
+    id: string;
+    date: string;
+    action: string; // e.g., "Late Payment", "High Spend", "Speeding"
+    delta: number; // e.g., -50, +20
+    category: 'FINANCE' | 'OPS' | 'BEHAVIOR' | 'LOYALTY';
+    description: string;
+}
+
 export interface CustomerRiskProfile {
-  totalScore: number;
-  segment: 'WHALE' | 'VIP' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
+  totalScore: number; // 0 - 1000
+  segment: 'WHALE' | 'PLATINUM' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
   breakdown: {
-    financial: number;
-    operational: number;
-    commercial: number;
-    social: number;
+    financial: number; // 0-400
+    operational: number; // 0-300
+    behavioral: number; // 0-200
+    loyalty: number; // 0-100
   };
   flags: string[];
+  history: ATSHistoryItem[]; // Full audit trail
   lastAssessmentDate: string;
 }
 
@@ -165,6 +176,18 @@ export interface SecurityThreat {
   riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   detectedBy: string;
   timestamp: string;
+}
+
+// NEW: Real-time Alert Structure
+export interface SecurityAlert {
+    id: string;
+    timestamp: string;
+    severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+    type: 'UNAUTHORIZED_ENTRY' | 'SPEEDING' | 'DRONE_DETECTED' | 'GEOFENCE_BREACH';
+    location: string;
+    targetId?: string; // Vessel name or Object ID
+    message: string;
+    status: 'ACTIVE' | 'RESOLVED' | 'INVESTIGATING';
 }
 
 export interface CongressEvent {
@@ -231,6 +254,14 @@ export interface MasterDataStructure {
   loyalty_program?: any;
   ocean_guardians?: any;
   digital_services?: any;
+  protocol_config?: {
+      welcome_hail?: {
+          channel: string;
+          template: string;
+          trigger_distance_min: number;
+          trigger_distance_max: number;
+      };
+  };
 }
 
 export interface TenantConfig {
@@ -310,6 +341,7 @@ export interface VesselIntelligenceProfile {
   adaSeaOneStatus?: string;
   utilities?: any;
   loyaltyScore?: number;
+  riskProfile?: CustomerRiskProfile; // Linked profile
 }
 
 export interface VesselSystemsStatus {

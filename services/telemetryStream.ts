@@ -37,10 +37,10 @@ class TelemetryStreamService {
 
         // --- SECURE PROTOCOL SELECTION ---
         // Robust check for HTTPS to force WSS
-        // Checks if protocol is 'https:' (standard) or just 'https' (some proxies/env)
-        const isSecure = window.location.protocol === 'https:' || window.location.protocol === 'https';
+        const loc = window.location;
+        const isSecure = loc.protocol === 'https:';
         const protocol = isSecure ? 'wss:' : 'ws:';
-        const host = window.location.host; 
+        const host = loc.host || 'localhost:3000'; 
         
         // Construct the URL using standard relative logic
         const wsUrl = `${protocol}//${host}/ws/telemetry`;

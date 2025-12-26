@@ -22,12 +22,12 @@ const DEFAULT_FLEET: VesselIntelligenceProfile[] = [
         name: 'S/Y Phisedelia', imo: '987654321', type: 'VO65 Racing Yacht (ex-Mapfre)', flag: 'MT', 
         ownerName: 'Ahmet Engin', ownerId: '12345678901', ownerEmail: 'ahmet.engin@example.com', ownerPhone: '+905321234567',
         // dwt is optional in VesselIntelligenceProfile
-        dwt: 150, loa: 20.4, beam: 5.6, status: 'DOCKED', location: 'Pontoon C-12', 
+        dwt: 150, loa: 20.4, beam: 5.6, status: 'INBOUND', location: 'Sea of Marmara', 
         relationship: 'CONTRACT_HOLDER', // GOLD MEMBER
-        coordinates: { lat: 40.9634, lng: 28.6289 }, // Inside Marina
-        voyage: { lastPort: 'Alicante', nextPort: 'WIM', eta: 'Arrived' },
+        coordinates: { lat: 40.8500, lng: 28.5000 }, // Approx 10nm out
+        voyage: { lastPort: 'Alicante', nextPort: 'WIM', eta: '1 Hour' },
         paymentHistoryStatus: 'REGULAR',
-        adaSeaOneStatus: 'INACTIVE', 
+        adaSeaOneStatus: 'ACTIVE', 
         utilities: { electricityKwh: 450.2, waterM3: 12.5, lastReading: 'Today 08:00', status: 'ACTIVE' }
     },
     // ... (rest of mock fleet)
@@ -65,7 +65,6 @@ export const marinaExpert = {
         return {
             battery: { serviceBank: 25.4, engineBank: 26.1, status: 'DISCHARGING' },
             tanks: { fuel: 45, freshWater: 80, blackWater: 15 },
-            // Removed bilge forward/aft as they were not in the type definition, kept bilge as any if added
             bilge: { forward: 'DRY', aft: 'DRY', pumpStatus: 'AUTO' },
             shorePower: { connected: true, voltage: 228, amperage: 12.5 },
             comfort: {
@@ -74,15 +73,15 @@ export const marinaExpert = {
         };
     },
 
-    // ATC Radar Scan (Updated to use Backend Skill)
-    scanSector: async (lat: number, lng: number, radiusMiles: number, addTrace: (t: AgentTraceLog) => void): Promise<AisTarget[]> => {
-        addTrace(createLog('ada.marina', 'THINKING', `Scanning Radar Sector: ${radiusMiles}nm radius around ${lat}, ${lng}...`, 'EXPERT'));
+    // ATC Radar Scan (Updated for 20 Mile Radius)
+    scanSector: async (lat: number, lng: number, radiusMiles: number = 20, addTrace: (t: AgentTraceLog) => void): Promise<AisTarget[]> => {
+        addTrace(createLog('ada.marina', 'THINKING', `Scanning Radar Sector: ${radiusMiles}nm radius around ${lat.toFixed(4)}, ${lng.toFixed(4)}...`, 'EXPERT'));
         
         // 1. Try Backend Radar (Kpler/AIS Integration)
         try {
             const backendTargets = await invokeAgentSkill('marina', 'scan_radar', { lat, lng, radius: radiusMiles });
             if (backendTargets && Array.isArray(backendTargets)) {
-                addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Backend Radar: Found ${backendTargets.length} targets.`, 'WORKER'));
+                addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Backend Radar: Found ${backendTargets.length} targets within ${radiusMiles}nm.`, 'WORKER'));
                 return backendTargets;
             }
         } catch (e) {
@@ -98,7 +97,6 @@ export const marinaExpert = {
             name: v.name,
             type: v.type,
             distance: haversineDistance(lat, lng, v.coordinates!.lat, v.coordinates!.lng).toFixed(1),
-            // squawk, speed, source were not in AisTarget interface, but used in mapping
             coordinates: v.coordinates!
         })) as AisTarget[];
 
@@ -122,8 +120,52 @@ export const marinaExpert = {
         return available;
     },
     
-    generateProactiveHail: async (vesselName: string, tenantConfig: TenantConfig): Promise<string> => {
-        return `**📡 PROACTIVE HAIL SEQUENCE**...`; 
+    // Skill: Proactive Hail (Welcome Home Protocol - Episode A)
+    generateProactiveHail: async (vesselName: string, tenantConfig: TenantConfig, distanceNm: number = 6.0, addTrace?: (t: AgentTraceLog) => void): Promise<string> => {
+        
+        if (addTrace) addTrace(createLog('ada.marina', 'THINKING', `Analyzing 'Welcome Home' trigger for ${vesselName} at ${distanceNm}nm...`, 'EXPERT'));
+
+        // Load Config from Tenant (or Fallback to Hardcoded Defaults)
+        const config = tenantConfig.masterData.protocol_config?.welcome_hail || {
+            channel: "72",
+            template: "Good day, Captain. We have you on AIS approach at {distance} miles. Your berth {berth} is ready. {tender} has been dispatched to intercept and assist you at the breakwater.",
+            trigger_distance_min: 5,
+            trigger_distance_max: 7
+        };
+
+        // TRIGGER LOGIC
+        if (distanceNm < config.trigger_distance_min) {
+             if (addTrace) addTrace(createLog('ada.marina', 'OUTPUT', `Vessel ${vesselName} is close (${distanceNm}nm). Assuming handover complete.`, 'WORKER'));
+             return `INFO: Vessel ${vesselName} is on final approach (${distanceNm}nm).`;
+        }
+        
+        if (distanceNm > config.trigger_distance_max) {
+             if (addTrace) addTrace(createLog('ada.marina', 'OUTPUT', `Vessel ${vesselName} is too far (${distanceNm}nm). Monitoring.`, 'WORKER'));
+             return `INFO: Vessel ${vesselName} is monitoring range (${distanceNm}nm). Standby.`;
+        }
+
+        // Logic for Active Window
+        const pilotBoat = wimMasterData.assets?.tenders.find(t => t.assignment === 'ARRIVAL_PILOT') || wimMasterData.assets?.tenders[0];
+        const assignedBerth = "C-12"; // Dynamic lookup in real db
+
+        if (addTrace) {
+            addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `PROTOCOL ACTIVE: Contract Holder in range. Dispatching Tender: ${pilotBoat?.name}.`, 'WORKER'));
+            addTrace(createLog('ada.marina', 'TOOL_EXECUTION', `Alerting Concierge: Prepare Golf Cart at Pontoon C Gate.`, 'WORKER'));
+        }
+
+        // Apply Template Variables
+        let messageBody = config.template
+            .replace('{vessel}', vesselName)
+            .replace('{distance}', distanceNm.toString())
+            .replace('{berth}', `**${assignedBerth}**`)
+            .replace('{tender}', `**${pilotBoat?.name}**`);
+
+        return `**📡 PROACTIVE HAIL SEQUENCE (Auto-Trigger @ ${distanceNm}nm)**\n\n` + 
+               `**To:** ${vesselName}\n` +
+               `**From:** ${tenantConfig.name} Control (Ada)\n\n` +
+               `"${messageBody}\n` +
+               `Please monitor Channel ${config.channel}."\n\n` +
+               `*Action: Tender ${pilotBoat?.id} deployed.*`; 
     },
     
     processDeparture: async (vesselName: string, currentTenders: Tender[], tenantConfig: TenantConfig, addTrace: (t: AgentTraceLog) => void): Promise<any> => {

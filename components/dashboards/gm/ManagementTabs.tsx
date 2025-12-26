@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, Store, TrendingUp, BookOpen, Clock, BadgeCheck, BarChart3, Globe, PieChart, ShoppingBag, Utensils, ShieldAlert, Award, AlertTriangle } from 'lucide-react';
+import { Users, Store, TrendingUp, BookOpen, Clock, BadgeCheck, BarChart3, Globe, PieChart, ShoppingBag, Utensils, ShieldAlert, Award, AlertTriangle, ArrowUpRight, ArrowDownRight, History } from 'lucide-react';
 import { customerExpert } from '../../../services/agents/customerAgent';
 import { marinaExpert } from '../../../services/agents/marinaAgent';
 import { CustomerRiskProfile } from '../../../types';
@@ -37,14 +37,14 @@ export const HRTab: React.FC<{ hrData: any }> = ({ hrData }) => {
   );
 };
 
-// --- CUSTOMER INTELLIGENCE TAB (NEW) ---
+// --- CUSTOMER INTELLIGENCE TAB (ATS ENGINE) ---
 export const CustomerTab: React.FC = () => {
     const [profiles, setProfiles] = useState<any[]>([]);
+    const [expandedProfile, setExpandedProfile] = useState<string | null>(null);
 
     useEffect(() => {
         const loadProfiles = async () => {
             const vessels = marinaExpert.getAllFleetVessels();
-            // Here we ask the Customer Agent to interrogate other agents about each vessel
             const analyzed = await Promise.all(vessels.map(async (v) => {
                 const risk = await customerExpert.evaluateCustomerRisk(v.name, () => {});
                 return { ...v, riskProfile: risk };
@@ -57,7 +57,8 @@ export const CustomerTab: React.FC = () => {
     const getSegmentColor = (segment: string) => {
         switch(segment) {
             case 'WHALE': return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
-            case 'VIP': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+            case 'PLATINUM': return 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20';
+            case 'STANDARD': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
             case 'RISKY': return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
             case 'BLACKLISTED': return 'text-red-500 bg-red-500/10 border-red-500/20';
             default: return 'text-zinc-500 bg-zinc-500/10 border-zinc-500/20';
@@ -65,63 +66,105 @@ export const CustomerTab: React.FC = () => {
     };
 
     return (
-        <div className="bg-white dark:bg-zinc-900/30 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center mb-6">
+        <div className="bg-white dark:bg-zinc-900/30 p-5 rounded-xl border border-slate-200 dark:border-zinc-800 animate-in fade-in duration-300 h-full flex flex-col">
+            <div className="flex justify-between items-center mb-6 shrink-0">
                 <h3 className="text-xs font-black text-slate-700 dark:text-zinc-200 uppercase tracking-widest flex items-center gap-2">
-                    <ShieldAlert size={14} className="text-blue-500" /> Customer Risk Matrix
+                    <ShieldAlert size={14} className="text-blue-500" /> Ada Trust Score (ATS) Engine
                 </h3>
                 <div className="text-[10px] text-zinc-500">
-                    Ada Trust Score (ATS) Analysis
+                    Live Behavioral Grading
                 </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-4 overflow-y-auto custom-scrollbar flex-1 pr-2">
                 {profiles.map((p) => (
-                    <div key={p.name} className="p-3 bg-slate-50 dark:bg-zinc-900/80 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors">
-                        <div className="flex justify-between items-start">
+                    <div key={p.name} className="p-4 bg-slate-50 dark:bg-zinc-900/80 rounded-xl border border-slate-200 dark:border-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-all shadow-sm">
+                        <div className="flex justify-between items-start cursor-pointer" onClick={() => setExpandedProfile(expandedProfile === p.name ? null : p.name)}>
                             <div>
-                                <div className="font-bold text-sm text-slate-800 dark:text-zinc-200">{p.name}</div>
-                                <div className="text-[10px] text-slate-500 font-mono">Owner: {p.ownerName}</div>
+                                <div className="font-bold text-sm text-slate-800 dark:text-zinc-200 flex items-center gap-2">
+                                    {p.name}
+                                    {expandedProfile === p.name ? <ArrowUpRight size={14} className="text-zinc-400"/> : <ArrowDownRight size={14} className="text-zinc-400"/>}
+                                </div>
+                                <div className="text-[10px] text-slate-500 font-mono mt-0.5">Owner: {p.ownerName} | IMO: {p.imo}</div>
                             </div>
-                            <div className={`px-2 py-1 rounded border text-[10px] font-bold uppercase ${getSegmentColor(p.riskProfile?.segment)}`}>
-                                {p.riskProfile?.segment}
+                            <div className="text-right">
+                                <div className={`px-2 py-1 rounded border text-[10px] font-bold uppercase inline-block mb-1 ${getSegmentColor(p.riskProfile?.segment)}`}>
+                                    {p.riskProfile?.segment}
+                                </div>
+                                <div className="text-xs font-mono font-black text-slate-700 dark:text-zinc-300">
+                                    SCORE: {p.riskProfile?.totalScore}
+                                </div>
                             </div>
                         </div>
                         
                         {/* Score Bar */}
                         <div className="mt-3 flex items-center gap-3">
-                            <div className="flex-1 h-2 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div className="flex-1 h-2 bg-slate-200 dark:bg-zinc-800 rounded-full overflow-hidden relative">
+                                {/* Zone Markers */}
+                                <div className="absolute left-[30%] top-0 bottom-0 w-px bg-white/20"></div>
+                                <div className="absolute left-[50%] top-0 bottom-0 w-px bg-white/20"></div>
+                                <div className="absolute left-[75%] top-0 bottom-0 w-px bg-white/20"></div>
+                                
                                 <div 
-                                    className={`h-full rounded-full ${p.riskProfile?.totalScore < 500 ? 'bg-red-500' : 'bg-emerald-500'}`} 
+                                    className={`h-full rounded-full transition-all duration-1000 ${
+                                        p.riskProfile?.totalScore < 300 ? 'bg-red-500' : 
+                                        p.riskProfile?.totalScore < 500 ? 'bg-orange-500' :
+                                        p.riskProfile?.totalScore < 750 ? 'bg-emerald-500' :
+                                        p.riskProfile?.totalScore < 900 ? 'bg-indigo-500' : 'bg-purple-500'
+                                    }`} 
                                     style={{ width: `${(p.riskProfile?.totalScore / 1000) * 100}%` }}
                                 ></div>
                             </div>
-                            <div className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
-                                {p.riskProfile?.totalScore}
-                            </div>
                         </div>
 
-                        {/* Breakdown */}
-                        <div className="grid grid-cols-3 gap-2 mt-3 text-[9px] text-slate-500 dark:text-zinc-500 uppercase font-bold text-center">
-                            <div className="bg-white dark:bg-black/20 p-1 rounded border border-slate-100 dark:border-zinc-800">
-                                Finance: <span className={p.riskProfile?.breakdown.financial < 50 ? 'text-red-500' : 'text-emerald-500'}>{p.riskProfile?.breakdown.financial}</span>
-                            </div>
-                            <div className="bg-white dark:bg-black/20 p-1 rounded border border-slate-100 dark:border-zinc-800">
-                                Ops: <span className={p.riskProfile?.breakdown.operational < 50 ? 'text-red-500' : 'text-emerald-500'}>{p.riskProfile?.breakdown.operational}</span>
-                            </div>
-                            <div className="bg-white dark:bg-black/20 p-1 rounded border border-slate-100 dark:border-zinc-800">
-                                Value: <span className="text-purple-500">{p.riskProfile?.breakdown.commercial}</span>
-                            </div>
+                        {/* Breakdown Grid */}
+                        <div className="grid grid-cols-4 gap-2 mt-4 text-[9px] text-slate-500 dark:text-zinc-500 uppercase font-bold text-center">
+                            {[
+                                { l: 'Finance', v: p.riskProfile?.breakdown.financial, max: 400 },
+                                { l: 'Ops', v: p.riskProfile?.breakdown.operational, max: 300 },
+                                { l: 'Behavior', v: p.riskProfile?.breakdown.behavioral, max: 200 },
+                                { l: 'Loyalty', v: p.riskProfile?.breakdown.loyalty, max: 100 }
+                            ].map((item, i) => (
+                                <div key={i} className="bg-white dark:bg-black/20 p-2 rounded border border-slate-100 dark:border-zinc-800 flex flex-col gap-1">
+                                    <span className="opacity-70">{item.l}</span>
+                                    <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
+                                        <div className="bg-indigo-500 h-full" style={{ width: `${(item.v / item.max) * 100}%` }}></div>
+                                    </div>
+                                    <span className="text-zinc-700 dark:text-zinc-300">{item.v}/{item.max}</span>
+                                </div>
+                            ))}
                         </div>
 
-                        {/* Flags */}
-                        {p.riskProfile?.flags.length > 0 && (
-                            <div className="mt-2 pt-2 border-t border-slate-200 dark:border-zinc-800 flex gap-2 flex-wrap">
-                                {p.riskProfile.flags.map((flag: string) => (
-                                    <span key={flag} className="flex items-center gap-1 text-[9px] text-red-600 bg-red-100 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
-                                        <AlertTriangle size={8} /> {flag}
-                                    </span>
-                                ))}
+                        {/* EXPANDED HISTORY VIEW */}
+                        {expandedProfile === p.name && (
+                            <div className="mt-4 pt-4 border-t border-slate-200 dark:border-zinc-800 animate-in fade-in slide-in-from-top-2">
+                                <h4 className="text-[10px] font-bold text-zinc-500 uppercase mb-3 flex items-center gap-2">
+                                    <History size={12} /> Grading History
+                                </h4>
+                                <div className="space-y-2">
+                                    {p.riskProfile?.history.length === 0 ? (
+                                        <div className="text-[10px] text-zinc-500 italic">No recorded interactions.</div>
+                                    ) : (
+                                        p.riskProfile?.history.map((evt: any) => (
+                                            <div key={evt.id} className="flex justify-between items-center p-2 rounded bg-white dark:bg-zinc-900/50 border border-slate-100 dark:border-zinc-800/50 text-[10px]">
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`font-bold px-1.5 py-0.5 rounded border ${
+                                                        evt.delta > 0 
+                                                        ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                                                        : 'bg-red-500/10 text-red-600 border-red-500/20'
+                                                    }`}>
+                                                        {evt.delta > 0 ? '+' : ''}{evt.delta}
+                                                    </span>
+                                                    <div>
+                                                        <div className="text-zinc-700 dark:text-zinc-300 font-bold">{evt.description}</div>
+                                                        <div className="text-zinc-500 font-mono">{new Date(evt.date).toLocaleDateString()} • {evt.category}</div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-zinc-400 font-mono text-[9px]">{evt.action}</div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         )}
                     </div>

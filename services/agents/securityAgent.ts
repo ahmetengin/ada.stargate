@@ -1,5 +1,5 @@
 
-import { AgentAction, AgentTraceLog, NodeName, SecurityThreat } from '../../types';
+import { AgentAction, AgentTraceLog, NodeName, SecurityThreat, SecurityAlert } from '../../types';
 
 // Helper to create a log
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
@@ -13,8 +13,39 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
 
 export const securityExpert = {
     
+    // Skill: Monitor Real-Time Threats (Sentinel Loop)
+    // This skill simulates checking live radar/camera feeds against authorized zones
+    monitorRealTimeThreats: async (activeTracks: any[], addTrace: (t: AgentTraceLog) => void): Promise<SecurityAlert[]> => {
+        addTrace(createLog('ada.security', 'THINKING', `SENTINEL PROTOCOL: Correlating AIS tracks with Geofence Database...`, 'EXPERT'));
+        
+        const alerts: SecurityAlert[] = [];
+
+        // Simulation: 1 in 10 chance of finding a high-speed unauthorized vessel
+        const detectedAnomaly = Math.random() > 0.85;
+
+        if (detectedAnomaly) {
+            const alert: SecurityAlert = {
+                id: `ALERT-${Date.now()}`,
+                timestamp: new Date().toLocaleTimeString(),
+                severity: 'CRITICAL',
+                type: 'UNAUTHORIZED_ENTRY',
+                location: 'Fuel Dock Approach (Sector Zulu)',
+                targetId: 'Unknown High-Speed Craft (40kn)',
+                message: 'Vessel breaching speed limit in restricted maneuver zone. No AIS signature.',
+                status: 'ACTIVE'
+            };
+            alerts.push(alert);
+            
+            addTrace(createLog('ada.security', 'CRITICAL', `BREACH DETECTED: ${alert.targetId} @ ${alert.location}`, 'WORKER'));
+            addTrace(createLog('ada.security', 'TOOL_EXECUTION', `Triggering automatic CCTV lock-on (Cam-14, Cam-15)...`, 'WORKER'));
+        } else {
+             addTrace(createLog('ada.security', 'OUTPUT', `Perimeter Secure. ${activeTracks.length || 'Zero'} tracks monitoring.`, 'WORKER'));
+        }
+
+        return alerts;
+    },
+
     // Skill: Review CCTV Footage (Unified Vision & Reasoning)
-    // This skill simulates the "Eye" of the agent checking the specific camera feed.
     reviewCCTV: async (location: string, timeWindow: string, addTrace: (t: AgentTraceLog) => void): Promise<{ confirmed: boolean, evidenceId: string, details: string, detectedObjects: string[] }> => {
         addTrace(createLog('ada.security', 'THINKING', `Connecting to Camera Grid (NVR-Cluster-01)... Selecting feed: ${location}.`, 'EXPERT'));
         
@@ -26,14 +57,14 @@ export const securityExpert = {
         let objects = ["Sea Surface", "Pontoon Structure"];
 
         // SCENARIO: Match the LiveMap "BREACH" at Pontoon A-S3
-        if (location.includes('A-S3') || location.includes('Pontoon A') || location.includes('A-05')) {
+        if (location.includes('A-S3') || location.includes('Pontoon A') || location.includes('A-05') || location.includes('Fuel')) {
             addTrace(createLog('ada.security', 'TOOL_EXECUTION', `Running YOLOv10 Object Detection on frame #4492...`, 'WORKER'));
             
             detectionResult = "CRITICAL: Unauthorized vessel contact detected. High-speed approach trajectory verified.";
             objects = ["Unidentified Speedboat (Type: Zodiac)", "Wake Turbulence", "Hull Contact"];
             confirmed = true;
 
-            addTrace(createLog('ada.security', 'CODE_OUTPUT', `VISION ALERT: Class 'Speedboat' | Confidence: 98.4% | Vector: Stationary @ A-S3`, 'WORKER'));
+            addTrace(createLog('ada.security', 'CODE_OUTPUT', `VISION ALERT: Class 'Speedboat' | Confidence: 98.4% | Vector: Stationary @ ${location}`, 'WORKER'));
         } else {
             addTrace(createLog('ada.security', 'OUTPUT', `Feed Analysis: Nominal. Routine activity only.`, 'WORKER'));
         }

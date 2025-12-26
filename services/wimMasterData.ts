@@ -43,6 +43,14 @@ export const wimMasterData: MasterDataStructure = {
       phone: "+90 212 850 22 00"
     }
   },
+  protocol_config: {
+      welcome_hail: {
+          channel: "72",
+          template: "Good day, Captain. We have you on AIS approach at {distance} miles. Your berth {berth} is ready. {tender} has been dispatched to intercept and assist you at the breakwater.",
+          trigger_distance_min: 5,
+          trigger_distance_max: 7
+      }
+  },
   assets: {
     tenders: [
         { 
