@@ -8,7 +8,7 @@ interface BerthsTabProps {
 
 export const BerthsTab: React.FC<BerthsTabProps> = ({ berthAllocation }) => {
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="h-full overflow-y-auto custom-scrollbar bg-[#020617] p-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Header HUD */}
       <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-900 text-white border border-zinc-800 shadow-lg">
