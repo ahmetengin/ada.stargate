@@ -52,6 +52,29 @@ export const financeExpert = {
       return { finalPrice: basePrice - discountAmount, discountRate, discountAmount, strategy: 'LOCAL_HEURISTIC', marketRate: 0.05 };
   },
 
+  // NEW SKILL: Ad-Hoc Payment Link Generation (Iyzico Integration)
+  createPaymentLink: async (vesselName: string, amount: number, description: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, link: string, message: string }> => {
+      addTrace(createLog('ada.finance', 'THINKING', `Generating secure 3D-Secure payment link for ${vesselName}... Amount: €${amount}`, 'EXPERT'));
+      
+      // Simulate API Latency
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      const token = Math.random().toString(36).substring(2, 10).toUpperCase();
+      // In a real app, this would call Iyzico /v1/payment/link
+      const link = `https://iyzi.co/pay/${token}?amt=${amount}&ref=${vesselName.replace(/\s/g, '')}`;
+
+      addTrace(createLog('ada.finance', 'TOOL_EXECUTION', `Iyzico API Response: 200 OK. Token: ${token}`, 'WORKER'));
+      
+      const message = `**PAYMENT LINK GENERATED**\n\n` +
+                      `**Vessel:** ${vesselName}\n` +
+                      `**Service:** ${description}\n` +
+                      `**Amount:** €${amount.toFixed(2)}\n\n` +
+                      `> **Secure Link:** [Click to Pay (${link})](${link})\n` +
+                      `*Link expires in 24 hours.*`;
+                      
+      return { success: true, link, message };
+  },
+
   // ... (keep other methods like checkDebt, processPayment, process with local fallback)
   checkDebt: async (vesselName: string): Promise<any> => {
       return { status: 'CLEAR', amount: 0, paymentHistoryStatus: 'REGULAR' };

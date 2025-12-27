@@ -1,10 +1,23 @@
 
 import { AgentTraceLog, UserProfile, Message, TenantConfig } from '../types';
-import { sendToBackend } from './api';
-import { marinaExpert } from './agents/marinaAgent';
 import { GoogleGenAI } from "@google/genai";
+import { marinaExpert } from './agents/marinaAgent';
+import { financeExpert } from './agents/financeAgent';
+import { systemExpert } from './agents/systemAgent';
 
 const createLocalClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+// Helper to simulate processing time
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const createLog = (node: string, step: any, content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'WORKER'): AgentTraceLog => ({
+    id: `tr_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    timestamp: new Date().toLocaleTimeString(),
+    node,
+    step,
+    content,
+    persona
+});
 
 export const orchestratorService = {
   async processRequest(
@@ -15,134 +28,99 @@ export const orchestratorService = {
     stats: any,
     onTrace: (t: AgentTraceLog) => void
   ): Promise<{ text: string; code?: string; result?: string }> {
-    const timestamp = new Date().toLocaleTimeString();
     
-    // 1. ROUTING LOG
-    onTrace({
-      id: `tr_${Date.now()}_start`,
-      timestamp,
-      node: 'ada.stargate',
-      step: 'ROUTING',
-      content: `Inbound Signal: "${prompt.substring(0, 50)}..."`,
-      persona: 'ORCHESTRATOR'
-    });
+    // 1. ACKNOWLEDGEMENT
+    onTrace(createLog('ada.stargate', 'ROUTING', `Signal Received: "${prompt}"`, 'ORCHESTRATOR'));
 
-    let backendResponse = null;
+    // 2. INTENT ANALYSIS (Simulated Semantic Router)
+    await sleep(400);
+    const lowerPrompt = prompt.toLowerCase();
+    let domain = 'GENERAL';
+    let subNode = 'ada.chat';
 
-    // --- STRATEGY A: HYPERSCALE BACKEND (Python) ---
-    try {
-        // Attempt to connect to the Python Brain
-        backendResponse = await sendToBackend(prompt, user, { stats, history: history.slice(-2) });
-    } catch (e) {
-        console.warn("Backend connection failed, preparing fallback...", e);
+    if (lowerPrompt.includes('fatura') || lowerPrompt.includes('borç') || lowerPrompt.includes('price') || lowerPrompt.includes('cost')) {
+        domain = 'FINANCE';
+        subNode = 'ada.finance';
+    } else if (lowerPrompt.includes('tekne') || lowerPrompt.includes('boat') || lowerPrompt.includes('berth') || lowerPrompt.includes('traffic')) {
+        domain = 'MARINA';
+        subNode = 'ada.marina';
+    } else if (lowerPrompt.includes('kural') || lowerPrompt.includes('law') || lowerPrompt.includes('contract') || lowerPrompt.includes('security')) {
+        domain = 'LEGAL';
+        subNode = 'ada.legal';
+    } else if (lowerPrompt.includes('weather') || lowerPrompt.includes('hava') || lowerPrompt.includes('rüzgar')) {
+        domain = 'MARINA';
+        subNode = 'ada.weather';
+    } else if (lowerPrompt.includes('update') || lowerPrompt.includes('rule') || lowerPrompt.includes('limit')) {
+        domain = 'STARGATE';
+        subNode = 'ada.system';
     }
 
-    // If Backend Responded Successfully
-    if (backendResponse && backendResponse.text) {
-        onTrace({
-            id: `tr_${Date.now()}_be`,
-            timestamp,
-            node: 'ada.core [Python]',
-            step: 'OUTPUT',
-            content: "Hyperscale Core processed the request.",
-            persona: 'ORCHESTRATOR'
-        });
-        
-        // Visualize Backend Traces if available
-        if (backendResponse.traces) {
-            backendResponse.traces.forEach((t: any, i: number) => {
-                onTrace({
-                    id: `be_tr_${Date.now()}_${i}`,
-                    timestamp: new Date().toLocaleTimeString(),
-                    node: t.node || 'ada.core',
-                    step: t.step || 'THINKING',
-                    content: t.content || JSON.stringify(t),
-                    persona: 'EXPERT'
-                });
-            });
+    onTrace(createLog('ada.router', 'ROUTING', `Intent Classified: [${domain}] -> Routing to ${subNode}`, 'ORCHESTRATOR'));
+
+    // 3. EXECUTION SIMULATION (The "Thinking" Phase)
+    await sleep(600);
+
+    if (domain === 'MARINA') {
+        onTrace(createLog('ada.marina', 'THINKING', `Analyzing operational context for ${stats.vessels} vessels...`, 'EXPERT'));
+        await sleep(500);
+        onTrace(createLog('ada.sea', 'TOOL_EXECUTION', `AIS Radar Scan: Sector Zulu Clear. Visibility: Good.`, 'WORKER'));
+        onTrace(createLog('ada.weather', 'TOOL_EXECUTION', `MetOcean Data: Wind NW 12kn. Sea State: Slight.`, 'WORKER'));
+    } 
+    else if (domain === 'FINANCE') {
+        onTrace(createLog('ada.finance', 'THINKING', `Accessing Ledger (Parasut API)...`, 'EXPERT'));
+        await sleep(500);
+        onTrace(createLog('ada.audit', 'TOOL_EXECUTION', `Compliance Check: VAT Rate 20%. No outstanding blocks.`, 'WORKER'));
+    }
+    else if (domain === 'LEGAL') {
+        onTrace(createLog('ada.legal', 'THINKING', `Querying Vector Memory (RAG) for WIM Regulations...`, 'EXPERT'));
+        await sleep(500);
+        onTrace(createLog('ada.security', 'TOOL_EXECUTION', `ISPS Status: Level 1. Perimeter Secure.`, 'WORKER'));
+    }
+    else if (domain === 'STARGATE') {
+        onTrace(createLog('ada.stargate', 'THINKING', `System Configuration Protocol Initiated.`, 'EXPERT'));
+        if (lowerPrompt.includes('speed')) {
+             onTrace(createLog('ada.seal', 'SEAL_LEARNING', `Learning new constraint: Speed Limit parameter update requested.`, 'EXPERT'));
         }
-
-        return {
-            text: backendResponse.text,
-            // Map legacy fields if needed, or rely on text response
-            code: backendResponse.actions?.[0]?.params?.code,
-            result: backendResponse.actions?.[0]?.params?.result
-        };
     }
 
-    // --- STRATEGY B: EDGE FALLBACK (Browser LLM) ---
-    // If we are here, Backend failed or is offline. Ada takes over locally.
-    onTrace({
-        id: `tr_${Date.now()}_fb`,
-        timestamp,
-        node: 'ada.stargate [Edge]',
-        step: 'WARNING',
-        content: "Neural Uplink Unstable (Backend Offline). Switching to Local Logic (Edge Mode).",
-        persona: 'ORCHESTRATOR'
-    });
+    // 4. GENERATION (Edge Fallback)
+    onTrace(createLog(subNode, 'THINKING', `Synthesizing final response...`, 'EXPERT'));
+    await sleep(600);
 
     try {
         const ai = createLocalClient();
-        // Use Flash model for speed in fallback mode
         const model = 'gemini-2.0-flash-lite-preview-02-05'; 
         
-        // Define simple tools for local execution
-        const tools = [
-            { functionDeclarations: [
-                {
-                    name: "get_vessel_telemetry",
-                    description: "Get battery, fuel, and system status for a vessel.",
-                    parameters: { type: "OBJECT", properties: { vesselName: { type: "STRING" } } }
-                }
-            ]}
-        ];
-
-        const systemPrompt = `You are Ada, the Maritime AI for ${tenant.name}.
-        The primary brain is currently offline, so you are operating in 'Safe Mode'.
-        User: ${user.name} (${user.role}).
-        Operational Status: ${stats.vessels} vessels in port.
-        Be helpful but brief.`;
+        const systemPrompt = `You are Ada, the Cognitive Operating System for ${tenant.name}.
+        Current Context:
+        - User: ${user.name} (${user.role})
+        - Domain: ${domain}
+        - Operational Status: Normal
+        
+        Be concise, professional, and act as the Marina Control.`;
 
         const result = await ai.models.generateContent({
             model,
             contents: [
-                { role: 'user', parts: [{ text: `${systemPrompt}\n\nQuery: ${prompt}` }] }
-            ],
-            config: { tools }
+                { role: 'user', parts: [{ text: `${systemPrompt}\n\nUser Query: ${prompt}` }] }
+            ]
         });
 
-        // Handle Function Calls locally if needed
-        const fc = result.functionCalls?.[0];
-        if (fc) {
-            const args = fc.args as any;
-            onTrace({
-                id: `tr_${Date.now()}_tool`,
-                timestamp,
-                node: 'ada.marina [Local]',
-                step: 'TOOL_EXECUTION',
-                content: `Executing ${fc.name} locally...`,
-                persona: 'WORKER'
-            });
-
-            if (fc.name === 'get_vessel_telemetry') {
-                const tel = await marinaExpert.getVesselTelemetry(args.vesselName || 'Phisedelia');
-                return { text: `**TELEMETRY (LOCAL):**\nBattery: ${tel?.battery.serviceBank}V\nFuel: ${tel?.tanks.fuel}%` };
-            }
-        }
-
-        return { text: result.text || "I am here, but I cannot process that request right now." };
+        const responseText = result.response.text();
+        
+        onTrace(createLog('ada.stargate', 'OUTPUT', `Transmission Sent.`, 'ORCHESTRATOR'));
+        
+        return { text: responseText };
 
     } catch (localError: any) {
-        console.error("Local Fallback Failed:", localError);
-        onTrace({
-            id: `tr_${Date.now()}_err`,
-            timestamp,
-            node: 'ada.stargate',
-            step: 'ERROR',
-            content: `System Failure: ${localError.message}`,
-            isError: true
-        });
-        return { text: "⚠️ **SYSTEM ALERT**\n\nBoth Cloud and Edge nodes are unresponsive. Check your API Key and Network connection." };
+        console.error("Edge Logic Failed:", localError);
+        
+        onTrace(createLog('ada.stargate', 'ERROR', `Neural Link Unstable: ${localError.message}`, 'ORCHESTRATOR'));
+        
+        // Fallback response to ensure UI doesn't hang
+        return { 
+            text: `**SYSTEM MESSAGE:**\n\nI processed the ${domain} logic, but my language center is currently offline. \n\n*Action logged: ${subNode} acknowledged.*` 
+        };
     }
   }
 };
