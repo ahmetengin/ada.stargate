@@ -5,8 +5,9 @@ import React, { useState, useEffect, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Message, MessageRole, EpisodeId, VesselIntelligenceProfile } from '../../types';
 import { marinaExpert } from '../../services/agents/marinaAgent';
+import { submitFeedback } from '../../services/api';
 import { VesselCard } from '../VesselCard';
-import { Anchor, Terminal, Sparkles, ShieldAlert, Zap, Globe, Ship } from 'lucide-react';
+import { Anchor, Terminal, Sparkles, ShieldAlert, Zap, Globe, Ship, ThumbsUp, ThumbsDown, ArrowRight } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -54,6 +55,10 @@ const EpisodeCard = ({ id, text }: { id: EpisodeId, text: string }) => {
 export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) => {
   const isUser = message.role === MessageRole.User;
   const [vesselProfiles, setVesselProfiles] = useState<Record<string, VesselIntelligenceProfile>>({});
+  const [feedbackStatus, setFeedbackStatus] = useState<'none' | 'positive' | 'negative'>('none');
+  const [showCorrectionInput, setShowCorrectionInput] = useState(false);
+  const [correctionText, setCorrectionText] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   useEffect(() => {
     if (message.text) {
@@ -69,6 +74,25 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
       if (Object.keys(foundProfiles).length > 0) setVesselProfiles(foundProfiles);
     }
   }, [message.text]);
+
+  const handleFeedback = async (rating: 'positive' | 'negative') => {
+      if (feedbackStatus !== 'none') return; // Prevent multiple feedbacks
+      
+      setFeedbackStatus(rating);
+      if (rating === 'positive') {
+          await submitFeedback(message.id, 'positive');
+      } else {
+          setShowCorrectionInput(true);
+      }
+  };
+
+  const submitCorrection = async () => {
+      if (!correctionText.trim()) return;
+      setIsSubmittingFeedback(true);
+      await submitFeedback(message.id, 'negative', correctionText);
+      setIsSubmittingFeedback(false);
+      setShowCorrectionInput(false);
+  };
 
   if (message.role === MessageRole.Episode && message.episodeId) {
       return <EpisodeCard id={message.episodeId} text={message.text} />;
@@ -132,6 +156,53 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
                             <VesselCard key={idx} profile={profile} />
                         ))}
                     </div>
+
+                    {/* Feedback UI */}
+                    <div className="mt-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <button 
+                            onClick={() => handleFeedback('positive')}
+                            disabled={feedbackStatus !== 'none'}
+                            className={`p-1.5 rounded-full transition-colors ${feedbackStatus === 'positive' ? 'text-emerald-400 bg-emerald-500/10' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'}`}
+                        >
+                            <ThumbsUp size={12} />
+                        </button>
+                        <button 
+                             onClick={() => handleFeedback('negative')}
+                             disabled={feedbackStatus !== 'none'}
+                             className={`p-1.5 rounded-full transition-colors ${feedbackStatus === 'negative' ? 'text-red-400 bg-red-500/10' : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800'}`}
+                        >
+                            <ThumbsDown size={12} />
+                        </button>
+                    </div>
+
+                    {/* Correction Input */}
+                    {showCorrectionInput && (
+                        <div className="mt-3 p-3 bg-zinc-900/80 border border-red-500/20 rounded-lg animate-in fade-in slide-in-from-top-2">
+                            <div className="text-[10px] text-red-400 font-bold uppercase tracking-wide mb-2 flex items-center gap-2">
+                                <ShieldAlert size={12} /> SEAL Training Input
+                            </div>
+                            <div className="flex gap-2">
+                                <input 
+                                    type="text" 
+                                    value={correctionText}
+                                    onChange={(e) => setCorrectionText(e.target.value)}
+                                    placeholder="What is the correct information?"
+                                    className="flex-1 bg-black/40 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 outline-none focus:border-red-500/50"
+                                    onKeyDown={(e) => e.key === 'Enter' && submitCorrection()}
+                                />
+                                <button 
+                                    onClick={submitCorrection}
+                                    disabled={!correctionText.trim() || isSubmittingFeedback}
+                                    className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded px-2 py-1 flex items-center justify-center transition-colors"
+                                >
+                                    {isSubmittingFeedback ? <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div> : <ArrowRight size={12} />}
+                                </button>
+                            </div>
+                            <div className="text-[9px] text-zinc-600 mt-1.5 italic">
+                                This feedback will be used to refine the SEAL learning model.
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

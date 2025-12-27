@@ -23,30 +23,43 @@ export const legalExpert = {
         timestamp: new Date().toLocaleTimeString(),
         node: 'ada.legal',
         step: 'THINKING',
-        content: `Querying Qdrant Vector Memory for: "${query}"...`,
+        content: `Querying Qdrant Vector Memory (RAG) for: "${query}"...`,
         persona: 'EXPERT'
     });
 
     let advice = "";
+    let sources = [];
     
-    // 1. Try Backend RAG
+    // 1. Try Backend RAG (Primary)
     try {
         const ragResult = await invokeAgentSkill('legal', 'rag_query', { query });
+        
         if (ragResult && ragResult.result) {
             advice = ragResult.result;
+            sources = ragResult.sources || [];
+            
             addTrace({
                 id: `trace_legal_rag_res_${Date.now()}`,
                 timestamp: new Date().toLocaleTimeString(),
                 node: 'ada.legal',
                 step: 'OUTPUT',
-                content: `Retrieved ${ragResult.docs?.length || 0} documents from knowledge base.`,
+                content: `Retrieved ${ragResult.docs?.length || 0} documents from knowledge base. Sources: ${sources.join(', ')}`,
                 persona: 'WORKER'
             });
         } else {
-            advice = "Legal database connection failed.";
+            throw new Error("Backend RAG returned empty.");
         }
     } catch (e) {
-        advice = "Unable to reach Legal Core. Please check system status.";
+        // Fallback or Error
+        advice = "Legal database connection failed. Unable to verify regulations against vector memory.";
+        addTrace({
+            id: `trace_legal_err_${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString(),
+            node: 'ada.legal',
+            step: 'ERROR',
+            content: `RAG Connection Failed.`,
+            persona: 'WORKER'
+        });
     }
 
     return [{
@@ -56,7 +69,7 @@ export const legalExpert = {
         params: { 
             advice: advice,
             context: "RAG Retrieval",
-            references: []
+            references: sources
         }
     }];
   }

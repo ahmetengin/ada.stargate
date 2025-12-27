@@ -65,3 +65,21 @@ export const invokeAgentSkill = async (agent: string, skill: string, params: any
         return null;
     }
 };
+
+export const submitFeedback = async (messageId: string, rating: 'positive' | 'negative', comment?: string): Promise<boolean> => {
+    try {
+        const response = await fetch('/api/v1/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message_id: messageId,
+                rating: rating,
+                correction: comment
+            })
+        });
+        return response.ok;
+    } catch (e) {
+        console.error("Failed to submit feedback:", e);
+        return false;
+    }
+};

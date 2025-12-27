@@ -46,6 +46,10 @@ export interface Message {
   executionResult?: string;
   attachments?: Attachment[];
   generatedImage?: string;
+  feedback?: {
+    rating: 'positive' | 'negative';
+    comment?: string;
+  };
 }
 
 export type ThemeMode = 'light' | 'dark' | 'auto';
