@@ -51,7 +51,7 @@ class TelemetryStreamService {
             this.setupSocketHandlers();
         } catch (error) {
             this.isConnecting = false;
-            console.error(`[Telemetry] WebSocket instance creation failed for ${wsUrl}:`, error);
+            console.warn(`[Telemetry] WebSocket initialization failed for ${wsUrl}:`, error);
             this.handleReconnect();
         }
     }
@@ -88,7 +88,7 @@ class TelemetryStreamService {
             
             // Retry unless closed intentionally (code 1000)
             if (event.code !== 1000) { 
-                console.warn(`[Telemetry] Connection closed (Code ${event.code}). Retrying...`);
+                console.warn(`[Telemetry] Connection closed (Code ${event.code}). Retrying in ${this.getDelay()}ms...`);
                 this.handleReconnect();
             }
             this.socket = null;
@@ -96,15 +96,25 @@ class TelemetryStreamService {
 
         this.socket.onerror = (error) => {
             this.isConnecting = false;
-            console.error(`[Telemetry] WebSocket transport error detected.`);
+            // Suppress error logging if it's just a connection refusal which will be handled by onclose
+            if (this.retryCount > 0) {
+                 console.debug(`[Telemetry] WebSocket transport warning (retry #${this.retryCount}).`);
+            } else {
+                 console.warn(`[Telemetry] WebSocket transport warning.`);
+            }
         };
+    }
+
+    private getDelay() {
+        return Math.min(this.baseDelay * Math.pow(2, this.retryCount), this.maxRetryDelay);
     }
 
     private handleReconnect() {
         if (this.reconnectTimer) return;
 
-        const delay = Math.min(this.baseDelay * Math.pow(2, this.retryCount), this.maxRetryDelay);
-        const jitteredDelay = delay * (0.5 + Math.random());
+        const delay = this.getDelay();
+        // Add jitter
+        const jitteredDelay = delay * (0.8 + Math.random() * 0.4);
 
         this.reconnectTimer = setTimeout(() => {
             this.retryCount++;

@@ -106,7 +106,8 @@ export const orchestratorService = {
             ]
         });
 
-        const responseText = result.response.text();
+        // FIX: In @google/genai SDK, 'result' is the response object, and 'text' is a property getter.
+        const responseText = result.text || "No response generated.";
         
         onTrace(createLog('ada.stargate', 'OUTPUT', `Transmission Sent.`, 'ORCHESTRATOR'));
         
@@ -115,7 +116,7 @@ export const orchestratorService = {
     } catch (localError: any) {
         console.error("Edge Logic Failed:", localError);
         
-        onTrace(createLog('ada.stargate', 'ERROR', `Neural Link Unstable: ${localError.message}`, 'ORCHESTRATOR'));
+        onTrace(createLog('ada.stargate', 'ERROR', `Neural Link Unstable: ${localError.message || 'Unknown Error'}`, 'ORCHESTRATOR'));
         
         // Fallback response to ensure UI doesn't hang
         return { 
