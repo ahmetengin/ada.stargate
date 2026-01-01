@@ -1,0 +1,7 @@
+
+{
+  "on_agent_start": "hooks/scripts/telemetry_start.py",
+  "on_tool_error": "hooks/scripts/error_handler.py",
+  "on_memory_update": "hooks/scripts/sync_vectors.py",
+  "post_command": "hooks/scripts/audit_log.py"
+}

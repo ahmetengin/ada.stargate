@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Fingerprint, Scan, ShieldCheck, Binary } from 'lucide-react';
+import { Fingerprint, Scan, ShieldCheck, Binary, Briefcase } from 'lucide-react';
 
 interface AuthOverlayProps {
   targetRole: string;
@@ -39,6 +39,8 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
   const getRoleColor = () => {
     switch(targetRole) {
         case 'GENERAL_MANAGER': return 'text-indigo-500 border-indigo-500';
+        case 'HR_MANAGER': return 'text-pink-500 border-pink-500';
+        case 'OPS_STAFF': return 'text-cyan-500 border-cyan-500';
         case 'CAPTAIN': return 'text-emerald-500 border-emerald-500';
         case 'MEMBER': return 'text-purple-500 border-purple-500';
         default: return 'text-zinc-500 border-zinc-500';
@@ -48,6 +50,8 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
   const getRoleLabel = () => {
       switch(targetRole) {
           case 'GENERAL_MANAGER': return 'LEVEL 5 - EXECUTIVE';
+          case 'HR_MANAGER': return 'LEVEL 4 - HUMAN RESOURCES';
+          case 'OPS_STAFF': return 'LEVEL 2 - OPERATIONS';
           case 'CAPTAIN': return 'LEVEL 3 - COMMAND';
           case 'MEMBER': return 'LEVEL 1 - MEMBER';
           case 'VISITOR': return 'PUBLIC ACCESS';
@@ -74,7 +78,7 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
                 {step === 0 && <Scan size={48} />}
                 {step === 1 && <Fingerprint size={48} />}
                 {step === 2 && <Binary size={48} />}
-                {step === 3 && <ShieldCheck size={48} />}
+                {step === 3 && (targetRole === 'HR_MANAGER' ? <Briefcase size={48} /> : <ShieldCheck size={48} />)}
             </div>
         </div>
 

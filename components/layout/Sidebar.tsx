@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { UserProfile } from '../../types';
+import { UserProfile, UserRole } from '../../types';
 import { 
-    Anchor, Radio, CreditCard, Scale, Brain, Activity, Zap
+    Anchor, Radio, CreditCard, Scale, Brain, Activity, Zap, Users, ShieldCheck, Briefcase
 } from 'lucide-react';
 
 export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'berths' | 'none';
@@ -33,9 +33,15 @@ const NodeItem = ({ id, label, state, onClick }: { id: string, label: string, st
 );
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
+  userProfile,
   onPulseClick,
   onTabChange
 }) => {
+  const role = userProfile.role;
+
+  // Helper to check permissions
+  const hasAccess = (allowedRoles: UserRole[]) => allowedRoles.includes(role);
+
   return (
     <div className="h-full w-full flex flex-col bg-[#020617] border-r border-white/5 text-slate-400 select-none overflow-hidden">
       
@@ -54,39 +60,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-2">
-          <SectionHeader title="ADA.MARINA (Operatör)" icon={Zap} color="text-cyan-400" />
-          <NodeItem id="OPS" label="Operasyon Masası" state="idle" onClick={() => onTabChange('ops')} />
-          <NodeItem id="TRAF" label="Trafik Kontrol" state="idle" onClick={() => onTabChange('ops')} />
-          <NodeItem id="PEDA" label="Akıllı Pedestallar" state="idle" onClick={() => onTabChange('facility')} />
-          <NodeItem id="BOAT" label="Çekek / Lift" state="idle" onClick={() => onTabChange('tech')} />
+          
+          {/* 1. OPERATIONS (Staff, GM, Ops) */}
+          {hasAccess(['GENERAL_MANAGER', 'OPS_STAFF', 'HR_MANAGER']) && (
+              <>
+                  <SectionHeader title="ADA.MARINA (Operatör)" icon={Zap} color="text-cyan-400" />
+                  <NodeItem id="OPS" label="Operasyon Masası" state="idle" onClick={() => onTabChange('ops')} />
+                  <NodeItem id="TRAF" label="Trafik Kontrol" state="idle" onClick={() => onTabChange('ops')} />
+                  <NodeItem id="PEDA" label="Akıllı Pedestallar" state="idle" onClick={() => onTabChange('facility')} />
+                  <NodeItem id="ENTRY" label="Misafir Check-In" state="idle" onClick={() => onTabChange('guest_checkin')} />
+                  <NodeItem id="BOAT" label="Çekek / Lift" state="idle" onClick={() => onTabChange('tech')} />
+              </>
+          )}
 
-          <SectionHeader title="ADA.FINANCE (CFO)" icon={CreditCard} color="text-emerald-400" />
-          <NodeItem id="COMM" label="Ticari Yönetim" state="idle" onClick={() => onTabChange('commercial')} />
-          <NodeItem id="INVX" label="Fatura Otomasyonu" state="working" onClick={() => onTabChange('commercial')} />
-          <NodeItem id="YIEL" label="Dinamik Fiyatlama" state="idle" onClick={() => onTabChange('berths')} />
+          {/* 2. FINANCE (GM, Finance) - Hidden for basic Ops */}
+          {hasAccess(['GENERAL_MANAGER']) && (
+              <>
+                  <SectionHeader title="ADA.FINANCE (CFO)" icon={CreditCard} color="text-emerald-400" />
+                  <NodeItem id="COMM" label="Ticari Yönetim" state="idle" onClick={() => onTabChange('commercial')} />
+                  <NodeItem id="INVX" label="Fatura Otomasyonu" state="working" onClick={() => onTabChange('commercial')} />
+                  <NodeItem id="YIEL" label="Dinamik Fiyatlama" state="idle" onClick={() => onTabChange('berths')} />
+              </>
+          )}
 
-          <SectionHeader title="ADA.LEGAL (Counsel)" icon={Scale} color="text-indigo-400" />
-          <NodeItem id="HR" label="İnsan Kaynakları" state="idle" onClick={() => onTabChange('hr')} />
-          <NodeItem id="RAGX" label="Hukuki RAG" state="idle" onClick={() => onTabChange('ops')} />
-          <NodeItem id="ISPS" label="Güvenlik & ISPS" state="idle" onClick={() => onTabChange('ops')} />
+          {/* 3. HR & LEGAL (GM, HR Manager) */}
+          {hasAccess(['GENERAL_MANAGER', 'HR_MANAGER']) && (
+              <>
+                  <SectionHeader title="ADA.LEGAL (HR & Law)" icon={Scale} color="text-indigo-400" />
+                  <NodeItem id="HR" label="İnsan Kaynakları" state="idle" onClick={() => onTabChange('hr')} />
+                  <NodeItem id="RAGX" label="Hukuki RAG" state="idle" onClick={() => onTabChange('ops')} />
+                  <NodeItem id="ISPS" label="Güvenlik & ISPS" state="idle" onClick={() => onTabChange('ops')} />
+              </>
+          )}
 
-          <SectionHeader title="ADA.STARGATE (Beyin)" icon={Brain} color="text-purple-400" />
-          <NodeItem id="ROUT" label="Orkestrasyon" state="working" onClick={() => onTabChange('analytics')} />
-          <NodeItem id="ANLY" label="TabPFN Analitik" state="idle" onClick={() => onTabChange('analytics')} />
+          {/* 4. BRAIN (Admin Only) */}
+          {hasAccess(['GENERAL_MANAGER']) && (
+              <>
+                  <SectionHeader title="ADA.STARGATE (Beyin)" icon={Brain} color="text-purple-400" />
+                  <NodeItem id="ROUT" label="Orkestrasyon" state="working" onClick={() => onTabChange('analytics')} />
+                  <NodeItem id="ANLY" label="TabPFN Analitik" state="idle" onClick={() => onTabChange('analytics')} />
+              </>
+          )}
+
+          {/* 5. CUSTOMER VIEW (Limited) */}
+          {hasAccess(['CAPTAIN', 'MEMBER', 'VISITOR']) && (
+               <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-center">
+                   <Briefcase size={24} className="mx-auto text-zinc-500 mb-2"/>
+                   <div className="text-[10px] text-zinc-400">Welcome to WIM Portal. Use the chat to request services.</div>
+               </div>
+          )}
       </div>
 
-      <div className="p-4 border-t border-white/5 bg-[#050b14]">
-          <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => onTabChange('observer')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95">
-                <Activity size={16} className="text-slate-400" />
-                <span className="text-[8px] font-black uppercase">Observer</span>
-              </button>
-              <button onClick={() => onTabChange('vhf')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-all border border-red-500/20 active:scale-95">
-                <Radio size={16} className="text-red-500" />
-                <span className="text-[8px] font-black uppercase">Radio_Link</span>
-              </button>
+      {hasAccess(['GENERAL_MANAGER', 'OPS_STAFF']) && (
+          <div className="p-4 border-t border-white/5 bg-[#050b14]">
+              <div className="grid grid-cols-2 gap-2">
+                  <button onClick={() => onTabChange('observer')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95">
+                    <Activity size={16} className="text-slate-400" />
+                    <span className="text-[8px] font-black uppercase">Observer</span>
+                  </button>
+                  <button onClick={() => onTabChange('vhf')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-all border border-red-500/20 active:scale-95">
+                    <Radio size={16} className="text-red-500" />
+                    <span className="text-[8px] font-black uppercase">Radio_Link</span>
+                  </button>
+              </div>
           </div>
-      </div>
+      )}
     </div>
   );
 }

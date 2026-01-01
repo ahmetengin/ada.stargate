@@ -4,6 +4,7 @@ import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantCon
 import { GuestDashboard } from './GuestDashboard';
 import { CaptainDashboard } from './CaptainDashboard';
 import { GMDashboard } from './GMDashboard';
+import { HRDashboard } from './HRDashboard'; // NEW
 import { EmergencyDashboard } from './EmergencyDashboard';
 
 interface CanvasProps {
@@ -51,8 +52,14 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   const isEmergency = dashboardLogs.some(l => l.type === 'CRITICAL_EMERGENCY');
 
+  // Emergency Override
   if (isEmergency && userProfile.role !== 'VISITOR' && userProfile.role !== 'MEMBER') {
       return <EmergencyDashboard />;
+  }
+
+  // Role-Based Routing
+  if (userProfile.role === 'HR_MANAGER' || activeTabOverride === 'hr') {
+      return <HRDashboard />;
   }
 
   if (userProfile.role === 'VISITOR' || userProfile.role === 'MEMBER') {
@@ -63,6 +70,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       return <CaptainDashboard />;
   }
 
+  // Default to GM Dashboard for others (GM, Ops)
   return (
       <div className="h-full w-full pb-20 lg:pb-0 overflow-hidden">
         <GMDashboard 

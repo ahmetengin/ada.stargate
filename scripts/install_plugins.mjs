@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { exit } from 'process';
+import process from 'process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +34,7 @@ try {
 } catch (e) {
     console.error(`\n❌ CRITICAL ERROR: Git clone failed.`);
     console.error(`   Please ensure 'git' is installed and you have internet access.`);
-    exit(1);
+    process.exit(1);
 }
 
 // 3. Install Plugins

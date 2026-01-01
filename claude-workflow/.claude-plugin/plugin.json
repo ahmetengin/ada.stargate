@@ -1,0 +1,14 @@
+
+{
+  "name": "ada-stargate-core",
+  "version": "5.5.0",
+  "description": "A Federated Cognitive Operating System for Maritime Operations (WIM).",
+  "permissions": [
+    "filesystem:read",
+    "filesystem:write",
+    "network:connect",
+    "command:run"
+  ],
+  "runtime": "python",
+  "entrypoint": "hooks/scripts/bootstrap.py"
+}

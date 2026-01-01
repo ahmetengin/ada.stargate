@@ -65,15 +65,18 @@ export interface TelemetryEvent {
     berth_id?: string;
 }
 
-export type UserRole = 'VISITOR' | 'MEMBER' | 'CAPTAIN' | 'GENERAL_MANAGER';
+// UPDATED: Added HR_MANAGER and OPS_STAFF roles
+export type UserRole = 'VISITOR' | 'MEMBER' | 'CAPTAIN' | 'GENERAL_MANAGER' | 'HR_MANAGER' | 'OPS_STAFF';
 
 export interface UserProfile {
   id: string;
   name: string;
   role: UserRole;
-  clearanceLevel: number;
+  clearanceLevel: number; // 0-5
   legalStatus: 'GREEN' | 'AMBER' | 'RED';
   loyalty?: any;
+  department?: string; // For Staff
+  vesselId?: string;   // For Captains/Owners
 }
 
 export type MemoryModule = 'working' | 'episodic' | 'semantic' | 'procedural';
@@ -129,27 +132,26 @@ export interface TravelItinerary {
   transfers: any[];
 }
 
-// NEW: Scoring History Item
 export interface ATSHistoryItem {
     id: string;
     date: string;
-    action: string; // e.g., "Late Payment", "High Spend", "Speeding"
-    delta: number; // e.g., -50, +20
+    action: string; 
+    delta: number; 
     category: 'FINANCE' | 'OPS' | 'BEHAVIOR' | 'LOYALTY';
     description: string;
 }
 
 export interface CustomerRiskProfile {
-  totalScore: number; // 0 - 1000
+  totalScore: number; 
   segment: 'WHALE' | 'PLATINUM' | 'STANDARD' | 'RISKY' | 'BLACKLISTED';
   breakdown: {
-    financial: number; // 0-400
-    operational: number; // 0-300
-    behavioral: number; // 0-200
-    loyalty: number; // 0-100
+    financial: number;
+    operational: number;
+    behavioral: number; 
+    loyalty: number;
   };
   flags: string[];
-  history: ATSHistoryItem[]; // Full audit trail
+  history: ATSHistoryItem[]; 
   lastAssessmentDate: string;
 }
 
@@ -182,14 +184,13 @@ export interface SecurityThreat {
   timestamp: string;
 }
 
-// NEW: Real-time Alert Structure
 export interface SecurityAlert {
     id: string;
     timestamp: string;
     severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
     type: 'UNAUTHORIZED_ENTRY' | 'SPEEDING' | 'DRONE_DETECTED' | 'GEOFENCE_BREACH';
     location: string;
-    targetId?: string; // Vessel name or Object ID
+    targetId?: string; 
     message: string;
     status: 'ACTIVE' | 'RESOLVED' | 'INVESTIGATING';
 }
@@ -345,7 +346,7 @@ export interface VesselIntelligenceProfile {
   adaSeaOneStatus?: string;
   utilities?: any;
   loyaltyScore?: number;
-  riskProfile?: CustomerRiskProfile; // Linked profile
+  riskProfile?: CustomerRiskProfile; 
 }
 
 export interface VesselSystemsStatus {
@@ -358,8 +359,8 @@ export interface VesselSystemsStatus {
 
 export interface NavtexMessage {
     id: string;
-    stationCode: string; // 'I' for Izmir, 'L' for Limnos
-    messageType: string; // 'A' = Navigational Warning
+    stationCode: string; 
+    messageType: string;
     content: string;
     coordinates?: { lat: number, lng: number };
     status: 'ACTIVE' | 'CANCELLED';
