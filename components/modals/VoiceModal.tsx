@@ -1,9 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Mic, Radio, AlertTriangle, Power, RefreshCw, Activity, Signal } from 'lucide-react';
+import { PhoneOff, Mic, Activity, Signal, Zap } from 'lucide-react';
 import { LiveSession } from '../../services/liveService';
 import { LiveConnectionState, UserProfile, TenantConfig } from '../../types';
-import { formatCoordinate } from '../../services/utils';
 
 interface VoiceModalProps {
   isOpen: boolean;
@@ -14,170 +13,59 @@ interface VoiceModalProps {
   channel: string;
 }
 
-// Mocking the vhfinfo library logic for immediate UI rendering
-const getVhfDetails = (channel: string) => {
-    const db: Record<string, any> = {
-        '16': { freq: '156.800', type: 'Simplex', desc: 'Distress, Safety & Calling' },
-        '72': { freq: '156.625', type: 'Simplex', desc: 'Inter-ship & Marina Ops' },
-        '73': { freq: '156.675', type: 'Simplex', desc: 'Inter-ship (Yachting)' },
-        '06': { freq: '156.300', type: 'Simplex', desc: 'Search and Rescue (SAR)' },
-        '12': { freq: '156.600', type: 'Simplex', desc: 'Port Operations / VTS' },
-        '13': { freq: '156.650', type: 'Simplex', desc: 'Bridge-to-Bridge (Nav Safety)' },
-        '67': { freq: '156.375', type: 'Simplex', desc: 'Meteorology / Weather' },
-    };
-    return db[channel] || { freq: '---.---', type: 'Unknown', desc: 'Auxiliary' };
-};
-
-export const VoiceModal: React.FC<VoiceModalProps> = ({ isOpen, onClose, userProfile, activeTenantConfig, onTranscriptReceived, channel }) => {
+export const VoiceModal: React.FC<VoiceModalProps> = ({ 
+    isOpen, 
+    onClose, 
+    userProfile, 
+    activeTenantConfig, 
+    onTranscriptReceived, 
+    channel 
+}) => {
   const [status, setStatus] = useState<LiveConnectionState>(LiveConnectionState.Disconnected);
-  const [audioLevel, setAudioLevel] = useState(0);
   const [session, setSession] = useState<LiveSession | null>(null);
-
-  const lat = activeTenantConfig.masterData?.identity?.location?.coordinates?.lat || 0;
-  const lng = activeTenantConfig.masterData?.identity?.location?.coordinates?.lng || 0;
-
-  const formattedLat = formatCoordinate(lat, 'lat');
-  const formattedLng = formatCoordinate(lng, 'lng');
-  const displayCoordinates = `${formattedLat} / ${formattedLng}`;
-  
-  const vhfInfo = getVhfDetails(channel);
+  const [volume, setVolume] = useState(0);
 
   useEffect(() => {
     if (isOpen) {
-        if (!session) {
-            connect();
-        }
+        const newSession = new LiveSession();
+        newSession.onStatusChange = (s) => setStatus(s as LiveConnectionState);
+        newSession.onAudioLevel = (level) => setVolume(level * 100);
+        newSession.onTurnComplete = (u, m) => onTranscriptReceived(u, m);
+        setSession(newSession);
+        newSession.connect(userProfile, activeTenantConfig);
     } else {
-        if(session) {
-            session.disconnect();
-            setSession(null);
-            setStatus(LiveConnectionState.Disconnected);
-        }
+        session?.disconnect();
+        setSession(null);
+        setStatus(LiveConnectionState.Disconnected);
+        setVolume(0);
     }
-
-    return () => {
-      session?.disconnect();
-    };
-  }, [isOpen]);
-
-  const connect = async () => {
-      const newSession = new LiveSession();
-      
-      newSession.onStatusChange = (s) => setStatus(s as LiveConnectionState);
-      newSession.onAudioLevel = (level) => setAudioLevel(prev => prev * 0.8 + level * 0.2);
-      newSession.onTurnComplete = (userText, modelText) => onTranscriptReceived(userText, modelText);
-
-      setSession(newSession);
-      await newSession.connect(userProfile, activeTenantConfig);
-  };
-
-  const handleDisconnect = async () => {
-    if (session) {
-      session.disconnect();
-    }
-    setSession(null);
-    setStatus(LiveConnectionState.Disconnected);
-    onClose();
-  };
-  
-  const handleRetry = async () => {
-      if (session) session.disconnect();
-      setStatus(LiveConnectionState.Connecting);
-      setTimeout(() => connect(), 500);
-  };
+  }, [isOpen, userProfile, activeTenantConfig, onTranscriptReceived]);
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-zinc-900 border-2 border-zinc-700 rounded-3xl shadow-2xl relative overflow-hidden">
-        
-        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0 pointer-events-none bg-[length:100%_4px,6px_100%]"></div>
-
-        <div className="bg-zinc-800 p-4 flex justify-between items-center border-b border-zinc-700 relative z-10">
-          <div className="flex items-center gap-2">
-            <Radio className="text-indigo-500" />
-            <span className="font-mono font-bold tracking-widest text-zinc-200">ADA VHF</span>
-          </div>
-          <div className="flex items-center gap-3">
-             {status === LiveConnectionState.Connected && (
-                <div className="flex items-center gap-1.5 text-red-500 animate-pulse">
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  <span className="text-[10px] font-mono font-bold">REC</span>
-                </div>
-              )}
-             <div className={`w-2 h-2 rounded-full ${status === LiveConnectionState.Connected ? 'bg-green-500 animate-pulse' : status === LiveConnectionState.Error ? 'bg-red-500' : 'bg-amber-500'}`} />
-             <span className="text-[10px] font-mono uppercase text-zinc-500">{status}</span>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 font-mono">
+      <div className="relative w-full max-w-sm aspect-[3/4] bg-[#020617] border border-cyan-500/30 rounded-[3rem] shadow-[0_0_80px_rgba(8,145,178,0.2)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-500">
+        <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20">
+             <div className="flex flex-col"><span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">156.625 MHz</span><span className="text-lg font-black text-white">VHF CH {channel}</span></div>
         </div>
 
-        <div className="p-8 flex flex-col items-center justify-center min-h-[320px] relative z-10">
-           <div className="mb-6 text-center w-full">
-             <div className="flex justify-between items-end border-b border-zinc-700 pb-2 mb-4">
-                 <div className="text-left">
-                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Network</span>
-                     <span className="text-xs font-mono text-zinc-300 uppercase">{activeTenantConfig.masterData?.identity?.code || 'UNKNOWN'}</span>
-                 </div>
-                 <div className="text-right">
-                     <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest block">Frequency</span>
-                     <span className="text-xs font-mono text-emerald-500">{vhfInfo.freq} MHz</span>
-                 </div>
-             </div>
-             <div className="text-xs font-mono text-zinc-500 mb-4">{displayCoordinates}</div>
-             <div className="text-7xl font-mono font-bold text-indigo-500 tracking-tighter flex items-center justify-center gap-4 text-shadow-glow">
-               {channel === 'SCAN' ? 'SCN' : channel} 
-               <div className="flex flex-col items-start">
-                   <span className="text-base text-zinc-400 font-bold uppercase leading-none">{vhfInfo.type}</span>
-                   <span className="text-[10px] text-zinc-600 uppercase max-w-[80px] leading-tight mt-1">{vhfInfo.desc}</span>
-               </div>
-             </div>
-           </div>
-
-           <div className="relative w-32 h-32 flex items-center justify-center mb-4">
-             {status === LiveConnectionState.Error ? (
-                 <div className="flex flex-col items-center justify-center text-red-500 animate-pulse">
-                     <AlertTriangle size={48} />
-                     <span className="text-[10px] font-bold mt-2 uppercase tracking-widest text-center">Network Error<br/>Link Lost</span>
-                 </div>
-             ) : (
-                 <>
-                    <div className={`absolute inset-0 rounded-full border border-indigo-500/30 transition-all duration-75`} style={{ transform: `scale(${1 + audioLevel * 1.5})`, opacity: 0.6 - audioLevel }}></div>
-                    <div className={`absolute inset-0 rounded-full border border-indigo-400/20 transition-all duration-100 delay-75`} style={{ transform: `scale(${1 + audioLevel * 2.5})`, opacity: 0.4 - audioLevel }}></div>
-                    <div className={`w-24 h-24 rounded-full bg-gradient-to-br from-indigo-600 to-indigo-900 flex items-center justify-center shadow-[0_0_30px_rgba(79,70,229,0.4)] transition-transform duration-75 ${status === LiveConnectionState.Connected ? 'scale-100' : 'scale-90 grayscale'}`}>
-                        {status === LiveConnectionState.Connected ? (
-                            <Mic className="text-white w-8 h-8" />
-                        ) : (
-                            <Activity className="text-white/50 w-8 h-8 animate-spin-slow" />
-                        )}
-                    </div>
-                 </>
-             )}
-           </div>
-
-           <div className="font-mono text-sm text-zinc-400 text-center h-6 flex items-center justify-center gap-2">
-             {status === LiveConnectionState.Connecting && "ESTABLISHING SECURE LINK..."}
-             {status === LiveConnectionState.Connected && (
-                 <>
-                    <Signal size={14} className={audioLevel > 0.05 ? "text-emerald-500" : "text-zinc-600"} />
-                    {audioLevel > 0.05 ? "TRANSMITTING" : "SQUELCH OPEN"}
-                 </>
-             )}
-             {status === LiveConnectionState.Error && <span className="text-red-500 font-bold">SIGNAL LOST</span>}
-           </div>
+        <div className="flex-1 flex items-center justify-center relative z-10">
+            <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 relative shadow-2xl ${status === LiveConnectionState.Connected ? 'bg-cyan-900 border-2 border-cyan-400' : 'bg-zinc-900 border-2 border-zinc-800'}`} style={{ transform: `scale(${1 + volume/150})` }}>
+                <Mic size={40} className={status === LiveConnectionState.Connected ? 'text-white' : 'text-zinc-600'} />
+                {status === LiveConnectionState.Connected && <div className="absolute inset-0 rounded-full bg-cyan-400/20 animate-ping"></div>}
+            </div>
+            <div className="absolute mt-48 text-[10px] font-bold tracking-widest text-cyan-500 uppercase animate-pulse">{status === LiveConnectionState.Connected ? 'Live Transmitting' : 'Connecting...'}</div>
         </div>
 
-        <div className="bg-zinc-800 p-4 border-t border-zinc-700 flex flex-col items-center justify-center relative z-10">
-          {status === LiveConnectionState.Error ? (
-              <button onClick={handleRetry} className="group flex items-center gap-3 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/50 text-amber-500 px-8 py-3 rounded-full transition-all font-mono uppercase font-bold tracking-wider hover:shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse">
-                <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
-                RE-ESTABLISH
-              </button>
-          ) : (
-              <button onClick={handleDisconnect} className="group flex items-center gap-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/50 text-red-500 px-8 py-3 rounded-full transition-all font-mono uppercase font-bold tracking-wider hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]">
-                <Power size={18} className="group-hover:scale-110 transition-transform" />
-                POWER OFF
-              </button>
-          )}
+        <div className="p-8 pb-10 z-20">
+            <div className="flex justify-between items-center text-[9px] text-zinc-600 mb-6 font-bold uppercase">
+                <div className="flex items-center gap-1"><Signal size={10}/> -42dBm</div>
+                <div className="flex items-center gap-1"><Zap size={10}/> 12.4V</div>
+            </div>
+            <button onClick={onClose} className="w-full flex items-center justify-center gap-3 bg-red-600 hover:bg-red-500 text-white py-4 rounded-2xl transition-all shadow-lg active:scale-95">
+                <PhoneOff size={20} /><span className="text-xs font-black uppercase tracking-widest">End Session</span>
+            </button>
         </div>
       </div>
     </div>

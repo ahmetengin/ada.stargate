@@ -1,11 +1,10 @@
 
 import { AgentAction, AgentTraceLog, NodeName, TravelItinerary } from '../../types';
 import { marinaExpert } from './marinaAgent'; 
-import { passkitExpert } from './passkitAgent'; // Integrate PassKit
+import { passkitExpert } from './passkitAgent';
 import { TaskHandlerFn } from '../decomposition/types'; 
-import { wimMasterData } from '../wimMasterData';
+import { wimMasterData } from '../data/wimMasterData';
 
-// Helper to create a log
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
     timestamp: new Date().toLocaleTimeString(),
@@ -15,8 +14,7 @@ const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string,
     persona
 });
 
-// --- TENANT CONFIG ---
-const TENANT = "KITES"; // Hardcoded Tenant Identity
+const TENANT = "KITES"; 
 const AGENCY_ID = "TÜRSAB A-2648";
 
 const PROVIDERS = {
@@ -27,33 +25,7 @@ const PROVIDERS = {
     CROSS_BORDER: 'Kites Global Concierge'
 };
 
-// --- MOCK ITINERARY DATABASE ---
-const MOCK_ITINERARIES: TravelItinerary[] = [
-    {
-        id: 'TRV-2025-001',
-        passengerName: 'Ahmet Engin',
-        tripName: 'Paris Business Trip',
-        status: 'ACTIVE',
-        totalCost: 4850,
-        flights: [
-            {
-                id: 'FL-01',
-                airline: 'Turkish Airlines',
-                flightNumber: 'TK1821',
-                departure: { airport: 'IST', time: '2025-11-25 08:30' },
-                arrival: { airport: 'CDG', time: '2025-11-25 11:10' },
-                status: 'TICKETED',
-                provider: PROVIDERS.AVIATION
-            }
-        ],
-        hotels: [],
-        transfers: []
-    }
-];
-
 export const kitesExpert = {
-    
-    // Skill: Search Flights 
     searchFlights: async (origin: string, dest: string, date: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, results: any[], message: string }> => {
         addTrace(createLog('ada.travel', 'THINKING', `[TENANT: ${TENANT}] Requesting flight options from sub-agent '${PROVIDERS.AVIATION}' for ${origin}-${dest}...`, 'EXPERT'));
         
@@ -105,15 +77,12 @@ export const kitesExpert = {
         };
     },
 
-    // Skill: Finalize Booking & Issue PassKit (The "Ch72 Confirm" Logic)
     finalizeBooking: async (details: string, passengerName: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string, actions: AgentAction[] }> => {
         addTrace(createLog('ada.travel', 'THINKING', `[TENANT: ${TENANT}] Initiating Booking Protocol for: "${details}". Passenger: ${passengerName}`, 'EXPERT'));
 
-        // 1. Create PNR (Simulation)
         const pnr = `PNR-${Math.random().toString(36).substring(7).toUpperCase()}`;
         addTrace(createLog('ada.travel', 'TOOL_EXECUTION', `Creating PNR on Amadeus... Confirmed: ${pnr}`, 'WORKER'));
 
-        // 2. Issue Digital Pass (PassKit Integration)
         const passResult = await passkitExpert.issueTravelPass({
             passenger: passengerName,
             type: 'FLIGHT',
@@ -123,7 +92,6 @@ export const kitesExpert = {
 
         const actions: AgentAction[] = [];
         
-        // 3. Log Operational Confirmation (The "Ch72" Metaphor)
         actions.push({
             id: `op_log_travel_${Date.now()}`,
             kind: 'internal',
@@ -134,7 +102,6 @@ export const kitesExpert = {
             }
         });
 
-        // 4. Trigger PassKit Action for UI
         actions.push({
             id: `passkit_travel_${Date.now()}`,
             kind: 'external',
@@ -155,7 +122,6 @@ export const kitesExpert = {
         };
     },
 
-    // Skill: Book Yacht Charter
     bookYachtCharter: async (date: string, type: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, options: any[], message: string }> => {
         addTrace(createLog('ada.travel', 'THINKING', `[TENANT: ${TENANT}] Client requested Yacht Charter for ${date}. Querying WIM Charter Fleet...`, 'EXPERT'));
         
@@ -180,7 +146,6 @@ export const kitesExpert = {
         return { success: true, options: offers, message };
     },
 
-    // Skill: Emergency Extraction 
     arrangeEmergencyExit: async (currentLocation: {lat: number, lng: number}, destinationCity: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, plan: any, message: string }> => {
         addTrace(createLog('ada.travel', 'THINKING', `🚨 [TENANT: ${TENANT}] EMERGENCY EXTRACTION PROTOCOL INITIATED.`, 'EXPERT'));
 
@@ -189,7 +154,6 @@ export const kitesExpert = {
 
         addTrace(createLog('ada.travel', 'PLANNING', `Extraction Route: Sea(${nearestPort}) -> Land(Transfer) -> Air(${flight.number})`, 'ORCHESTRATOR'));
 
-        // Auto-generate pass for this emergency
         const passResult = await passkitExpert.issueTravelPass({
             passenger: "Emergency PAX",
             type: 'TRANSFER',
@@ -208,20 +172,18 @@ export const kitesExpert = {
         return { success: true, plan: { flight, nearestPort }, message };
     },
 
-    // Skill: Cross-Border Dining
     manageCrossBorderDining: async (venue: string, guests: number, time: string, addTrace: (t: AgentTraceLog) => void): Promise<{ success: boolean, message: string, action?: AgentAction }> => {
         addTrace(createLog('ada.travel', 'THINKING', `[TENANT: ${TENANT}] Processing Cross-Border Reservation for **${venue}** (Greece).`, 'EXPERT'));
 
-        const partner = wimMasterData.strategic_partners.cross_border_partners?.find(p => p.name.toLowerCase().includes(venue.toLowerCase()));
+        const partner = wimMasterData.strategic_partners?.cross_border_partners?.find((p: any) => p.name.toLowerCase().includes(venue.toLowerCase()));
 
         if (!partner) {
              return { success: false, message: `I'm sorry, I don't have a direct partnership link with **${venue}**. I can only book confirmed tables at **Manos** or **Pantelis** in Symi.` };
         }
 
-        // Generate a Pass for the Restaurant Reservation
         const passResult = await passkitExpert.issueTravelPass({
             passenger: "VIP Guest",
-            type: 'HOTEL', // Reusing type for venue
+            type: 'HOTEL', 
             summary: `Dinner: ${partner.name} (Symi)`,
             date: "TONIGHT"
         }, addTrace);
@@ -249,7 +211,6 @@ export const kitesExpert = {
     }
 };
 
-// --- Handlers for the Brain ---
 export const travelHandlers: Record<string, TaskHandlerFn> = {
     'travel.searchFlights': async (ctx: any, obs: any) => {
         const { origin, dest, date } = obs.payload;

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { RegistryEntry, Tender, VhfLog, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
+import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { GuestDashboard } from './GuestDashboard';
 import { CaptainDashboard } from './CaptainDashboard';
 import { GMDashboard } from './GMDashboard';
@@ -10,84 +10,64 @@ interface CanvasProps {
   vesselsInPort: number;
   registry: RegistryEntry[];
   tenders: Tender[];
-  vhfLogs?: VhfLog[];
   aisTargets?: AisTarget[];
   userProfile: UserProfile;
   onOpenReport?: () => void;
   onOpenTrace?: () => void;
   agentTraces?: AgentTraceLog[];
-  activeTenantConfig: TenantConfig;
-  // NEW PROP to tunnel the tab override
-  activeTabOverride?: string; 
+  activeTenantConfig: TenantConfig; 
+  activeTabOverride?: string;
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ 
   vesselsInPort, 
   registry,
   tenders,
-  vhfLogs = [],
   aisTargets = [],
   userProfile,
   onOpenReport,
   onOpenTrace,
   agentTraces = [],
   activeTenantConfig,
-  activeTabOverride // NEW
+  activeTabOverride
 }) => {
-  // Live Data Simulation for "Static" fix
   const [occupancyRate, setOccupancyRate] = useState(92);
-  const [movementCount, setMovementCount] = useState(registry.length);
   
   useEffect(() => {
-      // Simulate live operational heartbeat
       const interval = setInterval(() => {
           setOccupancyRate(prev => prev + (Math.random() > 0.5 ? 0.1 : -0.1));
-          setMovementCount(registry.length); // Sync with real props
       }, 5000);
-
       return () => clearInterval(interval);
-  }, [registry.length]);
+  }, []);
 
-  // Extract Critical Logs from Traces for the Dashboard
-  // This logic looks for specific keywords that trigger the "Guardian Protocol"
   const dashboardLogs = agentTraces
-    .filter(t => t.step === 'ERROR' || t.isError || t.content.includes('DENIED') || t.content.includes('ALERT') || t.content.includes('CODE_RED') || t.content.includes('MAYDAY'))
+    .filter(t => t.step === 'ERROR' || t.isError || (t.content && typeof t.content === 'string' && (t.content.includes('DENIED') || t.content.includes('ALERT') || t.content.includes('CODE_RED') || t.content.includes('MAYDAY'))))
     .map(t => ({
         timestamp: t.timestamp,
         source: t.node,
         message: t.content,
-        type: t.content.includes('CODE_RED') || t.content.includes('MAYDAY') ? 'CRITICAL_EMERGENCY' : 'critical'
+        type: (t.content && typeof t.content === 'string' && (t.content.includes('CODE_RED') || t.content.includes('MAYDAY'))) ? 'CRITICAL_EMERGENCY' : 'critical'
     }));
 
-  // --- GUARDIAN PROTOCOL (Episode B) ---
-  // If a CODE RED is active, override the dashboard for non-guests to focus purely on the emergency
   const isEmergency = dashboardLogs.some(l => l.type === 'CRITICAL_EMERGENCY');
 
   if (isEmergency && userProfile.role !== 'VISITOR' && userProfile.role !== 'MEMBER') {
       return <EmergencyDashboard />;
   }
 
-  // --- VIEW 1 & 2: VISITOR / MEMBER (LIFESTYLE DECK) ---
-  // Note: GuestDashboard now handles its own internal scrolling and layout.
   if (userProfile.role === 'VISITOR' || userProfile.role === 'MEMBER') {
-      return (
-        <div className="h-full w-full overflow-hidden">
-            <GuestDashboard userProfile={userProfile} />
-        </div>
-      );
+      return <div className="h-full w-full overflow-hidden"><GuestDashboard userProfile={userProfile} /></div>;
   }
 
-  // --- VIEW 3: CAPTAIN (VESSEL DECK) ---
   if (userProfile.role === 'CAPTAIN') {
       return <CaptainDashboard />;
   }
 
-  // --- VIEW 4: GM / OPERATOR (MASTER OPS) ---
   return (
       <div className="h-full w-full pb-20 lg:pb-0 overflow-hidden">
         <GMDashboard 
             userProfile={userProfile}
-            logs={dashboardLogs} // Passing dynamic logs derived from traces
+            logs={dashboardLogs}
             registry={registry}
             tenders={tenders}
             vesselsInPort={vesselsInPort}
@@ -96,7 +76,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             onOpenReport={onOpenReport || (() => {})}
             onOpenTrace={onOpenTrace || (() => {})}
             activeTenantConfig={activeTenantConfig}
-            activeTabOverride={activeTabOverride} // Pass it down
+            activeTabOverride={activeTabOverride}
         />
       </div>
   );

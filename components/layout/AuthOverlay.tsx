@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Fingerprint, Scan, ShieldCheck, Lock, Binary } from 'lucide-react';
+import { Fingerprint, Scan, ShieldCheck, Binary } from 'lucide-react';
 
 interface AuthOverlayProps {
   targetRole: string;
@@ -12,7 +12,7 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    const totalDuration = 2000; // 2 seconds total
+    const totalDuration = 2000; 
     const intervalTime = 20;
     const steps = totalDuration / intervalTime;
     
@@ -23,10 +23,9 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
       const prog = Math.min((currentStep / steps) * 100, 100);
       setProgress(prog);
 
-      // Animation Stages
-      if (prog > 20 && step === 0) setStep(1); // Biometric
-      if (prog > 60 && step === 1) setStep(2); // Decrypting
-      if (prog > 90 && step === 2) setStep(3); // Granted
+      if (prog > 20 && step === 0) setStep(1); 
+      if (prog > 60 && step === 1) setStep(2); 
+      if (prog > 90 && step === 2) setStep(3); 
 
       if (currentStep >= steps) {
         clearInterval(timer);
@@ -35,7 +34,7 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
     }, intervalTime);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [step, onComplete]);
 
   const getRoleColor = () => {
     switch(targetRole) {
@@ -58,8 +57,6 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
 
   return (
     <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center font-mono cursor-wait">
-      
-      {/* Background Matrix Effect (Simplified) */}
       <div className="absolute inset-0 opacity-10 overflow-hidden pointer-events-none">
           <div className="grid grid-cols-12 gap-4 h-full">
               {[...Array(12)].map((_, i) => (
@@ -71,8 +68,6 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
       </div>
 
       <div className="relative z-10 flex flex-col items-center w-full max-w-md">
-        
-        {/* Central Icon */}
         <div className="relative mb-8">
             <div className={`w-32 h-32 rounded-full border-4 border-dashed animate-[spin_3s_linear_infinite] opacity-30 ${getRoleColor()}`}></div>
             <div className={`absolute inset-0 flex items-center justify-center ${getRoleColor()} animate-pulse`}>
@@ -83,7 +78,6 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
             </div>
         </div>
 
-        {/* Text Status */}
         <div className="text-center space-y-2 mb-8 h-16">
             <div className="text-xs text-zinc-500 uppercase tracking-[0.3em] animate-pulse">
                 {step === 0 && "INITIATING HANDSHAKE..."}
@@ -96,7 +90,6 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
             </div>
         </div>
 
-        {/* Progress Bar */}
         <div className="w-64 h-1 bg-zinc-800 rounded-full overflow-hidden">
             <div 
                 className={`h-full transition-all duration-75 ease-out ${getRoleColor().replace('text-', 'bg-').split(' ')[0]}`} 
@@ -104,7 +97,6 @@ export const AuthOverlay: React.FC<AuthOverlayProps> = ({ targetRole, onComplete
             ></div>
         </div>
         <div className="mt-2 text-[10px] text-zinc-600">{Math.round(progress)}% COMPLETE</div>
-
       </div>
     </div>
   );

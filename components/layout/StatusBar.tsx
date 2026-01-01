@@ -6,15 +6,21 @@ import { UserProfile } from '../../types';
 interface StatusBarProps {
   userProfile: UserProfile;
   onToggleAuth: () => void;
+  nodeHealth: string;
+  latency: number;
+  activeChannel: string;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ userProfile, onToggleAuth }) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ 
+  userProfile, 
+  onToggleAuth,
+  nodeHealth,
+}) => {
   const isGM = userProfile.role === 'GENERAL_MANAGER';
   const isLegalRed = userProfile.legalStatus === 'RED';
 
   return (
     <div className="h-7 w-full flex items-center justify-between select-none font-mono text-[10px] bg-[#020617] border-t border-white/10 text-slate-500 z-50">
-      
       <div className="flex items-center h-full">
         <div className="flex items-center px-3 border-r border-white/10 gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
@@ -23,7 +29,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({ userProfile, onToggleAuth 
         </div>
         
         <div className="flex items-center px-3 border-r border-white/10 gap-2">
-           <Activity size={10} className="text-slate-600" />
+           <Activity size={10} className={nodeHealth === 'working' ? 'animate-spin' : 'text-slate-600'} />
            <span>v5.5-STABLE</span>
         </div>
 

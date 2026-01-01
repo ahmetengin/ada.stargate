@@ -2,7 +2,7 @@
 import React from 'react';
 import { UserProfile } from '../../types';
 import { 
-    Anchor, Radio, CreditCard, Scale, Brain, Activity, Shield, Zap, Box, Terminal
+    Anchor, Radio, CreditCard, Scale, Brain, Activity, Zap
 } from 'lucide-react';
 
 export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'berths' | 'none';
@@ -33,16 +33,12 @@ const NodeItem = ({ id, label, state, onClick }: { id: string, label: string, st
 );
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
-  userProfile,
-  onRoleChange,
   onPulseClick,
-  activeTab,
   onTabChange
 }) => {
   return (
     <div className="h-full w-full flex flex-col bg-[#020617] border-r border-white/5 text-slate-400 select-none overflow-hidden">
       
-      {/* Header */}
       <div className="p-6 border-b border-white/5 bg-[#050b14]/50">
         <div className="flex items-center gap-4 cursor-pointer group" onClick={onPulseClick}>
             <div className="relative">
@@ -57,9 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* BIG 4 SOVEREIGN DOMAINS */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-2">
-          
           <SectionHeader title="ADA.MARINA (Operatör)" icon={Zap} color="text-cyan-400" />
           <NodeItem id="OPS" label="Operasyon Masası" state="idle" onClick={() => onTabChange('ops')} />
           <NodeItem id="TRAF" label="Trafik Kontrol" state="idle" onClick={() => onTabChange('ops')} />
@@ -79,10 +73,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <SectionHeader title="ADA.STARGATE (Beyin)" icon={Brain} color="text-purple-400" />
           <NodeItem id="ROUT" label="Orkestrasyon" state="working" onClick={() => onTabChange('analytics')} />
           <NodeItem id="ANLY" label="TabPFN Analitik" state="idle" onClick={() => onTabChange('analytics')} />
-
       </div>
 
-      {/* Footer System Controls */}
       <div className="p-4 border-t border-white/5 bg-[#050b14]">
           <div className="grid grid-cols-2 gap-2">
               <button onClick={() => onTabChange('observer')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95">

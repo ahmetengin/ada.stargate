@@ -1,5 +1,5 @@
 
-import { MasterDataStructure } from '../types';
+import { MasterDataStructure } from '../../types';
 
 export const wimMasterData: MasterDataStructure = {
   identity: {
@@ -60,7 +60,6 @@ export const wimMasterData: MasterDataStructure = {
             status: "Idle", 
             type: "RIB", 
             serviceCount: 124,
-            // Capability: Mobile Bathymetry & Micro-Climate Sensing
             sensors: ["Depth (Chirp)", "Wind (Ultrasonic)", "SeaTemp"] 
         },
         { 

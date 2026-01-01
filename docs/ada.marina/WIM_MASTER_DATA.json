@@ -38,7 +38,8 @@
     "tenders": [
       { "id": "T-01", "callsign": "Tender Alpha", "type": "Palamar Botu", "status": "Active" },
       { "id": "T-02", "callsign": "Tender Bravo", "type": "Palamar Botu", "status": "Active" },
-      { "id": "T-03", "callsign": "Tender Charlie", "type": "Palamar Botu", "status": "Standby" }
+      { "id": "T-03", "callsign": "Tender Charlie", "type": "Palamar Botu", "status": "Standby" },
+      { "id": "T-04", "callsign": "WIM-Delta", "type": "RIB", "status": "Active" }
     ]
   },
   "legal_framework": {

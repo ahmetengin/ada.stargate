@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
-import { ArrowUp, AudioWaveform, ScanLine, Radio, Command } from 'lucide-react';
+import { ArrowUp, AudioWaveform, ScanLine, Command, Radio } from 'lucide-react';
 import { ModelType, UserRole } from '../../types';
 import { QuickActions } from './QuickActions';
 
@@ -12,14 +12,13 @@ interface InputAreaProps {
   userRole?: UserRole;
   onQuickAction?: (text: string) => void;
   onScanClick?: () => void;
+  // ADDED: onRadioClick prop
   onRadioClick?: () => void;
 }
 
 export const InputArea: React.FC<InputAreaProps> = ({ 
   onSend, 
   isLoading, 
-  selectedModel, 
-  onModelChange,
   userRole,
   onQuickAction,
   onScanClick,
@@ -35,16 +34,14 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false; // Changed to false to prevent infinite loops/repeats
-      recognitionRef.current.interimResults = false; // Disabled interim to fix "yarınyarınyarın" glitch
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
       recognitionRef.current.lang = 'tr-TR'; 
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[0][0].transcript;
-        // Append cleanly instead of cumulative rebuild
         const newText = (textBeforeDictationRef.current + ' ' + transcript).trim();
         setText(newText);
-        // Automatically stop after one sentence/phrase to prevent glitches
         setIsDictating(false);
       };
 
@@ -112,7 +109,6 @@ export const InputArea: React.FC<InputAreaProps> = ({
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-4">
-      
       {userRole && onQuickAction && (
           <div className="w-full">
               <QuickActions userRole={userRole} onAction={onQuickAction} />
@@ -122,7 +118,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       <div className={`relative bg-white/90 dark:bg-[#0a101d]/90 backdrop-blur-xl rounded-2xl sm:rounded-3xl border shadow-sm transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] flex items-end p-2 
           ${isLoading 
             ? 'border-[var(--accent-color)] shadow-[0_0_15px_rgba(34,211,238,0.2)] opacity-80 cursor-wait' 
-            : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:shadow-lg focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)]/50 focus-within:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)]'
+            : 'border-[var(--border-color)] hover:border-[var(--accent-color)]/50 hover:shadow-lg focus-within:border-[var(--accent-color)] focus-within:ring-1 focus-within:ring-[var(--accent-color)]/50'
           }
           ${isDictating ? 'ring-2 ring-red-500/50 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : ''}`}>
           
@@ -130,8 +126,9 @@ export const InputArea: React.FC<InputAreaProps> = ({
               <button onClick={onScanClick} className="p-2 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors group" title="Tarayıcı">
                   <ScanLine size={18} className="group-hover:scale-110 transition-transform"/>
               </button>
-              <button onClick={onRadioClick} className="p-2 text-red-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors group" title="VHF Telsiz Modu">
-                  <Radio size={18} className="group-hover:animate-pulse"/>
+              {/* ADDED: VHF Radio Button */}
+              <button onClick={onRadioClick} className="p-2 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors group" title="VHF Radyo Modu">
+                  <Radio size={18} className="group-hover:scale-110 transition-transform"/>
               </button>
           </div>
           

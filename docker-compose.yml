@@ -1,4 +1,3 @@
-
 version: '3.9'
 
 networks:
@@ -6,8 +5,8 @@ networks:
     driver: bridge
 
 services:
-  # 1. THE BRAIN (Python/Go Backend)
-  ada-core:
+  # 1. THE BRAIN (Python LangGraph)
+  ada-backend:
     build: 
       context: ./backend
       dockerfile: Dockerfile
@@ -18,18 +17,14 @@ services:
       - REDIS_URL=redis://ada-redis:6379
       - QDRANT_URL=http://ada-qdrant:6333
       - MQTT_BROKER=ada-mqtt
-      - OLLAMA_URL=http://ada-local-llm:11434
     depends_on:
       - ada-redis
       - ada-qdrant
       - ada-mqtt
-    volumes:
-      - ./backend:/app
-      - ./docs:/docs
     networks:
       - ada_onenet
 
-  # 2. FRONTEND GATEWAY (Nginx + React Dist)
+  # 2. FRONTEND GATEWAY (Nginx + React)
   ada-frontend:
     build:
       context: .
@@ -39,9 +34,11 @@ services:
     container_name: ada_frontend_hyperscale
     restart: always
     ports:
-      - "80:80" # Maps Port 80 of Pi to Nginx
+      - "3000:80"
+    environment:
+      - API_KEY=${API_KEY}
     depends_on:
-      - ada-core
+      - ada-backend
     networks:
       - ada_onenet
 
@@ -55,7 +52,17 @@ services:
     networks:
       - ada_onenet
 
-  # 4. TRUTH (Postgres)
+  # 4. EVENT BUS (Redis)
+  ada-redis:
+    image: redis:alpine
+    container_name: ada_redis
+    restart: always
+    volumes:
+      - redis_data:/data
+    networks:
+      - ada_onenet
+
+  # 5. TRUTH (Postgres)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -66,16 +73,6 @@ services:
       POSTGRES_DB: wim_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ada_onenet
-
-  # 5. NERVOUS SYSTEM (Redis)
-  ada-redis:
-    image: redis:alpine
-    container_name: ada_redis
-    restart: always
-    volumes:
-      - redis_data:/data
     networks:
       - ada_onenet
 
@@ -92,20 +89,9 @@ services:
     networks:
       - ada_onenet
 
-  # 7. LOCAL BRAIN (Ollama - Optional for Offline)
-  ada-local-llm:
-    image: ollama/ollama:latest
-    container_name: ada_local_llm
-    restart: always
-    volumes:
-      - ollama_data:/root/.ollama
-    networks:
-      - ada_onenet
-
 volumes:
   postgres_data:
   qdrant_data:
   redis_data:
   mqtt_data:
   mqtt_log:
-  ollama_data:

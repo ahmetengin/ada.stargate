@@ -13,13 +13,13 @@ import {
     FileText,
     Map,
     Calendar,
-    Wrench,
     Ship,
     BarChart3,
     Eye,
     QrCode,
     Fuel,
-    Users
+    Activity,
+    ShieldCheck
 } from 'lucide-react';
 import { UserRole } from '../../types';
 
@@ -29,55 +29,63 @@ interface QuickActionsProps {
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, userRole }) => {
-  
-  // Define Role-Specific Action Sets based on Ada's capabilities
   const actions = [
-    // --- VISITOR ACTIONS (Information & Access) ---
-    { label: 'Wi-Fi', icon: Wifi, text: 'What is the guest wifi password?', roles: ['VISITOR'] },
-    { label: 'Map', icon: Map, text: 'Show me the marina map and amenities.', roles: ['VISITOR'] },
-    { label: 'Events', icon: Calendar, text: 'What events are happening today?', roles: ['VISITOR'] },
-    { label: 'Login', icon: QrCode, text: 'I want to log in / register.', roles: ['VISITOR'] },
-
-    // --- MEMBER ACTIONS (Concierge & Lifestyle) ---
-    { label: 'My Pass', icon: QrCode, text: 'Show my digital access pass.', roles: ['MEMBER'] },
-    { label: 'Book Table', icon: Utensils, text: 'Reserve a table at Poem Restaurant for tonight.', roles: ['MEMBER'] },
-    { label: 'Valet', icon: Car, text: 'I need my car at the main pontoon gate.', roles: ['MEMBER'] },
-    { label: 'Concierge', icon: LifeBuoy, text: 'Connect me to the concierge desk.', roles: ['MEMBER'] },
-    
-    // --- CAPTAIN ACTIONS (Operations & Vessel) ---
-    { label: 'Departure', icon: ArrowUp, text: 'Request departure clearance for my vessel.', roles: ['CAPTAIN'] },
-    { label: 'Arrival', icon: ArrowDown, text: 'Request arrival & berthing instructions.', roles: ['CAPTAIN'] },
-    { label: 'Tender', icon: Ship, text: 'Request tender service to my location.', roles: ['CAPTAIN'] },
-    { label: 'Blue Card', icon: Recycle, text: 'I need a waste pump-out (Blue Card process).', roles: ['CAPTAIN'] },
-    { label: 'Tech Support', icon: Wrench, text: 'Report a technical fault at my pedestal.', roles: ['CAPTAIN'] },
-    { label: 'Fuel', icon: Fuel, text: 'Check fuel station availability.', roles: ['CAPTAIN'] },
-    { label: 'Account', icon: CircleDollarSign, text: 'Show my current balance and invoices.', roles: ['CAPTAIN'] },
-    
-    // --- GM ACTIONS (Oversight & Command) ---
-    { label: 'Daily Ops', icon: FileText, text: 'Generate daily operations report.', roles: ['GENERAL_MANAGER'] },
-    { label: 'Financials', icon: BarChart3, text: 'Show financial snapshot and overdue accounts.', roles: ['GENERAL_MANAGER'] },
-    { label: 'Incidents', icon: AlertTriangle, text: 'List critical security incidents for today.', roles: ['GENERAL_MANAGER'] },
-    { label: 'Staff', icon: Users, text: 'Show security patrol status and shift roster.', roles: ['GENERAL_MANAGER'] },
-    { label: 'CCTV', icon: Eye, text: 'Access surveillance feeds for Pontoon A.', roles: ['GENERAL_MANAGER'] },
+    { label: 'Marina Map', icon: Map, text: 'Show me the marina map and available amenities.', roles: ['VISITOR'] },
+    { label: 'WiFi Pass', icon: Wifi, text: 'What is the guest wifi password?', roles: ['VISITOR'] },
+    { label: 'Events', icon: Calendar, text: 'What events are happening in the marina today?', roles: ['VISITOR'] },
+    { label: 'Register', icon: QrCode, text: 'I want to register my vessel for a short stay.', roles: ['VISITOR'] },
+    { label: 'My Pass', icon: QrCode, text: 'Access my digital membership pass.', roles: ['MEMBER'] },
+    { label: 'Call Buggy', icon: Car, text: 'I need a buggy at Pontoon B gate.', roles: ['MEMBER'] },
+    { label: 'Book Table', icon: Utensils, text: 'Reserve a table for 4 at Poem Restaurant tonight.', roles: ['MEMBER'] },
+    { label: 'Concierge', icon: LifeBuoy, text: 'Connect me with the concierge desk.', roles: ['MEMBER'] },
+    { label: 'Request Arrival', icon: ArrowDown, text: 'Request arrival clearance and berthing instructions.', roles: ['CAPTAIN'] },
+    { label: 'Request Departure', icon: ArrowUp, text: 'Request departure clearance and settle any outstanding fees.', roles: ['CAPTAIN'] },
+    { label: 'Radio Check', icon: Activity, text: 'VHF Channel 72 radio check.', roles: ['CAPTAIN'] },
+    { label: 'Blue Card', icon: Recycle, text: 'Schedule a waste pump-out and update my Blue Card.', roles: ['CAPTAIN'] },
+    { label: 'Fuel Status', icon: Fuel, text: 'Check fuel station current wait time and diesel price.', roles: ['CAPTAIN'] },
+    { label: 'Ledger', icon: CircleDollarSign, text: 'Show my current account balance and pending invoices.', roles: ['CAPTAIN'] },
+    { label: 'Daily Ops', icon: FileText, text: 'Generate daily operations report for the General Manager.', roles: ['GENERAL_MANAGER'] },
+    { label: 'Fin Snapshot', icon: BarChart3, text: 'Show current revenue snapshot and overdue accounts.', roles: ['GENERAL_MANAGER'] },
+    { label: 'Incidents', icon: AlertTriangle, text: 'List all critical and warning incidents logged in the last 24 hours.', roles: ['GENERAL_MANAGER'] },
+    { label: 'Staff Status', icon: ShieldCheck, text: 'Show security patrol status and personnel on duty.', roles: ['GENERAL_MANAGER'] },
+    { label: 'System Trace', icon: Eye, text: 'Open the neural observer for active agents.', roles: ['GENERAL_MANAGER'] },
   ];
 
   const visibleActions = actions.filter(action => action.roles.includes(userRole as string));
 
   return (
-    <div className="flex items-center sm:justify-center gap-2 mt-2 px-0 sm:px-6 overflow-x-auto custom-scrollbar no-scrollbar pb-1 w-full">
-      <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-600 uppercase font-bold whitespace-nowrap hidden sm:inline">
-        {userRole === 'GENERAL_MANAGER' ? 'Command:' : 'Quick:'}
-      </span>
-      {visibleActions.map((action, idx) => (
-        <button 
-          key={idx}
-          onClick={() => onAction(action.text)}
-          className="flex items-center gap-1.5 px-2 py-1 bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 rounded-md text-[10px] font-mono text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors whitespace-nowrap flex-shrink-0"
-        >
-          <action.icon size={12} />
-          {action.label}
-        </button>
-      ))}
+    <div className="flex items-center gap-2 px-1 overflow-x-auto no-scrollbar pb-1 w-full mask-fade-right">
+      <div className="flex items-center gap-1.5 pr-2 border-r border-zinc-200 dark:border-zinc-800 shrink-0">
+        <span className="text-[9px] font-mono font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest">
+            {userRole === 'GENERAL_MANAGER' ? 'Direct_Cmd' : 'Shortcuts'}
+        </span>
+      </div>
+      
+      <div className="flex items-center gap-2 min-w-max pr-10">
+        {visibleActions.map((action, idx) => (
+          <button 
+            key={idx}
+            onClick={() => onAction(action.text)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-zinc-900/50 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-lg text-[10px] font-mono font-bold text-zinc-600 dark:text-zinc-400 hover:text-indigo-500 dark:hover:text-cyan-400 transition-all duration-200 group active:scale-95 shadow-sm"
+          >
+            <action.icon size={12} className="group-hover:scale-110 transition-transform" />
+            <span className="whitespace-nowrap uppercase tracking-wider">{action.label}</span>
+          </button>
+        ))}
+      </div>
+      
+      <style>{`
+        .mask-fade-right {
+          mask-image: linear-gradient(to right, black 85%, transparent 100%);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
 };
