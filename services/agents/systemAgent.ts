@@ -2,7 +2,7 @@
 import { AgentAction, AgentTraceLog, NodeName } from '../../types';
 import { systemUpdateExpert } from '../skills/systemUpdater';
 import { TaskHandlerFn } from '../decomposition/types';
-import { getCurrentMaritimeTime } from '../utils';
+import { getCurrentMaritimeTime } from '../utils/utils';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_sys_${Date.now()}_${Math.random()}`,
@@ -77,7 +77,7 @@ export const systemExpert = {
         }
 
         // 3. Execute Update via Skill
-        addTrace(createLog('ada.stargate', 'TOOL_EXECUTION', `Patching Tenant Configuration: ${key} = ${value}`, 'WORKER'));
+        addTrace(createLog('ada.stargate', 'TOOL_EXECUTION', `Patching Tenant Configuration via 'ada-system-ops': ${key} = ${value}`, 'WORKER'));
         const action = await systemUpdateExpert.updateRule(key, value);
 
         addTrace(createLog('ada.stargate', 'OUTPUT', `Configuration updated successfully.`, 'EXPERT'));
