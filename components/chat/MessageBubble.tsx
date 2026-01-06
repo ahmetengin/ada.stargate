@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Message, MessageRole, VesselIntelligenceProfile } from '../../types';
 import { marinaExpert } from '../../services/agents/marinaAgent';
 import { VesselCard } from './VesselCard';
-import { Terminal, Shield } from 'lucide-react';
+import { Terminal, Shield, User, Bot, Cpu } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -32,11 +32,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
 
   if (message.role === MessageRole.System) {
       return (
-          <div className="flex justify-center my-10 py-6 border-y border-indigo-500/10">
-              <div className="text-center font-mono space-y-3">
-                  <div className="text-indigo-500 font-black tracking-[0.4em] text-xs uppercase">Ada Stargate v5.5 Activated</div>
-                  <div className="text-[10px] text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                      Sovereign Domain Mesh Online. SEAL learning protocol armed. Monitoring OneNet telemetry.
+          <div className="flex justify-center my-8">
+              <div className="relative group">
+                  <div className="absolute inset-0 bg-tech-500/20 blur-xl rounded-full opacity-50 group-hover:opacity-80 transition-opacity"></div>
+                  <div className="relative border border-tech-800 bg-void/80 backdrop-blur px-6 py-3 rounded-full flex items-center gap-3 shadow-[0_0_15px_rgba(20,184,166,0.1)]">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                      <div className="text-[10px] font-mono text-tech-400 tracking-widest uppercase">
+                          Ada Stargate v5.5 <span className="text-slate-600 mx-2">|</span> Core Online
+                      </div>
                   </div>
               </div>
           </div>
@@ -45,39 +48,88 @@ export const MessageBubble: React.FC<MessageBubbleProps> = memo(({ message }) =>
 
   return (
     <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
+        
+        {/* Avatar / Icon */}
         {!isUser && (
-            <div className="mr-3 mt-1 shrink-0">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${isEpisode ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' : 'bg-indigo-500/10 border-indigo-500/30 text-indigo-500'}`}>
-                    {isEpisode ? <Shield size={14} /> : <Terminal size={14} />}
+            <div className="mr-4 mt-1 shrink-0 flex flex-col items-center gap-1">
+                <div className={`w-8 h-8 rounded bg-tech-950 border border-tech-800 flex items-center justify-center text-tech-400 shadow-[0_0_10px_rgba(20,184,166,0.2)]`}>
+                    {isEpisode ? <Shield size={14} /> : <Cpu size={14} />}
                 </div>
+                {message.nodePath && (
+                   <div className="w-px h-full bg-tech-900/50 my-1"></div>
+                )}
             </div>
         )}
         
-        <div className={`max-w-[85%] font-mono text-xs lg:text-sm ${isUser ? 'text-right' : 'text-left'}`}>
-            {isUser ? (
-                <div className="bg-indigo-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm inline-block">
-                    {message.text}
+        <div className={`max-w-[85%] lg:max-w-[70%] ${isUser ? 'order-1' : 'order-2'}`}>
+            
+            {/* Header for System Messages */}
+            {!isUser && (
+                <div className="flex items-center gap-2 mb-1.5 opacity-70 pl-1">
+                    <span className="text-[9px] font-tech font-bold uppercase tracking-widest text-tech-500">
+                        {message.nodePath || 'ADA.STARGATE'}
+                    </span>
+                    <span className="text-[8px] font-mono text-slate-600">
+                        {new Date(message.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})}
+                    </span>
                 </div>
-            ) : (
-                <div className={`px-4 py-3 rounded-2xl rounded-tl-sm border transition-colors ${isEpisode ? 'bg-amber-950/10 border-amber-500/20 text-amber-100' : 'bg-zinc-100 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-700/50 text-zinc-800 dark:text-zinc-200'}`}>
-                    <ReactMarkdown 
-                        components={{
-                            strong: ({node, ...props}) => <span className="text-indigo-400 font-bold" {...props} />,
-                            code: ({node, ...props}) => <span className="bg-black/20 px-1 rounded text-pink-400" {...props} />,
-                            p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
-                        }}
-                    >
-                        {message.text}
-                    </ReactMarkdown>
-                    
-                    <div className="space-y-4 mt-4">
+            )}
+
+            {/* Bubble Content */}
+            <div className={`
+                relative p-4 text-sm font-sans leading-relaxed shadow-lg backdrop-blur-sm
+                ${isUser 
+                    ? 'bg-tech-600 text-white rounded-l-xl rounded-tr-xl rounded-br-none border border-tech-500' 
+                    : 'bg-tech-950/40 text-slate-300 rounded-r-xl rounded-bl-xl rounded-tl-none border border-tech-900/60'
+                }
+            `}>
+                {/* Tech Corner Accent for System Messages */}
+                {!isUser && (
+                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-tech-500/50"></div>
+                )}
+
+                <ReactMarkdown 
+                    components={{
+                        strong: ({node, ...props}) => <span className="text-tech-300 font-bold font-display tracking-wide" {...props} />,
+                        code: ({node, ...props}) => <span className="bg-black/30 border border-tech-900 px-1.5 py-0.5 rounded text-[10px] font-code text-neon-amber" {...props} />,
+                        p: ({node, ...props}) => <p className="mb-2 last:mb-0" {...props} />,
+                        ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-2 marker:text-tech-500" {...props} />,
+                        ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 my-2 marker:text-tech-500" {...props} />,
+                    }}
+                >
+                    {message.text}
+                </ReactMarkdown>
+                
+                {/* Vessel Cards Injection */}
+                {Object.keys(vesselProfiles).length > 0 && !isUser && (
+                    <div className="mt-4 pt-4 border-t border-tech-900/50 space-y-3">
                         {Object.values(vesselProfiles).map((profile, idx) => (
                             <VesselCard key={idx} profile={profile} />
                         ))}
                     </div>
+                )}
+            </div>
+
+            {/* Footer / Trace Info */}
+            {message.executionResult && !isUser && (
+                <div className="mt-1 pl-1 flex items-center gap-2">
+                    <div className="h-px w-4 bg-tech-800"></div>
+                    <span className="text-[9px] font-mono text-slate-600 uppercase">
+                        Code Executed: {message.executionResult}
+                    </span>
                 </div>
             )}
         </div>
+
+        {/* User Icon (Right Side) */}
+        {isUser && (
+            <div className="ml-4 mt-1 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-tech-600 flex items-center justify-center text-white shadow-lg">
+                    <User size={14} />
+                </div>
+            </div>
+        )}
+
     </div>
   );
 });

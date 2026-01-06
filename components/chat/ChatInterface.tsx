@@ -1,6 +1,6 @@
 
 import React, { useRef, useCallback, useEffect } from 'react';
-import { Menu } from 'lucide-react';
+import { Sun, Moon, Monitor, Radio, Signal, Wifi } from 'lucide-react';
 import { Message, ModelType, TenantConfig, ThemeMode, UserRole } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { InputArea } from './InputArea';
@@ -13,89 +13,128 @@ interface ChatInterfaceProps {
     theme: ThemeMode;
     activeTenantConfig: TenantConfig; 
     onModelChange: (m: ModelType) => void;
-    onSend: (text: string) => void;
+    onSend: (text: string, attachments: File[]) => void;
     onQuickAction: (text: string) => void;
     onScanClick: () => void;
-    // ADDED: onRadioClick to support VHF Radio mode toggle from App.tsx
-    onRadioClick?: () => void;
     onTraceClick: () => void;
-    onThemeChange: (t: ThemeMode) => void;
-    onToggleSidebar: () => void;
+    onToggleTheme: () => void;
 }
 
 export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     messages,
     isLoading,
+    selectedModel,
     userRole,
     theme,
     activeTenantConfig, 
     onModelChange,
-    selectedModel,
     onSend,
     onQuickAction,
     onScanClick,
-    onRadioClick,
     onTraceClick,
-    onThemeChange,
-    onToggleSidebar
+    onToggleTheme
 }) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const isUserAtBottomRef = useRef(true);
+
+    const handleScroll = useCallback(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const threshold = 100;
+        const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+        isUserAtBottomRef.current = distanceToBottom < threshold;
+    }, []);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+        if (isUserAtBottomRef.current) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+        }
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full w-full relative bg-[var(--bg-primary)]">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-indigo-500/5 blur-[120px] pointer-events-none"></div>
+        <div className="flex flex-col h-full w-full relative transition-colors duration-300 pb-20 lg:pb-0 bg-void">
+            {/* Technical Background */}
+            <div className="absolute inset-0 bg-grid-tech opacity-10 z-0 pointer-events-none"></div>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-tech-500/5 blur-[100px] pointer-events-none z-0"></div>
 
-            <header className="flex h-14 items-center justify-between px-4 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 shrink-0">
-                <div className="flex items-center gap-3">
-                    <button onClick={onToggleSidebar} className="lg:hidden p-2 text-[var(--text-secondary)] hover:bg-black/5 dark:hover:bg-white/5 rounded-lg">
-                        <Menu size={18} />
-                    </button>
-                    <div className="flex items-center gap-2 cursor-pointer group" onClick={onTraceClick}>
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></div>
-                        <span className="text-xs font-mono font-black text-[var(--text-primary)] uppercase tracking-widest group-hover:text-[var(--accent-color)] transition-colors">
-                            {activeTenantConfig.node_address}
-                        </span>
+            {/* Comms Header */}
+            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-tech-900/50 bg-void/80 backdrop-blur-md z-10 flex-shrink-0">
+                <div className="flex items-center gap-4 cursor-pointer group" onClick={onTraceClick}>
+                    {/* Node Indicator */}
+                    <div className="flex flex-col items-end">
+                        <div className="flex gap-1">
+                            <div className="w-1 h-3 bg-tech-500/50 skew-x-[-10deg]"></div>
+                            <div className="w-1 h-3 bg-tech-500 skew-x-[-10deg]"></div>
+                            <div className="w-1 h-3 bg-tech-400 skew-x-[-10deg] animate-pulse"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm font-tech font-bold text-white tracking-[0.1em] uppercase">
+                                {activeTenantConfig.id}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded-sm bg-tech-900/50 border border-tech-800 text-[9px] font-code text-tech-400">
+                                NODE_ID: 8812
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 tracking-widest uppercase group-hover:text-tech-400 transition-colors">
+                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_#10b981]"></span>
+                            Secure Link Established
+                        </div>
                     </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
-                    <div className="flex items-center bg-black/5 dark:bg-white/5 p-1 rounded-lg border border-[var(--border-color)]">
-                        {(['light', 'dark'] as ThemeMode[]).map(t => (
-                            <button 
-                                key={t}
-                                onClick={() => onThemeChange(t)}
-                                className={`px-2 py-1 text-[9px] font-bold uppercase rounded transition-all ${theme === t ? 'bg-white dark:bg-zinc-800 text-indigo-500 shadow-sm' : 'text-zinc-500'}`}
-                            >
-                                {t}
-                            </button>
-                        ))}
+                {/* Frequency Tuner Visual */}
+                <div className="flex-1 max-w-md mx-8 relative h-8 hidden xl:block">
+                    <div className="absolute inset-0 flex items-center justify-between opacity-20">
+                        {[...Array(20)].map((_,i) => <div key={i} className="w-px h-2 bg-tech-500"></div>)}
                     </div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full flex justify-center gap-8 text-[10px] font-mono text-tech-700">
+                        <span>156.600</span>
+                        <span className="text-tech-400 font-bold glow">156.625 MHz</span>
+                        <span>156.650</span>
+                    </div>
+                    <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-red-500/50"></div>
                 </div>
-            </header>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 lg:p-8 space-y-6" ref={scrollContainerRef}>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-tech-950 border border-tech-900 rounded text-slate-400">
+                        <Signal size={12} className="text-emerald-500" />
+                        <span className="text-[10px] font-mono font-bold">-42 dBm</span>
+                    </div>
+                    <button 
+                        onClick={onToggleTheme}
+                        className="p-2 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                    >
+                        {theme === 'light' ? <Sun size={16} /> : <Moon size={16} />}
+                    </button>
+                </div>
+            </div>
+
+            {/* Messages Area */}
+            <div 
+                className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-8 custom-scrollbar scroll-smooth relative z-10" 
+                ref={scrollContainerRef}
+                onScroll={handleScroll}
+            >
                 {messages.map((msg) => (
                     <MessageBubble key={msg.id} message={msg} />
                 ))}
-                <div ref={messagesEndRef} />
+                <div ref={messagesEndRef} className="h-4" />
             </div>
 
-            <div className="p-4 lg:p-6 bg-gradient-to-t from-[var(--bg-primary)] via-[var(--bg-primary)] to-transparent">
+            {/* Input Area */}
+            <div className="flex-shrink-0 bg-void/90 backdrop-blur-xl border-t border-tech-900/50 p-4 sm:p-6 pb-6 sm:pb-8 z-20 relative">
                 <InputArea 
-                    onSend={(t) => onSend(t)}
+                    onSend={onSend}
                     isLoading={isLoading}
                     selectedModel={selectedModel}
                     onModelChange={onModelChange}
                     userRole={userRole}
                     onQuickAction={onQuickAction}
                     onScanClick={onScanClick}
-                    // ADDED: Passed down onRadioClick
-                    onRadioClick={onRadioClick}
                 />
             </div>
         </div>

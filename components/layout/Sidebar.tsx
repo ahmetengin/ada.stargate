@@ -2,10 +2,10 @@
 import React from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { 
-    Anchor, Radio, CreditCard, Scale, Brain, Activity, Zap, Users, ShieldCheck, Briefcase
+    Anchor, Radio, Map, Activity, Zap, Cpu, Compass, Wind, Settings, Monitor, Hexagon, Terminal, Brain
 } from 'lucide-react';
 
-export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'berths' | 'none';
+export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'berths' | 'chartplotter' | 'instruments' | 'system' | 'none';
 
 interface SidebarProps {
   userProfile: UserProfile;
@@ -15,116 +15,141 @@ interface SidebarProps {
   onPulseClick?: () => void;
 }
 
-const SectionHeader = ({ title, icon: Icon, color }: { title: string, icon: any, color: string }) => (
-    <h3 className={`text-[10px] font-black ${color} uppercase tracking-widest mb-3 pl-2 border-l-2 border-current flex items-center gap-2 mt-6 first:mt-0`}>
-        <Icon size={12} />
-        {title}
-    </h3>
+const SectionHeader = ({ title, color = "text-tech-400" }: { title: string, color?: string }) => (
+    <div className="flex items-center gap-2 px-4 mt-6 mb-2 opacity-80">
+        <div className={`h-1 w-1 rounded-full bg-current ${color}`}></div>
+        <div className={`h-px w-3 bg-current ${color}`}></div>
+        <h3 className={`text-[10px] font-tech font-bold uppercase tracking-[0.2em] ${color} text-glow`}>
+            {title}
+        </h3>
+    </div>
 );
 
-const NodeItem = ({ id, label, state, onClick }: { id: string, label: string, state: string, onClick?: () => void }) => (
-    <div onClick={onClick} className="flex items-center justify-between px-3 py-2 group cursor-pointer hover:bg-white/5 rounded-lg transition-all active:bg-white/10">
-        <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${state === 'working' ? 'bg-amber-500 animate-pulse shadow-[0_0_8px_orange]' : 'bg-emerald-500/50'}`}></div>
-            <span className="text-[11px] font-mono text-slate-400 group-hover:text-slate-200">{label}</span>
+const NodeItem = ({ id, label, state, onClick, active, icon: Icon }: { id: string, label: string, state: string, onClick?: () => void, active?: boolean, icon?: any }) => (
+    <div 
+        onClick={onClick} 
+        className={`group relative mx-2 mb-1 px-3 py-2.5 cursor-pointer transition-all duration-300 border border-transparent
+        ${active 
+            ? 'bg-tech-950/60 border-tech-500/30' 
+            : 'hover:bg-tech-900/20 hover:border-tech-800/30'
+        }`}
+    >
+        {/* Active Marker */}
+        {active && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-tech-400 shadow-[0_0_10px_#2dd4bf]"></div>}
+        
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className={`relative flex items-center justify-center w-5 h-5 transition-transform group-hover:scale-110 ${active ? 'text-tech-400' : 'text-slate-600'}`}>
+                     {Icon ? <Icon size={18} strokeWidth={1.5} /> : <Hexagon size={18} strokeWidth={1.5} />}
+                </div>
+                <div>
+                    <div className={`text-[11px] font-tech font-bold uppercase tracking-wide leading-none transition-colors ${active ? 'text-white' : 'text-slate-400 group-hover:text-tech-200'}`}>
+                        {label}
+                    </div>
+                    <div className="text-[8px] font-code text-slate-600 mt-0.5 group-hover:text-tech-600">
+                        ::{id}
+                    </div>
+                </div>
+            </div>
+            
+            {state === 'working' && (
+                <div className="flex gap-0.5">
+                    <div className="w-0.5 h-2 bg-neon-amber animate-pulse"></div>
+                    <div className="w-0.5 h-3 bg-neon-amber animate-pulse delay-75"></div>
+                    <div className="w-0.5 h-1.5 bg-neon-amber animate-pulse delay-150"></div>
+                </div>
+            )}
         </div>
-        <span className="text-[8px] font-mono text-slate-600 uppercase opacity-0 group-hover:opacity-100 transition-opacity">{id}</span>
     </div>
 );
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
   userProfile,
   onPulseClick,
-  onTabChange
+  onTabChange,
+  activeTab
 }) => {
   const role = userProfile.role;
-
-  // Helper to check permissions
   const hasAccess = (allowedRoles: UserRole[]) => allowedRoles.includes(role);
 
   return (
-    <div className="h-full w-full flex flex-col bg-[#020617] border-r border-white/5 text-slate-400 select-none overflow-hidden">
-      
-      <div className="p-6 border-b border-white/5 bg-[#050b14]/50">
+    <div className="h-full w-full flex flex-col bg-void border-r border-tech-900/50 relative overflow-hidden">
+      {/* Decorative Grid Background */}
+      <div className="absolute inset-0 bg-grid-tech opacity-10 pointer-events-none"></div>
+
+      {/* Header */}
+      <div className="relative p-5 border-b border-tech-900/50 bg-void z-10">
         <div className="flex items-center gap-4 cursor-pointer group" onClick={onPulseClick}>
-            <div className="relative">
-                <div className="w-12 h-12 bg-indigo-950/30 rounded-xl flex items-center justify-center border border-indigo-500/20 group-hover:border-indigo-500/50 transition-all duration-500 shadow-[0_0_20px_rgba(79,70,229,0.1)]">
-                    <Anchor size={24} className="text-indigo-400" />
-                </div>
+            <div className="relative w-12 h-12 flex items-center justify-center bg-tech-950/50 rounded-lg border border-tech-800">
+                <Anchor size={24} className="text-tech-400 relative z-10" />
+                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_#10b981]"></div>
             </div>
             <div>
-                <h2 className="text-xl font-display font-bold tracking-widest text-white leading-none">ADA<span className="text-indigo-500">STARGATE</span></h2>
-                <div className="text-[9px] text-slate-600 font-mono tracking-wider mt-1 uppercase">v5.5 HYPERSCALE</div>
+                <h2 className="text-xl font-tech font-bold tracking-widest text-white leading-none flex items-center gap-1">
+                    ADA<span className="text-tech-500">.BBN</span>
+                </h2>
+                <div className="flex items-center gap-2 mt-1">
+                    <div className="text-[9px] text-slate-500 font-code tracking-wider uppercase">
+                        BAREBOAT.OS v5.5
+                    </div>
+                </div>
             </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-2">
+      {/* Menu Area */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar py-2 relative z-10">
           
-          {/* 1. OPERATIONS (Staff, GM, Ops) */}
-          {hasAccess(['GENERAL_MANAGER', 'OPS_STAFF', 'HR_MANAGER']) && (
-              <>
-                  <SectionHeader title="ADA.MARINA (Operatör)" icon={Zap} color="text-cyan-400" />
-                  <NodeItem id="OPS" label="Operasyon Masası" state="idle" onClick={() => onTabChange('ops')} />
-                  <NodeItem id="TRAF" label="Trafik Kontrol" state="idle" onClick={() => onTabChange('ops')} />
-                  <NodeItem id="PEDA" label="Akıllı Pedestallar" state="idle" onClick={() => onTabChange('facility')} />
-                  <NodeItem id="ENTRY" label="Misafir Check-In" state="idle" onClick={() => onTabChange('guest_checkin')} />
-                  <NodeItem id="BOAT" label="Çekek / Lift" state="idle" onClick={() => onTabChange('tech')} />
-              </>
-          )}
+          <SectionHeader title="BRIDGE :: NAV" color="text-cyan-400" />
+          <NodeItem icon={Map} id="OPN-CPN" label="Chartplotter" state="idle" onClick={() => onTabChange('chartplotter')} active={activeTab === 'chartplotter'} />
+          <NodeItem icon={Compass} id="NMEA-0183" label="Instruments" state="working" onClick={() => onTabChange('instruments')} active={activeTab === 'instruments'} />
+          <NodeItem icon={Radio} id="AIS-VHF" label="Comms / AIS" state="idle" onClick={() => onTabChange('vhf')} active={activeTab === 'vhf'} />
 
-          {/* 2. FINANCE (GM, Finance) - Hidden for basic Ops */}
-          {hasAccess(['GENERAL_MANAGER']) && (
-              <>
-                  <SectionHeader title="ADA.FINANCE (CFO)" icon={CreditCard} color="text-emerald-400" />
-                  <NodeItem id="COMM" label="Ticari Yönetim" state="idle" onClick={() => onTabChange('commercial')} />
-                  <NodeItem id="INVX" label="Fatura Otomasyonu" state="working" onClick={() => onTabChange('commercial')} />
-                  <NodeItem id="YIEL" label="Dinamik Fiyatlama" state="idle" onClick={() => onTabChange('berths')} />
-              </>
-          )}
+          <SectionHeader title="VESSEL :: SYS" color="text-emerald-400" />
+          <NodeItem icon={Cpu} id="RPI-CORE" label="System Monitor" state="idle" onClick={() => onTabChange('system')} active={activeTab === 'system'} />
+          <NodeItem icon={Zap} id="PWR-MGMT" label="Power / Solar" state="idle" onClick={() => onTabChange('facility')} active={activeTab === 'facility'} />
+          <NodeItem icon={Wind} id="GRIB-WX" label="Weather / GRIB" state="working" onClick={() => onTabChange('ops')} active={activeTab === 'ops'} />
 
-          {/* 3. HR & LEGAL (GM, HR Manager) */}
-          {hasAccess(['GENERAL_MANAGER', 'HR_MANAGER']) && (
-              <>
-                  <SectionHeader title="ADA.LEGAL (HR & Law)" icon={Scale} color="text-indigo-400" />
-                  <NodeItem id="HR" label="İnsan Kaynakları" state="idle" onClick={() => onTabChange('hr')} />
-                  <NodeItem id="RAGX" label="Hukuki RAG" state="idle" onClick={() => onTabChange('ops')} />
-                  <NodeItem id="ISPS" label="Güvenlik & ISPS" state="idle" onClick={() => onTabChange('ops')} />
-              </>
-          )}
+          <SectionHeader title="LOGS :: DATA" color="text-purple-400" />
+          <NodeItem icon={Terminal} id="SGN-K" label="SignalK Log" state="idle" onClick={() => onTabChange('observer')} active={activeTab === 'observer'} />
+          <NodeItem icon={Settings} id="CFG-YAML" label="Configuration" state="idle" onClick={() => onTabChange('tech')} active={activeTab === 'tech'} />
 
-          {/* 4. BRAIN (Admin Only) */}
-          {hasAccess(['GENERAL_MANAGER']) && (
-              <>
-                  <SectionHeader title="ADA.STARGATE (Beyin)" icon={Brain} color="text-purple-400" />
-                  <NodeItem id="ROUT" label="Orkestrasyon" state="working" onClick={() => onTabChange('analytics')} />
-                  <NodeItem id="ANLY" label="TabPFN Analitik" state="idle" onClick={() => onTabChange('analytics')} />
-              </>
-          )}
-
-          {/* 5. CUSTOMER VIEW (Limited) */}
-          {hasAccess(['CAPTAIN', 'MEMBER', 'VISITOR']) && (
-               <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-center">
-                   <Briefcase size={24} className="mx-auto text-zinc-500 mb-2"/>
-                   <div className="text-[10px] text-zinc-400">Welcome to WIM Portal. Use the chat to request services.</div>
-               </div>
-          )}
       </div>
 
-      {hasAccess(['GENERAL_MANAGER', 'OPS_STAFF']) && (
-          <div className="p-4 border-t border-white/5 bg-[#050b14]">
-              <div className="grid grid-cols-2 gap-2">
-                  <button onClick={() => onTabChange('observer')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-all border border-white/5 active:scale-95">
-                    <Activity size={16} className="text-slate-400" />
-                    <span className="text-[8px] font-black uppercase">Observer</span>
-                  </button>
-                  <button onClick={() => onTabChange('vhf')} className="flex flex-col items-center gap-1 p-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 transition-all border border-red-500/20 active:scale-95">
-                    <Radio size={16} className="text-red-500" />
-                    <span className="text-[8px] font-black uppercase">Radio_Link</span>
-                  </button>
-              </div>
+      {/* Footer / Tools */}
+      <div className="p-3 border-t border-tech-900/50 bg-void z-10 space-y-2">
+          
+          {/* NEURAL OBSERVER BUTTON - HIGH VISIBILITY */}
+          <button 
+            onClick={() => onTabChange('observer')}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded border transition-all duration-300 group relative overflow-hidden ${
+                activeTab === 'observer' 
+                ? 'bg-purple-900/40 border-purple-500/50 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
+                : 'bg-tech-950/80 border-tech-800 text-slate-400 hover:border-purple-500/50 hover:text-white'
+            }`}
+          >
+             {/* Scanline effect inside button */}
+             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent -translate-x-[100%] group-hover:animate-[scan_1.5s_linear_infinite]"></div>
+             
+             <div className={`p-1.5 rounded-md ${activeTab === 'observer' ? 'bg-purple-500 text-white' : 'bg-zinc-800 group-hover:bg-purple-500/80 group-hover:text-white transition-colors'}`}>
+                 <Brain size={16} />
+             </div>
+             <div className="flex flex-col items-start">
+                 <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Neural Observer</span>
+                 <span className="text-[8px] font-mono text-purple-400/80 mt-1">:: WATCH_THOUGHT_PROCESS</span>
+             </div>
+             <Activity size={14} className={`ml-auto ${activeTab === 'observer' ? 'text-purple-400 animate-pulse' : 'text-zinc-700 group-hover:text-purple-400'}`} />
+          </button>
+
+          <div className="flex items-center gap-2 px-3 py-2 bg-tech-950/50 rounded border border-tech-900 opacity-60">
+             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+             <div className="flex flex-col">
+                 <span className="text-[8px] text-slate-500 font-bold uppercase">SignalK Server</span>
+                 <span className="text-[7px] text-tech-600 font-mono">192.168.1.4:3000</span>
+             </div>
           </div>
-      )}
+      </div>
     </div>
   );
 }
+    

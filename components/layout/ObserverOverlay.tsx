@@ -15,13 +15,17 @@ interface ObserverOverlayProps {
   traces: AgentTraceLog[];
 }
 
+// --- THE FULL 24-AGENT ROSTER ---
 const AGENT_REGISTRY = [
+  // GROUP 1: ADA.STARGATE (THE BRAIN)
   { id: 'ada.stargate', label: 'CORE ORCHESTRATOR', icon: Brain, color: 'text-purple-400', group: 'STARGATE' },
   { id: 'ada.router', label: 'SEMANTIC ROUTER', icon: Network, color: 'text-purple-400', group: 'STARGATE' },
   { id: 'ada.seal', label: 'SEAL LEARNER', icon: Sparkles, color: 'text-purple-400', group: 'STARGATE' },
   { id: 'ada.maker', label: 'PYTHON WORKER', icon: Terminal, color: 'text-purple-400', group: 'STARGATE' },
   { id: 'ada.federation', label: 'FEDERATION LINK', icon: Globe, color: 'text-purple-400', group: 'STARGATE' },
   { id: 'ada.it', label: 'SYSTEM ADMIN', icon: Cpu, color: 'text-purple-400', group: 'STARGATE' },
+
+  // GROUP 2: ADA.MARINA (THE OPERATOR)
   { id: 'ada.marina', label: 'HARBOUR MASTER', icon: Anchor, color: 'text-cyan-400', group: 'MARINA' },
   { id: 'ada.sea', label: 'NAVIGATOR (AIS)', icon: Ship, color: 'text-cyan-400', group: 'MARINA' },
   { id: 'ada.technic', label: 'TECHNICAL OPS', icon: Wrench, color: 'text-cyan-400', group: 'MARINA' },
@@ -29,15 +33,21 @@ const AGENT_REGISTRY = [
   { id: 'ada.berth', label: 'YIELD ENGINE', icon: Box, color: 'text-cyan-400', group: 'MARINA' },
   { id: 'ada.robotics', label: 'DRONE FLEET', icon: Plane, color: 'text-cyan-400', group: 'MARINA' },
   { id: 'ada.weather', label: 'METOCEAN', icon: CloudRain, color: 'text-cyan-400', group: 'MARINA' },
+
+  // GROUP 3: ADA.FINANCE (THE CFO)
   { id: 'ada.finance', label: 'CFO LEDGER', icon: Wallet, color: 'text-emerald-400', group: 'FINANCE' },
   { id: 'ada.commercial', label: 'COMMERCIAL', icon: ShoppingBag, color: 'text-emerald-400', group: 'FINANCE' },
   { id: 'ada.procurement', label: 'PURCHASING', icon: Truck, color: 'text-emerald-400', group: 'FINANCE' },
   { id: 'ada.audit', label: 'COMPLIANCE AUDIT', icon: FileCheck, color: 'text-emerald-400', group: 'FINANCE' },
+
+  // GROUP 4: ADA.LEGAL (THE COUNSEL)
   { id: 'ada.legal', label: 'GENERAL COUNSEL', icon: Scale, color: 'text-indigo-400', group: 'LEGAL' },
   { id: 'ada.hr', label: 'HUMAN RESOURCES', icon: Users, color: 'text-indigo-400', group: 'LEGAL' },
   { id: 'ada.security', label: 'SECURITY CHIEF', icon: Shield, color: 'text-red-500', group: 'LEGAL' },
   { id: 'ada.shield', label: 'DOME DEFENSE', icon: Radar, color: 'text-red-500', group: 'LEGAL' },
   { id: 'ada.passkit', label: 'IDENTITY', icon: ScanFace, color: 'text-indigo-400', group: 'LEGAL' },
+
+  // GROUP 5: SERVICES (FRONT OF HOUSE)
   { id: 'ada.concierge', label: 'GUEST EXPERIENCE', icon: Martini, color: 'text-pink-400', group: 'SERVICES' },
   { id: 'ada.congress', label: 'EVENT MANAGER', icon: Mic2, color: 'text-pink-400', group: 'SERVICES' },
 ];
@@ -47,22 +57,33 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
   const [activeAgents, setActiveAgents] = useState<Record<string, number>>({});
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
 
+  // Auto-scroll to bottom of logs
   useEffect(() => {
-      if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [traces, activeFilter]);
+      if(scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+  }, [traces, activeFilter]); // Scroll when filter changes too
 
+  // Update active agents based on recent traces (last 3 seconds)
   useEffect(() => {
       const now = Date.now();
-      const recentLogs = traces.slice(-5); 
+      const recentLogs = traces.slice(-5); // Look at last 5 logs
       const currentlyActive: Record<string, number> = { ...activeAgents };
       
       recentLogs.forEach(l => {
+          // Normalize node name to match ID (e.g. "ada.marina.wim" -> "ada.marina")
+          // Check if any agent ID is a substring of the trace node
           const matchedAgent = AGENT_REGISTRY.find(a => l.node.includes(a.id));
-          if (matchedAgent) currentlyActive[matchedAgent.id] = now;
+          if (matchedAgent) {
+              currentlyActive[matchedAgent.id] = now;
+          }
       });
 
+      // Cleanup old actives (older than 2 seconds)
       Object.keys(currentlyActive).forEach(key => {
-          if (now - currentlyActive[key] > 2000) delete currentlyActive[key];
+          if (now - currentlyActive[key] > 2000) {
+              delete currentlyActive[key];
+          }
       });
 
       setActiveAgents(currentlyActive);
@@ -94,8 +115,10 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
       }
   };
 
+  // Group agents for rendering
   const groups = ['STARGATE', 'MARINA', 'FINANCE', 'LEGAL', 'SERVICES'];
 
+  // FILTER LOGIC
   const filteredTraces = traces.filter(trace => {
       if (activeFilter === 'ALL') return true;
       const matchedAgent = AGENT_REGISTRY.find(a => trace.node.includes(a.id));
@@ -104,6 +127,8 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-[300] bg-[#050b14] text-zinc-300 font-mono text-xs flex flex-col animate-in fade-in duration-200 backdrop-blur-sm">
+      
+      {/* HEADER */}
       <div className="h-14 border-b border-white/10 bg-[#020617] flex items-center justify-between px-6 shrink-0 shadow-lg z-20">
           <div className="flex items-center gap-4">
               <Activity className="text-emerald-500 animate-pulse" size={18} />
@@ -112,13 +137,22 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
                   <span className="bg-zinc-800 text-zinc-400 px-1.5 rounded text-[10px] py-0.5">v5.5</span>
               </h1>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-500 hover:text-white">
-              <X size={18} />
-          </button>
+          <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 rounded border border-emerald-500/20">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]"></div>
+                  <span className="text-[10px] font-bold text-emerald-400">24 NODES ONLINE</span>
+              </div>
+              <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-zinc-500 hover:text-white">
+                  <X size={18} />
+              </button>
+          </div>
       </div>
 
+      {/* MAIN LAYOUT */}
       <div className="flex-1 grid grid-cols-12 overflow-hidden">
-          <div className="col-span-3 border-r border-white/10 bg-[#020617] flex flex-col overflow-y-auto custom-scrollbar">
+          
+          {/* LEFT: AGENT MATRIX (3 Columns) - THE ROSTER */}
+          <div className="col-span-3 border-r border-white/10 bg-[#020617] p-0 flex flex-col overflow-y-auto custom-scrollbar">
               {groups.map(group => (
                   <div key={group} className="border-b border-white/5 last:border-0">
                       <div className="px-4 py-2 bg-white/5 text-[9px] font-bold text-zinc-500 uppercase tracking-widest sticky top-0 backdrop-blur-sm z-10 flex justify-between items-center">
@@ -149,68 +183,155 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
               ))}
           </div>
 
+          {/* CENTER: EVENT STREAM (6 Columns) */}
           <div className="col-span-6 bg-[#050b14] flex flex-col relative border-r border-white/10">
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
+              
+              {/* Stream Header & Filters */}
               <div className="h-10 border-b border-white/10 flex items-center justify-between px-4 bg-[#020617]/80 backdrop-blur z-10 sticky top-0">
                   <div className="flex items-center gap-4 overflow-x-auto no-scrollbar py-1">
                       <button 
                         onClick={() => setActiveFilter('ALL')}
                         className={`flex items-center gap-1.5 px-3 py-1 rounded text-[9px] font-bold border transition-all ${activeFilter === 'ALL' ? 'bg-white text-black border-white' : 'bg-transparent text-zinc-500 border-transparent hover:bg-white/5'}`}
                       >
-                          <Filter size={10} /> ALL
+                          <Filter size={10} />
+                          ALL
                       </button>
-                      {groups.map(group => (
-                          <button
-                            key={group}
-                            onClick={() => setActiveFilter(group)}
-                            className={`px-2 py-1 rounded text-[9px] font-bold border transition-all uppercase ${activeFilter === group ? `bg-white/10 ${getGroupColor(group).split(' ')[0]}` : 'text-zinc-600 border-transparent hover:text-zinc-400'}`}
-                          >
-                              {group}
-                          </button>
-                      ))}
+                      <div className="w-px h-4 bg-white/10 shrink-0"></div>
+                      {groups.map(group => {
+                          const isActive = activeFilter === group;
+                          const colorClass = getGroupColor(group);
+                          return (
+                              <button
+                                key={group}
+                                onClick={() => setActiveFilter(group)}
+                                className={`px-2 py-1 rounded text-[9px] font-bold border transition-all uppercase ${isActive ? `bg-white/10 ${colorClass.split(' ')[0]} border-${colorClass.split('-')[1]}-500/50` : 'text-zinc-600 border-transparent hover:text-zinc-400 hover:bg-white/5'}`}
+                              >
+                                  {group}
+                              </button>
+                          );
+                      })}
                   </div>
+                  <span className="text-[10px] font-mono text-zinc-600 flex items-center gap-2 shrink-0">
+                      <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse"></div>
+                      {filteredTraces.length} EVTS
+                  </span>
               </div>
 
+              {/* Logs */}
               <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3" ref={scrollRef}>
-                  {filteredTraces.map((trace, idx) => {
-                      const style = getLogStyle(trace.step);
-                      return (
-                          <div key={idx} className="flex gap-4 group animate-in slide-in-from-bottom-2 fade-in duration-300">
-                              <div className="flex flex-col items-center pt-2 opacity-50">
-                                  <div className={`w-1.5 h-1.5 rounded-full ${style.text.replace('text-', 'bg-')}`}></div>
-                                  <div className="w-px h-full bg-white/5 my-1"></div>
-                              </div>
-                              <div className={`flex-1 rounded-lg border-l-2 p-2.5 ${style.border} ${style.bg} border-t border-r border-b border-white/5 shadow-sm`}>
-                                  <div className="flex justify-between items-start mb-1">
-                                      <div className="flex items-center gap-2">
-                                          <span className={`px-1.5 py-px rounded text-[9px] font-bold ${style.badge}`}>{trace.step}</span>
-                                          <span className="text-indigo-400 font-bold tracking-wide text-[10px]">@{trace.node}</span>
+                  {filteredTraces.length === 0 ? (
+                      <div className="h-full flex flex-col items-center justify-center text-zinc-700 opacity-50">
+                          {activeFilter === 'ALL' ? <Activity size={48} className="mb-4 stroke-1"/> : <Filter size={48} className="mb-4 stroke-1"/>}
+                          <p className="text-xs uppercase tracking-widest">
+                              {activeFilter === 'ALL' ? 'Awaiting Neural Activity...' : `No activity for ${activeFilter}`}
+                          </p>
+                      </div>
+                  ) : (
+                      filteredTraces.map((trace, idx) => {
+                          const style = getLogStyle(trace.step);
+                          return (
+                              <div key={idx} className="flex gap-4 group animate-in slide-in-from-bottom-2 fade-in duration-300">
+                                  <div className="flex flex-col items-center pt-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                                      <div className={`w-1.5 h-1.5 rounded-full ${style.text.replace('text-', 'bg-')}`}></div>
+                                      <div className="w-px h-full bg-white/5 my-1 group-last:bg-transparent"></div>
+                                  </div>
+                                  
+                                  <div className={`flex-1 rounded-lg border-l-2 p-2.5 ${style.border} ${style.bg} border-t border-r border-b border-white/5 shadow-sm`}>
+                                      <div className="flex justify-between items-start mb-1">
+                                          <div className="flex items-center gap-2">
+                                              <span className={`px-1.5 py-px rounded text-[9px] font-bold ${style.badge}`}>{trace.step}</span>
+                                              <span className="text-indigo-400 font-bold tracking-wide text-[10px]">@{trace.node}</span>
+                                          </div>
+                                          <span className="text-zinc-600 font-mono text-[9px]">{trace.timestamp.split(' ')[0]}</span>
+                                      </div>
+                                      
+                                      <div className={`text-xs leading-relaxed whitespace-pre-wrap font-mono ${style.text}`}>
+                                          {typeof trace.content === 'object' ? (
+                                              <pre className="bg-black/30 p-2 rounded text-[10px] overflow-x-auto custom-scrollbar border border-white/5 mt-2">
+                                                  {JSON.stringify(trace.content, null, 2)}
+                                              </pre>
+                                          ) : (
+                                              trace.content
+                                          )}
                                       </div>
                                   </div>
-                                  <div className={`text-xs leading-relaxed font-mono ${style.text}`}>
-                                      {typeof trace.content === 'object' ? JSON.stringify(trace.content, null, 2) : trace.content}
-                                  </div>
                               </div>
-                          </div>
-                      );
-                  })}
+                          );
+                      })
+                  )}
               </div>
           </div>
 
+          {/* RIGHT: CONTEXT & DETAILS (3 Columns) */}
           <div className="col-span-3 bg-[#020617] p-5 overflow-y-auto">
               <h3 className="text-[10px] font-bold text-amber-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-2">
-                  <Activity size={12} /> Cognitive State
+                  <Activity size={12} />
+                  Cognitive State
               </h3>
+              
               <div className="space-y-6">
+                  {/* System Health */}
                   <div className="p-4 bg-white/5 rounded-xl border border-white/10 relative overflow-hidden">
                       <div className="absolute top-0 right-0 p-2 opacity-20"><Server size={40} /></div>
                       <div className="text-[9px] text-zinc-500 uppercase mb-2 font-bold tracking-wider">Infrastructure</div>
                       <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm mb-3">
-                          <Zap size={14} className="fill-current" /> HYPERSCALE ACTIVE
+                          <Zap size={14} className="fill-current" />
+                          HYPERSCALE ACTIVE
+                      </div>
+                      <div className="space-y-1">
+                          <div className="flex justify-between text-[10px] text-zinc-400">
+                              <span>Docker Mesh</span>
+                              <span className="text-emerald-500">Online</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] text-zinc-400">
+                              <span>Redis Bus</span>
+                              <span className="text-emerald-500">Connected</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] text-zinc-400">
+                              <span>Vector Mem</span>
+                              <span className="text-emerald-500">Synced</span>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Active Intent */}
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                      <div className="text-[9px] text-zinc-500 uppercase mb-2 font-bold tracking-wider">Latest Intent</div>
+                      <code className="text-xs text-indigo-300 block bg-black/30 p-2 rounded break-all border border-indigo-500/20">
+                          {traces.length > 0 ? traces[traces.length - 1].step : 'IDLE'}
+                      </code>
+                  </div>
+
+                  {/* Load Balancer */}
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                      <div className="text-[9px] text-zinc-500 uppercase mb-2 font-bold tracking-wider">Agent Load Distribution</div>
+                      <div className="flex items-end gap-1 h-16 border-b border-white/10 pb-1">
+                          {AGENT_REGISTRY.map((a, i) => {
+                              // Simulate load based on index for visual effect
+                              const height = Math.max(10, Math.min(100, (Math.sin(i + Date.now()/1000) * 50 + 50)));
+                              return (
+                                  <div 
+                                    key={i} 
+                                    className={`flex-1 rounded-t-sm transition-all duration-500 ${activeAgents[a.id] ? 'bg-emerald-500' : 'bg-indigo-500/20'}`} 
+                                    style={{ height: `${height}%` }}
+                                    title={a.id}
+                                  ></div>
+                              )
+                          })}
+                      </div>
+                      <div className="flex justify-between mt-2 text-[8px] text-zinc-600 uppercase">
+                          <span>Star</span>
+                          <span>Mar</span>
+                          <span>Fin</span>
+                          <span>Leg</span>
+                          <span>Svc</span>
                       </div>
                   </div>
               </div>
           </div>
+
       </div>
     </div>
   );
-};
+}
