@@ -322,7 +322,7 @@ export interface EnergyGridStatus {
   carbonFootprint?: number;
 }
 
-export type NodeName = 'ada.marina' | 'ada.sea' | 'ada.technic' | 'ada.energy' | 'ada.robotics' | 'ada.finance' | 'ada.commercial' | 'ada.customer' | 'ada.legal' | 'ada.security' | 'ada.shield' | 'ada.stargate' | 'ada.federation' | 'ada.hr' | 'ada.it' | 'ada.executive' | 'ada.reservations' | 'ada.analytics' | 'ada.concierge' | 'ada.congress' | 'ada.berth' | 'ada.travel' | 'ada.passkit' | 'ada.facility' | 'ada.yield' | 'ada.vhf';
+export type NodeName = 'ada.marina' | 'ada.sea' | 'ada.technic' | 'ada.energy' | 'ada.robotics' | 'ada.finance' | 'ada.commercial' | 'ada.customer' | 'ada.legal' | 'ada.security' | 'ada.shield' | 'ada.stargate' | 'ada.federation' | 'ada.hr' | 'ada.it' | 'ada.executive' | 'ada.reservations' | 'ada.analytics' | 'ada.concierge' | 'ada.congress' | 'ada.berth' | 'ada.travel' | 'ada.passkit' | 'ada.facility' | 'ada.yield' | 'ada.vhf' | 'ada.weather';
 
 export interface VesselIntelligenceProfile {
   name: string;

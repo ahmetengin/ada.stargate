@@ -1,6 +1,6 @@
 
 import React, { useRef, useCallback, useEffect } from 'react';
-import { Sun, Moon, Monitor, Radio, Signal, Wifi } from 'lucide-react';
+import { Sun, Moon, Monitor } from 'lucide-react';
 import { Message, ModelType, TenantConfig, ThemeMode, UserRole } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { InputArea } from './InputArea';
@@ -16,6 +16,7 @@ interface ChatInterfaceProps {
     onSend: (text: string, attachments: File[]) => void;
     onQuickAction: (text: string) => void;
     onScanClick: () => void;
+    onRadioClick: () => void;
     onTraceClick: () => void;
     onToggleTheme: () => void;
 }
@@ -31,6 +32,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     onSend,
     onQuickAction,
     onScanClick,
+    onRadioClick,
     onTraceClick,
     onToggleTheme
 }) => {
@@ -53,62 +55,38 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }, [messages]);
 
     return (
-        <div className="flex flex-col h-full w-full relative transition-colors duration-300 pb-20 lg:pb-0 bg-void">
-            {/* Technical Background */}
-            <div className="absolute inset-0 bg-grid-tech opacity-10 z-0 pointer-events-none"></div>
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-tech-500/5 blur-[100px] pointer-events-none z-0"></div>
+        <div className="flex flex-col h-full w-full relative transition-colors duration-300 pb-20 lg:pb-0">
+            {/* Background Base - Now uses CSS Variables */}
+            <div className="absolute inset-0 bg-[var(--bg-primary)] z-0"></div>
+            
+            {/* Atmospheric Glow - Only visible in Dark Mode */}
+            <div className="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-cyan-500/5 blur-[120px] pointer-events-none z-0"></div>
 
-            {/* Comms Header */}
-            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-tech-900/50 bg-void/80 backdrop-blur-md z-10 flex-shrink-0">
-                <div className="flex items-center gap-4 cursor-pointer group" onClick={onTraceClick}>
-                    {/* Node Indicator */}
-                    <div className="flex flex-col items-end">
-                        <div className="flex gap-1">
-                            <div className="w-1 h-3 bg-tech-500/50 skew-x-[-10deg]"></div>
-                            <div className="w-1 h-3 bg-tech-500 skew-x-[-10deg]"></div>
-                            <div className="w-1 h-3 bg-tech-400 skew-x-[-10deg] animate-pulse"></div>
-                        </div>
+            {/* Header - Hidden on Mobile (Handled by App.tsx Top Bar) */}
+            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors">
+                <div className="flex items-center gap-3 cursor-pointer group" onClick={onTraceClick}>
+                    <div className="relative">
+                        <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-[0_0_10px_#14b8a6] group-hover:scale-110 transition-transform"></div>
+                        <div className="absolute inset-0 bg-teal-400 rounded-full animate-ping opacity-75"></div>
                     </div>
-                    
                     <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-tech font-bold text-white tracking-[0.1em] uppercase">
-                                {activeTenantConfig.id}
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded-sm bg-tech-900/50 border border-tech-800 text-[9px] font-code text-tech-400">
-                                NODE_ID: 8812
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-[9px] font-mono text-slate-500 tracking-widest uppercase group-hover:text-tech-400 transition-colors">
-                            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_5px_#10b981]"></span>
-                            Secure Link Established
-                        </div>
+                        <span className="text-[10px] font-display font-bold text-[var(--text-secondary)] tracking-[0.2em] uppercase hover:text-[var(--accent-color)] transition-colors block leading-none">
+                            {activeTenantConfig.id}.MARINA
+                        </span>
+                        <span className="text-[8px] font-mono text-[var(--accent-color)] tracking-widest opacity-80">SECURE LINK</span>
                     </div>
                 </div>
                 
-                {/* Frequency Tuner Visual */}
-                <div className="flex-1 max-w-md mx-8 relative h-8 hidden xl:block">
-                    <div className="absolute inset-0 flex items-center justify-between opacity-20">
-                        {[...Array(20)].map((_,i) => <div key={i} className="w-px h-2 bg-tech-500"></div>)}
-                    </div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full flex justify-center gap-8 text-[10px] font-mono text-tech-700">
-                        <span>156.600</span>
-                        <span className="text-tech-400 font-bold glow">156.625 MHz</span>
-                        <span>156.650</span>
-                    </div>
-                    <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-red-500/50"></div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-tech-950 border border-tech-900 rounded text-slate-400">
-                        <Signal size={12} className="text-emerald-500" />
-                        <span className="text-[10px] font-mono font-bold">-42 dBm</span>
+                <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/50 dark:bg-white/5 rounded-full border border-[var(--border-color)] hover:border-[var(--accent-color)] transition-colors cursor-pointer" onClick={onRadioClick}>
+                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-[9px] font-mono font-bold text-[var(--text-secondary)]">VHF 72</span>
                     </div>
                     <button 
                         onClick={onToggleTheme}
-                        className="p-2 rounded hover:bg-white/5 text-slate-500 hover:text-white transition-colors"
+                        className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-[var(--text-secondary)] hover:text-[var(--accent-color)] transition-colors"
                     >
-                        {theme === 'light' ? <Sun size={16} /> : <Moon size={16} />}
+                        {theme === 'light' ? <Sun size={14} /> : theme === 'dark' ? <Moon size={14} /> : <Monitor size={14} />}
                     </button>
                 </div>
             </div>
@@ -126,7 +104,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </div>
 
             {/* Input Area */}
-            <div className="flex-shrink-0 bg-void/90 backdrop-blur-xl border-t border-tech-900/50 p-4 sm:p-6 pb-6 sm:pb-8 z-20 relative">
+            <div className="flex-shrink-0 bg-[var(--glass-bg)] backdrop-blur-xl border-t border-[var(--border-color)] p-4 sm:p-6 pb-6 sm:pb-8 z-20 relative transition-colors">
                 <InputArea 
                     onSend={onSend}
                     isLoading={isLoading}
@@ -135,6 +113,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     userRole={userRole}
                     onQuickAction={onQuickAction}
                     onScanClick={onScanClick}
+                    onRadioClick={onRadioClick}
                 />
             </div>
         </div>

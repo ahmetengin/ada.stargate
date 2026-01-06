@@ -1,8 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-    Activity, Brain, X, Terminal, Zap, Server, 
-    Shield, Anchor, Wallet, Scale, Network, Sparkles, Globe, 
+    Activity, X, Terminal, Shield, Anchor, Wallet, Scale, Network, Sparkles, Globe, 
     Ship, Wrench, Building2, Box, Plane, CloudRain, 
     ShoppingBag, Truck, FileCheck, Users, Radar, ScanFace, 
     Martini, Mic2, Cpu, Filter, FolderOpen, FileCode
@@ -15,26 +14,16 @@ interface ObserverOverlayProps {
   traces: AgentTraceLog[];
 }
 
-// --- SKILL REGISTRY (THE NEW PARADIGM) ---
 const SKILL_REGISTRY = [
-  // CORE OS SKILLS
   { id: 'ada-system-ops', name: 'System Operations', version: '1.0.0', type: 'CORE', icon: Cpu, desc: 'Rule patching & asset registry.' },
   { id: 'ada-stargate-router', name: 'Semantic Router', version: '4.2.1', type: 'CORE', icon: Network, desc: 'Intent classification & routing.' },
-  
-  // MARINA SKILLS
   { id: 'ada-marina-ops', name: 'Marina Operations', version: '2.1.0', type: 'DOMAIN', icon: Anchor, desc: 'Berthing physics & traffic control.' },
   { id: 'ada-sea-nav', name: 'Sea Navigation', version: '3.0.5', type: 'DOMAIN', icon: Ship, desc: 'COLREGs & Route optimization.' },
   { id: 'ada-technic-maint', name: 'Technical Maint.', version: '1.2.0', type: 'DOMAIN', icon: Wrench, desc: 'Lift scheduling & Blue Card.' },
-  
-  // FINANCE SKILLS
   { id: 'ada-finance-ledger', name: 'Finance Ledger', version: '5.0.0', type: 'DOMAIN', icon: Wallet, desc: 'Invoicing & Tax calculation.' },
   { id: 'ada-commercial-lease', name: 'Commercial Lease', version: '1.1.0', type: 'DOMAIN', icon: ShoppingBag, desc: 'Tenant management.' },
-  
-  // LEGAL & COMPLIANCE
   { id: 'ada-legal-compliance', name: 'Legal Compliance', version: '2.0.0', type: 'DOMAIN', icon: Scale, desc: 'RAG Search & Contract analysis.' },
   { id: 'ada-security-shield', name: 'Shield Defense', version: '4.1.0', type: 'DOMAIN', icon: Shield, desc: 'Perimeter drone & sonar watch.' },
-  
-  // SERVICES
   { id: 'ada-concierge-svc', name: 'Guest Services', version: '1.5.0', type: 'DOMAIN', icon: Martini, desc: 'Provisions & Transport.' }
 ];
 
@@ -43,21 +32,18 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
   const [activeSkills, setActiveSkills] = useState<Record<string, number>>({});
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
 
-  // Auto-scroll
   useEffect(() => {
       if(scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }
   }, [traces]);
 
-  // Visualize Active Skills based on Trace Node Names
   useEffect(() => {
       const now = Date.now();
       const recentLogs = traces.slice(-5);
       const currentlyActive: Record<string, number> = { ...activeSkills };
       
       recentLogs.forEach(l => {
-          // Map "ada.marina" node to "ada-marina-ops" skill for visualization
           const skillMap: Record<string, string> = {
               'ada.marina': 'ada-marina-ops',
               'ada.finance': 'ada-finance-ledger',
@@ -75,7 +61,6 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
           }
       });
 
-      // Cleanup old
       Object.keys(currentlyActive).forEach(key => {
           if (now - currentlyActive[key] > 2000) delete currentlyActive[key];
       });
@@ -87,8 +72,6 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
 
   return (
     <div className="fixed inset-0 z-[300] bg-[#050b14] text-zinc-300 font-mono text-xs flex flex-col animate-in fade-in duration-200 backdrop-blur-sm">
-      
-      {/* HEADER */}
       <div className="h-14 border-b border-white/10 bg-[#020617] flex items-center justify-between px-6 shrink-0 shadow-lg z-20">
           <div className="flex items-center gap-4">
               <Activity className="text-emerald-500 animate-pulse" size={18} />
@@ -108,10 +91,7 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
           </div>
       </div>
 
-      {/* MAIN LAYOUT */}
       <div className="flex-1 grid grid-cols-12 overflow-hidden">
-          
-          {/* LEFT: SKILL LIBRARY (File System Metaphor) */}
           <div className="col-span-3 border-r border-white/10 bg-[#020617] flex flex-col">
               <div className="p-3 bg-white/5 border-b border-white/5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                   /var/lib/ada/skills
@@ -148,7 +128,6 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
               </div>
           </div>
 
-          {/* CENTER: EXECUTION STREAM */}
           <div className="col-span-6 bg-[#050b14] flex flex-col relative border-r border-white/10">
               <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none"></div>
               
@@ -176,16 +155,9 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
                           </div>
                       </div>
                   ))}
-                  {traces.length === 0 && (
-                      <div className="text-center mt-20 text-zinc-700">
-                          <Terminal size={32} className="mx-auto mb-2 opacity-20" />
-                          <p>Ready for input...</p>
-                      </div>
-                  )}
               </div>
           </div>
 
-          {/* RIGHT: SKILL INSPECTOR */}
           <div className="col-span-3 bg-[#020617] flex flex-col">
               <div className="p-3 bg-white/5 border-b border-white/5 text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
                   Inspector
@@ -205,24 +177,11 @@ export const ObserverOverlay: React.FC<ObserverOverlayProps> = ({ isOpen, onClos
                           </div>
 
                           <div className="space-y-2">
-                              <div className="text-[10px] uppercase font-bold text-zinc-500">Manifest</div>
-                              <div className="bg-black/40 rounded p-3 font-mono text-[10px] text-zinc-400 border border-white/5">
-                                  <div className="flex justify-between"><span>Type:</span> <span className="text-emerald-400">NodeJS/ESM</span></div>
-                                  <div className="flex justify-between"><span>Perms:</span> <span className="text-amber-400">Read/Write</span></div>
-                                  <div className="flex justify-between"><span>Hot Reload:</span> <span className="text-emerald-400">Active</span></div>
-                              </div>
-                          </div>
-
-                          <div className="space-y-2">
                               <div className="text-[10px] uppercase font-bold text-zinc-500">Description</div>
                               <p className="text-zinc-400 leading-relaxed text-xs">
                                   {SKILL_REGISTRY.find(s => s.id === selectedSkill)?.desc}
                               </p>
                           </div>
-
-                          <button className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded text-[10px] font-bold uppercase tracking-wider transition-colors text-zinc-400 hover:text-white">
-                              View Source Code
-                          </button>
                       </div>
                   ) : (
                       <div className="text-center mt-20 text-zinc-700">

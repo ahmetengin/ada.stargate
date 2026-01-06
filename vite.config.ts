@@ -4,10 +4,10 @@ import react from '@vitejs/plugin-react';
 import path from 'path'; 
 import { fileURLToPath } from 'url';
 
-// Fix for: Cannot find name '__dirname' in ESM environment for Vite configuration
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Ensure API Key is available via environment variable during build/runtime
 const API_KEY = process.env.API_KEY || '';
 
 export default defineConfig({
@@ -17,41 +17,40 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Standardize the alias to resolve paths correctly from the project root
       '@': path.resolve(__dirname, './'), 
     },
-    // Ensure .ts and .tsx extensions are tried in order
     extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json']
   },
   server: {
     host: true,
-    port: 3000, 
-    proxy: {
-      '/api': {
-        target: 'http://127.0.0.1:8000', 
-        changeOrigin: true,
-        ws: true 
-      },
-      '/ws': {
-        target: 'http://127.0.0.1:8000', 
-        changeOrigin: true,
-        ws: true
-      },
-      '/radio': {
-        target: 'http://127.0.0.1:8000', 
-        changeOrigin: true,
-        ws: true
-      }
-    }
+    port: 3000,
   },
   build: {
     outDir: 'dist', 
-    emptyOutDir: true, 
+    emptyOutDir: true,
+    sourcemap: false, // Disable sourcemaps for production security
+    minify: 'terser',
+    terserOptions: {
+        compress: {
+            drop_console: true, // Remove console logs in production
+            drop_debugger: true
+        }
+    },
+    rollupOptions: {
+        output: {
+            manualChunks: {
+                vendor: ['react', 'react-dom', 'framer-motion', 'lucide-react'],
+                ai: ['@google/genai', 'react-markdown'],
+                charts: ['recharts'] // If added later
+            }
+        }
+    }
   },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './setupTests.ts',
     css: true,
+    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'], // Explicitly include test files
   },
 });

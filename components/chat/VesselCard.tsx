@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Activity, ShieldCheck, User, Zap, Gauge } from 'lucide-react';
 import { VesselIntelligenceProfile, VesselSystemsStatus } from '../../types';
-import { maskFullName } from '../../services/utils';
+import { maskFullName } from '../../services/utils/utils';
 import { marinaExpert } from '../../services/agents/marinaAgent';
 
 interface VesselCardProps {
