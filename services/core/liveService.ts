@@ -50,7 +50,7 @@ export class LiveSession {
             const systemInstruction = getVoiceSystemInstruction(userProfile, tenantConfig);
 
             this.sessionPromise = this.ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
                 config: {
                     responseModalities: [Modality.AUDIO],
                     speechConfig: { 
@@ -84,8 +84,12 @@ export class LiveSession {
         }
         this.scriptProcessor?.disconnect();
         this.microphoneStream?.getTracks().forEach(track => track.stop());
-        if (this.inputAudioContext?.state !== 'closed') this.inputAudioContext?.close().catch(() => {});
-        if (this.outputAudioContext?.state !== 'closed') this.outputAudioContext?.close().catch(() => {});
+        if (this.inputAudioContext && this.inputAudioContext.state !== 'closed') {
+            this.inputAudioContext.close().catch(() => {});
+        }
+        if (this.outputAudioContext && this.outputAudioContext.state !== 'closed') {
+            this.outputAudioContext.close().catch(() => {});
+        }
         this.sources.forEach(s => { try { s.stop(); } catch(e) {} });
         this.sources.clear();
         this.setStatus('disconnected');

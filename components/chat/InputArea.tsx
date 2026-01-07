@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
-import { ArrowUp, AudioWaveform, ScanLine, Command, Radio, ChevronRight, Mic } from 'lucide-react';
+import { ArrowUp, AudioWaveform, ScanLine, Radio } from 'lucide-react';
 import { ModelType, UserRole } from '../../types';
 import { QuickActions } from './QuickActions';
 
@@ -18,6 +18,8 @@ interface InputAreaProps {
 export const InputArea: React.FC<InputAreaProps> = ({ 
   onSend, 
   isLoading, 
+  selectedModel, 
+  onModelChange,
   userRole,
   onQuickAction,
   onScanClick,
@@ -33,18 +35,21 @@ export const InputArea: React.FC<InputAreaProps> = ({
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'tr-TR'; 
 
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        const newText = (textBeforeDictationRef.current + ' ' + transcript).trim();
-        setText(newText);
-        setIsDictating(false);
+        let currentSessionTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+            currentSessionTranscript += event.results[i][0].transcript;
+        }
+        const combinedText = (textBeforeDictationRef.current + ' ' + currentSessionTranscript).trim();
+        setText(combinedText);
       };
 
       recognitionRef.current.onerror = (event: any) => {
+        console.error("Speech recognition error", event.error);
         setIsDictating(false);
       };
 
@@ -63,6 +68,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
         alert("Browser does not support speech recognition.");
         return;
     }
+
     if (isDictating) {
         recognitionRef.current.stop();
         setIsDictating(false);
@@ -72,6 +78,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
             recognitionRef.current.start();
             setIsDictating(true);
         } catch (e) {
+            console.error(e);
             setIsDictating(false);
         }
     }
@@ -90,6 +97,10 @@ export const InputArea: React.FC<InputAreaProps> = ({
     setText('');
     textBeforeDictationRef.current = ''; 
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    if (isDictating && recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsDictating(false);
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -99,112 +110,60 @@ export const InputArea: React.FC<InputAreaProps> = ({
     }
   };
 
-  const hasText = text.trim().length > 0;
-
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-4">
+    <div className="w-full max-w-4xl mx-auto">
+      
       {userRole && onQuickAction && (
-          <div className="w-full pl-2">
+          <div className="opacity-80 hover:opacity-100 transition-opacity w-full mb-2">
               <QuickActions userRole={userRole} onAction={onQuickAction} />
           </div>
       )}
 
-      <div className={`
-          relative group transition-all duration-300
-          ${isLoading ? 'opacity-80 cursor-wait' : ''}
-      `}>
-          {/* Decorative Borders that glow on hover/focus */}
-          <div className="absolute -top-px -left-px w-4 h-4 border-t-2 border-l-2 border-tech-500/30 rounded-tl-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-500"></div>
-          <div className="absolute -bottom-px -right-px w-4 h-4 border-b-2 border-r-2 border-tech-500/30 rounded-br-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-all duration-500"></div>
+      <div className={`relative bg-white/80 dark:bg-[#0a101d]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border shadow-sm transition-all duration-300 flex items-end p-1.5 sm:p-2 
+          ${isLoading ? 'border-[var(--accent-color)] shadow-md' : 'border-[var(--border-color)] hover:border-[var(--accent-color)]'}
+          ${isDictating ? 'ring-1 ring-red-500/50 border-red-500/50' : ''}`}>
+          
+          <div className="flex items-center gap-0.5 sm:gap-1 pr-1.5 sm:pr-2 border-r border-[var(--border-color)] mr-1.5 sm:mr-2 mb-1.5">
+              <button onClick={onScanClick} className="p-2 sm:p-2.5 text-[var(--text-secondary)] hover:text-[var(--accent-color)] rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors" title="Scanner">
+                  <ScanLine size={16} />
+              </button>
+              <button onClick={onRadioClick} className="p-2 sm:p-2.5 text-red-600 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors shadow-[0_0_10px_rgba(220,38,38,0.2)]" title="VHF Radio Mode">
+                  <Radio size={16} />
+              </button>
+          </div>
+          
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={text}
+            onChange={handleTextChange}
+            onKeyDown={handleKeyDown}
+            placeholder={isDictating ? "Listening..." : "Command..."}
+            className={`flex-1 bg-transparent border-none focus:outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] py-3 font-mono min-w-0 max-h-[150px] resize-none ${isDictating ? 'placeholder:text-red-400 animate-pulse' : ''}`}
+            disabled={isLoading}
+          />
 
-          <div className={`
-              relative bg-black/40 backdrop-blur-xl rounded-2xl border flex items-end p-2 shadow-lg transition-all duration-300 ease-out
-              ${isDictating 
-                ? 'border-red-500/50 ring-1 ring-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.1)]' 
-                : 'border-tech-800/60 hover:border-tech-700/80 hover:bg-black/50'
-              }
-              focus-within:border-tech-500/60 focus-within:ring-1 focus-within:ring-tech-500/20 focus-within:shadow-[0_0_25px_rgba(20,184,166,0.1)] focus-within:bg-black/60 focus-within:-translate-y-0.5
-          `}>
-              
-              {/* Left Tools */}
-              <div className="flex items-center gap-1 pr-2 border-r border-tech-900/50 mr-2 mb-2 self-end pb-1 pl-1">
-                  <button onClick={onScanClick} className="p-2 text-slate-500 hover:text-tech-400 hover:bg-white/5 rounded-xl transition-colors" title="Scanner">
-                      <ScanLine size={18} strokeWidth={1.5} />
-                  </button>
-                  <button onClick={onRadioClick} className="p-2 text-red-500 hover:text-red-400 hover:bg-white/5 rounded-xl transition-colors shadow-[0_0_10px_rgba(239,68,68,0.2)]" title="VHF Radio">
-                      <Radio size={18} strokeWidth={1.5} />
-                  </button>
-              </div>
-              
-              {/* Text Input */}
-              <div className="flex-1 relative py-1">
-                  <div className={`absolute left-0 top-3.5 text-tech-600 transition-opacity duration-300 pointer-events-none ${hasText ? 'opacity-100' : 'opacity-50'}`}>
-                      <ChevronRight size={16} />
-                  </div>
-                  <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={text}
-                    onChange={handleTextChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder={isDictating ? "LISTENING [REC]..." : "Enter command or query..."}
-                    className={`
-                        w-full bg-transparent border-none focus:outline-none text-sm text-slate-200 
-                        placeholder:text-slate-600 py-3 pl-6 pr-2 font-mono min-w-0 max-h-[150px] resize-none leading-relaxed
-                        ${isDictating ? 'placeholder:text-red-500 animate-pulse' : ''}
-                    `}
-                    disabled={isLoading}
-                    spellCheck={false}
-                  />
-              </div>
-
-              {/* Right Tools */}
-              <div className="flex items-center gap-2 pl-2 mb-1.5 self-end">
-                  <button 
-                    onClick={toggleDictation} 
-                    className={`
-                        p-2.5 rounded-xl transition-all duration-300
-                        ${isDictating 
-                            ? 'text-white bg-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)] animate-pulse' 
-                            : 'text-slate-500 hover:text-white hover:bg-white/5'
-                        }
-                    `}
-                  >
-                      {isDictating ? <AudioWaveform size={20} /> : <Mic size={20} strokeWidth={1.5} />}
-                  </button>
-                  
-                  <button 
-                    onClick={handleSend}
-                    disabled={!hasText || isLoading}
-                    className={`
-                        p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center transform
-                        ${hasText 
-                            ? 'bg-gradient-to-br from-tech-500 to-tech-600 text-white shadow-[0_0_20px_rgba(20,184,166,0.3)] hover:scale-105 hover:shadow-[0_0_25px_rgba(20,184,166,0.5)] translate-x-0 opacity-100' 
-                            : 'bg-tech-950/50 border border-tech-900 text-slate-600 cursor-not-allowed scale-95 opacity-70'
-                        }
-                    `}
-                  >
-                      {isLoading ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      ) : (
-                        <ArrowUp size={20} strokeWidth={2.5} />
-                      )}
-                  </button>
-              </div>
+          <div className="flex items-center gap-1 sm:gap-2 pl-1 sm:pl-2 mb-1">
+              <button 
+                onClick={toggleDictation} 
+                className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5'}`}
+                title="Voice Input"
+              >
+                  <AudioWaveform size={16} />
+              </button>
+              <button 
+                onClick={handleSend}
+                disabled={!text.trim() || isLoading}
+                className={`p-2 sm:p-2.5 rounded-full transition-all flex items-center justify-center ${text.trim() ? 'bg-[var(--accent-color)] text-white shadow-md hover:scale-105' : 'bg-black/5 dark:bg-white/5 text-[var(--text-secondary)]'}`}
+              >
+                  {isLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div> : <ArrowUp size={16} />}
+              </button>
           </div>
       </div>
       
-      {/* Status Line */}
-      <div className="hidden sm:flex items-center justify-center gap-4 text-[9px] text-slate-600 font-code tracking-widest opacity-60 transition-opacity duration-500 group-hover:opacity-100">
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1 h-1 rounded-full ${isLoading ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></div>
-            {isLoading ? 'PROCESSING NEURAL TASK...' : 'SYSTEM READY'}
-          </div>
-          <span>::</span>
-          <div className="flex items-center gap-1.5">
-            <Command size={10} /> 
-            ENCRYPTION: AES-256
-          </div>
+      <div className="hidden sm:flex text-[9px] text-center text-[var(--text-secondary)] mt-3 uppercase tracking-[0.2em] font-bold opacity-50 items-center justify-center gap-2">
+          <div className="w-1 h-1 bg-emerald-500 rounded-full"></div>
+          Secure Connection Established • 256-BIT Encryption
       </div>
     </div>
   );

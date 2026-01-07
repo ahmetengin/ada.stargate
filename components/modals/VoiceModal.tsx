@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { PhoneOff, Mic, Activity, Signal, Zap } from 'lucide-react';
-import { LiveSession } from '../../services/liveService';
+import { LiveSession } from '../../services/core/liveService';
 import { LiveConnectionState, UserProfile, TenantConfig } from '../../types';
 
 interface VoiceModalProps {

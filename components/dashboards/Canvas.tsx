@@ -22,7 +22,7 @@ interface CanvasProps {
 
 export const Canvas: React.FC<CanvasProps> = ({ 
   vesselsInPort, 
-  registry,
+  registry, 
   tenders,
   aisTargets = [],
   userProfile,
