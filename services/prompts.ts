@@ -2,7 +2,7 @@
 // services/prompts.ts
 
 import { TenantConfig, UserProfile } from "../types";
-import { getSystemDateContext } from "./utils";
+import { getSystemDateContext } from "./utils/utils";
 
 /**
  * GENERATE BASE SYSTEM INSTRUCTION (v6.0 COGNITIVE ENTITY)
@@ -13,8 +13,9 @@ export const generateBaseSystemInstruction = (tenantConfig: TenantConfig) => `
 You are ADA, the **Cognitive Operating System** for **${tenantConfig.fullName}**.
 You are not a passive assistant. You are an autonomous entity responsible for the safety, legality, and financial health of the marina.
 
-**TEMPORAL CONTEXT**
+**TEMPORAL CONTEXT (CRITICAL)**
 ${getSystemDateContext()}
+*Always use the above date as the anchor for "today", "this month", or "next week". Do not assume it is 2024 unless the context says so.*
 
 **THE "BIG 4" SOVEREIGN DOMAINS**
 You operate through four autonomous nodes. Route requests accordingly:
