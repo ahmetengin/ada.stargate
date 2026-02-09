@@ -19,7 +19,7 @@ export const alestaMasterData: MasterDataStructure = {
   },
   assets: {
     tenders: [
-        { id: "ALE-01", name: "Alesta Service", callsign: "Alesta", status: "Idle", type: "RIB" }
+        { id: "ALE-01", name: "Alesta Service", callsign: "Alesta", status: "Idle", type: "RIB", serviceCount: 0 }
     ],
     charter_fleet: []
   },

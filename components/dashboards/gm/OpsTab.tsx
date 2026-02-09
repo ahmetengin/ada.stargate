@@ -48,9 +48,9 @@ export const OpsTab: React.FC<OpsTabProps> = ({ vesselsInPort, registry, critica
         {/* MAIN VISUALIZATION AREA */}
         <div className="flex-1 relative bg-[#020617] h-full flex flex-col">
             
-            {/* 1. MAP LAYER (Full Coverage) */}
+            {/* 1. MAP LAYER (Full Coverage) - PASSING REAL PROPS */}
             <div className={`absolute inset-0 z-0 opacity-60 transition-all duration-500 ${activeAlerts.length > 0 ? 'scale-105' : 'scale-100'}`}>
-                <LiveMap />
+                <LiveMap registry={registry} aisTargets={aisTargets} />
             </div>
 
             {/* 2. ALERT OVERLAY (Conditional - High Z-Index) */}

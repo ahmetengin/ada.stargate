@@ -18,27 +18,14 @@ export const wimMasterData: MasterDataStructure = {
         lng: 28.6636
       },
       dedicated_locations: {
-        fuel_station: {
-          label: "Fuel Station (Lukoil)",
-          coordinates: { lat: 40.9618, lng: 28.6645 }
-        },
-        customs_area: {
-           label: "Customs & Passport Control",
-           coordinates: { lat: 40.9635, lng: 28.6625 }
-        },
-        boatyard: {
-            label: "Technical Hardstanding (60.000m2)",
-            coordinates: { lat: 40.9640, lng: 28.6650 }
-        }
+        fuel_station: { label: "Fuel Station (Lukoil)", coordinates: { lat: 40.9618, lng: 28.6645 } },
+        customs_area: { label: "Customs & Passport Control", coordinates: { lat: 40.9635, lng: 28.6625 } },
+        boatyard: { label: "Technical Hardstanding (60.000m2)", coordinates: { lat: 40.9640, lng: 28.6650 } }
       }
     },
     vision: "To provide a clean, safe and agreeable living and working environment for Yachts and Owners.",
     contact: {
-      vhf_channels: {
-        public: ["72", "16"],
-        internal_ops: ["14"],
-        vts_sectors: ["11", "12", "13"] 
-      },
+      vhf_channels: { public: ["72", "16"], internal_ops: ["14"], vts_sectors: ["11", "12", "13"] },
       call_sign: "West Istanbul Marina",
       phone: "+90 212 850 22 00"
     }
@@ -46,55 +33,20 @@ export const wimMasterData: MasterDataStructure = {
   protocol_config: {
       welcome_hail: {
           channel: "72",
-          template: "Good day, Captain. We have you on AIS approach at {distance} miles. Your berth {berth} is ready. {tender} has been dispatched to intercept and assist you at the breakwater.",
+          template: "Good day, Captain. We have you on AIS approach at {distance} miles. Your berth {berth} is ready. {tender} has been dispatched.",
           trigger_distance_min: 5,
           trigger_distance_max: 7
       }
   },
   assets: {
     tenders: [
-        { 
-            id: "T-01", 
-            name: "ada.sea.wimAlfa", 
-            callsign: "WIM-A", 
-            status: "Idle", 
-            type: "RIB", 
-            serviceCount: 124,
-            sensors: ["Depth (Chirp)", "Wind (Ultrasonic)", "SeaTemp"] 
-        },
-        { 
-            id: "T-02", 
-            name: "ada.sea.wimBravo", 
-            callsign: "WIM-B", 
-            status: "Busy", 
-            assignment: "ARRIVAL_PILOT", 
-            type: "RIB", 
-            serviceCount: 88,
-            sensors: ["Depth (Forward Scan)", "Camera (360)"]
-        },
-        { 
-            id: "T-03", 
-            name: "ada.sea.wimCharlie", 
-            callsign: "WIM-C", 
-            status: "Maintenance", 
-            type: "Workboat", 
-            serviceCount: 210,
-            sensors: ["Fire Monitor", "Towing Load Cell"]
-        },
-        { 
-            id: "T-04", 
-            name: "WIM-Delta", 
-            callsign: "WIM-D", 
-            status: "Idle", 
-            type: "RIB", 
-            serviceCount: 0,
-            sensors: ["AIS Radar", "Thermal Cam"]
-        }
+        { id: "T-01", name: "ada.sea.wimAlfa", callsign: "WIM-A", status: "Idle", type: "RIB", serviceCount: 124, sensors: ["Depth", "Wind"] },
+        { id: "T-02", name: "ada.sea.wimBravo", callsign: "WIM-B", status: "Busy", assignment: "ARRIVAL_PILOT", type: "RIB", serviceCount: 88, sensors: ["Depth", "Camera"] },
+        { id: "T-03", name: "ada.sea.wimCharlie", callsign: "WIM-C", status: "Maintenance", type: "Workboat", serviceCount: 210, sensors: ["Fire Monitor"] },
+        { id: "T-04", name: "WIM-Delta", callsign: "WIM-D", status: "Idle", type: "RIB", serviceCount: 0, sensors: ["AIS Radar"] }
     ],
     charter_fleet: [
-        { id: "YCH-01", name: "WIM Explorer", type: "Motor Yacht", length: "18m", capacity: 10, status: "Available" },
-        { id: "YCH-02", name: "WIM Breeze", type: "Sailing Yacht", length: "15m", capacity: 8, status: "Available" },
-        { id: "YCH-03", name: "WIM Voyager", type: "Catamaran", length: "24m", capacity: 12, status: "Available" }
+        { id: "YCH-01", name: "WIM Explorer", type: "Motor Yacht", length: "18m", capacity: 10, status: "Available" }
     ]
   },
   campus_stats: {
@@ -104,15 +56,40 @@ export const wimMasterData: MasterDataStructure = {
   },
   commercial_tenants: {
       count: 45,
-      categories: ["Restaurants", "Boutiques", "Yacht Brokers", "Service Workshops", "Wellness"],
+      categories: ["Restaurants", "Boutiques", "Yacht Brokers", "Service Workshops", "Wellness", "Entertainment"],
       lease_model: "Fixed Rent + % Turnover Share",
       common_area_charge_formula: "Total Cost / Total Leased Area * Tenant Area",
       key_tenants: [
+          // ANCHOR BRANDS
+          { name: "Big Chefs", type: "F&B", location: "Kumsal Street" },
+          { name: "Happy Moon's", type: "F&B", location: "Kumsal Street" },
           { name: "Calisto Balık", type: "F&B", location: "Kumsal Street" },
           { name: "Ella Italian", type: "F&B", location: "Kumsal Street" },
-          { name: "Happy Moon's", type: "F&B", location: "Kumsal Street" },
+          { name: "Zeytinlik Balık", type: "F&B", location: "Kumsal Street" },
+          { name: "The Roof Kingdom", type: "F&B", location: "Terrace" },
+          { name: "Lamore Balık", type: "F&B", location: "Kumsal Street" },
+          { name: "Can Samimiy'et", type: "F&B", location: "Kumsal Street" },
+          // SOCIAL ZONE
           { name: "Poem Restaurant", type: "F&B", location: "Social Zone" },
           { name: "Fersah", type: "F&B", location: "Social Zone" },
+          { name: "Iskarmoz", type: "F&B", location: "Social Zone" },
+          { name: "Seferi Ocakbaşı", type: "F&B", location: "Social Zone" },
+          { name: "Pargalı Rum Meyhanesi", type: "F&B", location: "Social Zone" },
+          { name: "Quki Meyhane", type: "F&B", location: "Social Zone" },
+          { name: "İkitek Ocakbaşı", type: "F&B", location: "Social Zone" },
+          { name: "Sefam Olsun", type: "F&B", location: "Social Zone" },
+          { name: "Spoint", type: "F&B", location: "Social Zone" },
+          { name: "Mavi Meyhane", type: "F&B", location: "Social Zone" },
+          { name: "West Kanat", type: "F&B", location: "Social Zone" },
+          { name: "West Maya Marin", type: "F&B", location: "Social Zone" },
+          { name: "Deniz Kızı", type: "F&B", location: "Social Zone" },
+          { name: "Port Of Point", type: "F&B", location: "Social Zone" },
+          { name: "Sade Coffee", type: "Cafe", location: "Social Zone" },
+          // OTHERS
+          { name: "Fısıltı Lounge", type: "Bar", location: "Terrace" },
+          { name: "Validemin Elinden", type: "F&B", location: "Market Area" },
+          { name: "Mask Beach", type: "Entertainment", location: "Beach Area" },
+          { name: "Cümbüş", type: "Entertainment", location: "Social Zone" },
           { name: "West Life Sports Club", type: "Wellness", location: "Block B" },
           { name: "Migros Jet", type: "Market", location: "Block A" },
           { name: "Yacht Brokerage Row", type: "Office", location: "Commercial Street" }
@@ -143,20 +120,10 @@ export const wimMasterData: MasterDataStructure = {
     ]
   },
   legal_framework: {
-    base_pricing: {
-        mooring_daily: 4 // EUR per m²
-    },
+    base_pricing: { mooring_daily: 4 }, // EUR per m²
     pricing_multipliers: {
-        tiers: {
-            "STANDARD": 1.0,
-            "PREMIUM": 1.2,
-            "VIP": 1.5
-        },
-        seasonality: {
-            "LOW": 0.8,
-            "MID": 1.0,
-            "HIGH": 1.3 // Summer / Peak season
-        }
+        tiers: { "STANDARD": 1.0, "PREMIUM": 1.2, "VIP": 1.5 },
+        seasonality: { "LOW": 0.8, "MID": 1.0, "HIGH": 1.3 }
     }
   },
   event_calendar: [
@@ -191,7 +158,15 @@ export const wimMasterData: MasterDataStructure = {
   },
   services: {
     amenities: {
-        restaurants: ["Calisto Balık", "Ella Italian", "Happy Moon's", "Poem Restaurant"]
+        restaurants: [
+            "Poem Restaurant", "Port Of Point", "The Roof Kingdom", "Fersah", 
+            "Lamore Balık", "Iskarmoz", "Calisto Balık", "Can Samimiy'et", 
+            "Seferi Ocakbaşı", "Sade Coffee", "Mask Beach", "Ella Italian", 
+            "Happy Moon's", "Deniz Kızı", "Zeytinlik Balık", "Pargalı Rum Meyhanesi", 
+            "West Maya Marin", "Quki Meyhane", "Big Chefs", "İkitek Ocakbaşı", 
+            "Sefam Olsun", "Spoint", "Mavi Meyhane", "Cümbüş", "West Kanat", 
+            "Fısıltı Lounge", "Validemin Elinden"
+        ]
     }
   }
 };

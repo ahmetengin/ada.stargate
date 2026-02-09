@@ -7,7 +7,7 @@ import { TaskHandlerFn } from '../decomposition/types';
 import { travelHandlers, kitesExpert } from './travelAgent';
 import { genericHandlers } from './genericAgent';
 import { marinaHandlers, marinaExpert } from './marinaAgent';
-import { weatherHandlers, weatherExpert } from './weatherAgent'; // Updated
+import { weatherHandlers, weatherExpert } from './weatherAgent';
 import { technicHandlers, technicExpert } from './technicAgent';
 import { passkitExpert } from './passkitAgent';
 import { securityHandlers, securityExpert } from './securityAgent';
@@ -27,7 +27,12 @@ import { roboticsExpert } from './roboticsAgent';
 import { shieldExpert } from './shieldAgent';
 import { vhfExpert } from './vhfAgent';
 import { scienceExpert } from './scienceAgent';
-import { seaExpert } from './seaAgent'; // Added
+import { seaExpert } from './seaAgent';
+import { financeExpert } from './financeAgent';
+import { legalExpert } from './legalAgent';
+import { congressExpert } from './congressAgent';
+import { customerExpert } from './customerAgent';
+import { customerSegmentHandlers } from './customerSegmentAgent';
 
 // --- UNIFIED AGENT REGISTRY (THE 24 NODES) ---
 // This acts as the "Service Locator" for the entire application.
@@ -43,21 +48,22 @@ export const AGENT_REGISTRY = {
     'ada.weather': weatherExpert,
 
     // 2. FINANCE DOMAIN
-    'ada.finance': { ...commercialExpert, ...yieldExpert }, // Composite Leader
-    'ada.commercial': commercialExpert,
-    'ada.yield': yieldExpert,
-    'ada.reservations': reservationsExpert,
+    'ada.finance': financeExpert, // The CFO (Ledger, Invoicing)
+    'ada.commercial': commercialExpert, // Retail & Leasing
+    'ada.yield': yieldExpert, // Dynamic Pricing
+    'ada.reservations': reservationsExpert, // Booking Engine
+    'ada.customer': customerExpert, // CRM & ATS Scoring
 
     // 3. LEGAL DOMAIN
-    'ada.legal': { ...securityExpert, ...passkitExpert }, // Composite Leader
-    'ada.security': securityExpert,
-    'ada.shield': shieldExpert,
-    'ada.passkit': passkitExpert,
-    'ada.hr': hrExpert,
+    'ada.legal': legalExpert, // The Counsel (RAG, Contracts)
+    'ada.security': securityExpert, // Physical Security
+    'ada.shield': shieldExpert, // Electronic Defense
+    'ada.passkit': passkitExpert, // Identity & Access
+    'ada.hr': hrExpert, // Staffing
 
     // 4. SERVICES DOMAIN
     'ada.concierge': conciergeExpert,
-    'ada.congress': { /* Congress logic handled via Orchestrator state usually, but can be here */ },
+    'ada.congress': congressExpert, // Event Management
     'ada.travel': kitesExpert,
 
     // 5. STARGATE DOMAIN (BRAIN)
@@ -65,7 +71,7 @@ export const AGENT_REGISTRY = {
     'ada.system': systemExpert,
     'ada.federation': federationExpert,
     'ada.it': itExpert,
-    'ada.analytics': { ...analyticsExpert, ...scienceExpert }, // Composite
+    'ada.analytics': analyticsExpert,
     'ada.science': scienceExpert,
     'ada.vhf': vhfExpert,
     'ada.executive': executiveExpert
@@ -98,6 +104,7 @@ const handlers: Record<string, TaskHandlerFn> = {
   ...reservationsHandlers,
   ...federationHandlers,
   ...systemHandlers,
+  ...customerSegmentHandlers,
   'passkit.issue': passkitIssueHandler, 
 };
 

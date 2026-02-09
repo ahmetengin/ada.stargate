@@ -41,8 +41,8 @@ export const seturMasterData: MasterDataStructure = {
   },
   assets: {
     tenders: [
-        { id: "SET-01", name: "Setur Palamar 1", callsign: "Setur 1", status: "Idle", type: "RIB" },
-        { id: "SET-02", name: "Setur Palamar 2", callsign: "Setur 2", status: "Busy", type: "RIB" }
+        { id: "SET-01", name: "Setur Palamar 1", callsign: "Setur 1", status: "Idle", type: "RIB", serviceCount: 0 },
+        { id: "SET-02", name: "Setur Palamar 2", callsign: "Setur 2", status: "Busy", type: "RIB", serviceCount: 0 }
     ],
     charter_fleet: [] // Not managed directly
   }

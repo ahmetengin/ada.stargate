@@ -1,3 +1,4 @@
+
 version: '3.9'
 
 networks:
@@ -5,7 +6,7 @@ networks:
     driver: bridge
 
 services:
-  # 1. THE BRAIN (Python Backend - FastAPI + LangGraph)
+  # 1. THE BRAIN (Python Backend)
   ada-core:
     build: 
       context: ./backend
@@ -40,14 +41,12 @@ services:
     restart: always
     ports:
       - "3000:80"
-    environment:
-      - API_KEY=${API_KEY}
     depends_on:
       - ada-core
     networks:
       - ada_onenet
 
-  # 3. MEMORY (Vector DB - Qdrant)
+  # 3. MEMORY (Vector DB)
   ada-qdrant:
     image: qdrant/qdrant
     container_name: ada_qdrant
@@ -59,7 +58,7 @@ services:
     networks:
       - ada_onenet
 
-  # 4. TRUTH (Relational DB - Postgres)
+  # 4. TRUTH (Postgres)
   ada-postgres:
     image: postgres:15-alpine
     container_name: ada_postgres
@@ -73,7 +72,7 @@ services:
     networks:
       - ada_onenet
 
-  # 5. NERVOUS SYSTEM (Event Bus - Redis)
+  # 5. NERVOUS SYSTEM (Redis)
   ada-redis:
     image: redis:alpine
     container_name: ada_redis
@@ -85,14 +84,13 @@ services:
     networks:
       - ada_onenet
 
-  # 6. SENSORY SYSTEM (IoT Broker - Mosquitto)
+  # 6. SENSORY SYSTEM (MQTT)
   ada-mqtt:
     image: eclipse-mosquitto:2
     container_name: ada_mqtt_broker
     restart: always
     ports:
       - "1883:1883"
-      - "9001:9001"
     volumes:
       - mqtt_data:/mosquitto/data
       - mqtt_log:/mosquitto/log
