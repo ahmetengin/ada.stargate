@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { 
     ArrowDown, 
@@ -13,12 +12,10 @@ import {
     FileText,
     Map,
     Calendar,
-    Ship,
     BarChart3,
     Eye,
     QrCode,
     Fuel,
-    Activity,
     ShieldCheck
 } from 'lucide-react';
 import { UserRole } from '../../types';
@@ -40,7 +37,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onAction, userRole }
     { label: 'Concierge', icon: LifeBuoy, text: 'Connect me with the concierge desk.', roles: ['MEMBER'] },
     { label: 'Request Arrival', icon: ArrowDown, text: 'Request arrival clearance and berthing instructions.', roles: ['CAPTAIN'] },
     { label: 'Request Departure', icon: ArrowUp, text: 'Request departure clearance and settle any outstanding fees.', roles: ['CAPTAIN'] },
-    { label: 'Radio Check', icon: Activity, text: 'VHF Channel 72 radio check.', roles: ['CAPTAIN'] },
     { label: 'Blue Card', icon: Recycle, text: 'Schedule a waste pump-out and update my Blue Card.', roles: ['CAPTAIN'] },
     { label: 'Fuel Status', icon: Fuel, text: 'Check fuel station current wait time and diesel price.', roles: ['CAPTAIN'] },
     { label: 'Ledger', icon: CircleDollarSign, text: 'Show my current account balance and pending invoices.', roles: ['CAPTAIN'] },

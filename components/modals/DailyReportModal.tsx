@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, Printer, ShieldAlert, Anchor, Briefcase, Sun, Wind, CloudRain, Utensils, ShoppingBag, Activity, AlertTriangle, Navigation, DollarSign, FileText } from 'lucide-react';
 import { RegistryEntry, UserProfile, WeatherForecast, TenantConfig, Tender, AgentTraceLog, AisTarget } from '../../types';

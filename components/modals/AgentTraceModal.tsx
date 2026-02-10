@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, Brain, Activity } from 'lucide-react';
 import { AgentTraceLog } from '../../types';

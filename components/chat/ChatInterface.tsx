@@ -1,4 +1,3 @@
-
 import React, { useRef, useCallback, useEffect } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { Message, ModelType, TenantConfig, ThemeMode, UserRole } from '../../types';

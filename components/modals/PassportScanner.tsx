@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { X, ScanLine, CameraOff, UserSquare2, CreditCard, Focus, MoveDown } from 'lucide-react';
 

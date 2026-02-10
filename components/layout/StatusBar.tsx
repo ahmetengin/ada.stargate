@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { GitBranch, User, AlertCircle, Sparkles, Activity } from 'lucide-react';
 import { UserProfile } from '../../types';

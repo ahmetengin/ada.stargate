@@ -102,6 +102,45 @@ const App: React.FC = () => {
     }
   };
 
+  // --- VHF / VOICE HANDLER ---
+  // Captures live transcripts and injects them into the Chat & Trace logs
+  const handleVoiceTranscript = (userText: string, modelText: string) => {
+    if (!userText && !modelText) return;
+
+    // 1. Log User Speech
+    if (userText) {
+        const userMsg: Message = { 
+            id: `vhf_tx_${Date.now()}`, 
+            role: MessageRole.User, 
+            text: `[VHF CH72] ${userText}`, // Tag as VHF transmission
+            timestamp: Date.now() 
+        };
+        setMessages(prev => [...prev, userMsg]);
+    }
+
+    // 2. Log Ada Response
+    if (modelText) {
+        const modelMsg: Message = { 
+            id: `vhf_rx_${Date.now()}`, 
+            role: MessageRole.Model, 
+            text: `[VHF CH72] ${modelText}`, 
+            timestamp: Date.now() 
+        };
+        setMessages(prev => [...prev, modelMsg]);
+    }
+
+    // 3. Push to Neural Observer (Brain Trace)
+    const voiceTrace: AgentTraceLog = {
+        id: `tr_vhf_${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString(),
+        node: 'ada.vhf',
+        step: 'OUTPUT',
+        content: `TRANSCRIPT:\nUser: "${userText}"\nAda: "${modelText}"`,
+        persona: 'WORKER'
+    };
+    setAgentTraces(prev => [voiceTrace, ...prev]);
+  };
+
   const handleSidebarTabChange = (tabId: SidebarTabId) => {
     if (tabId === 'observer') setIsObserverOpen(true);
     else if (tabId === 'vhf') setIsVoiceModalOpen(true);
@@ -117,7 +156,17 @@ const App: React.FC = () => {
       {showAuthOverlay && <AuthOverlay targetRole={targetRole} onComplete={handleAuthComplete} />}
       
       <ObserverOverlay isOpen={isObserverOpen} onClose={() => setIsObserverOpen(false)} traces={agentTraces} />
-      <VoiceModal isOpen={isVoiceModalOpen} onClose={() => setIsVoiceModalOpen(false)} userProfile={userProfile} activeTenantConfig={activeTenantConfig} onTranscriptReceived={(u, m) => {}} channel="72" />
+      
+      {/* CONNECTED VOICE MODAL TO CHAT SYSTEM */}
+      <VoiceModal 
+          isOpen={isVoiceModalOpen} 
+          onClose={() => setIsVoiceModalOpen(false)} 
+          userProfile={userProfile} 
+          activeTenantConfig={activeTenantConfig} 
+          onTranscriptReceived={handleVoiceTranscript} 
+          channel="72" 
+      />
+
       <DailyReportModal isOpen={isReportModalOpen} onClose={() => setIsReportModalOpen(false)} registry={[]} logs={agentTraces} vesselsInPort={vesselsInPort} userProfile={userProfile} activeTenantConfig={activeTenantConfig} weatherData={{ temp: 24, condition: 'Sunny', windSpeed: 12, windDir: 'NW' }} tenders={[]} agentTraces={agentTraces} aisTargets={[]} onOpenReport={() => {}} onOpenTrace={() => setIsObserverOpen(true)} />
       <PassportScanner isOpen={isScannerOpen} onClose={() => setIsScannerOpen(false)} onScanComplete={(result) => handleSend(`ID Scanned: ${result.data.name}`)} />
 
@@ -137,8 +186,7 @@ const App: React.FC = () => {
                         onQuickAction={handleSend} onScanClick={() => setIsScannerOpen(true)}
                         onTraceClick={() => setIsObserverOpen(true)}
                         onRadioClick={() => setIsVoiceModalOpen(true)}
-                        onThemeChange={setTheme}
-                        onToggleSidebar={() => {}} 
+                        onToggleTheme={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
                     />
                 </div>
                 

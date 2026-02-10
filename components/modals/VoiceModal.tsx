@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { PhoneOff, Mic, Activity, Signal, Zap } from 'lucide-react';
 import { LiveSession } from '../../services/core/liveService';

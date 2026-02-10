@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { UserProfile, UserRole } from '../../types';
 import { 
-    Anchor, Radio, Map, Activity, Zap, Cpu, Compass, Wind, Settings, Monitor, Hexagon, Terminal, Brain
+    Anchor, Radio, Map, Activity, Zap, Cpu, Compass, Wind, Settings, Hexagon, Terminal, Brain
 } from 'lucide-react';
 
 export type SidebarTabId = 'ops' | 'fleet' | 'facility' | 'congress' | 'guest_checkin' | 'vhf' | 'observer' | 'presenter' | 'crm' | 'tech' | 'hr' | 'analytics' | 'commercial' | 'berths' | 'chartplotter' | 'instruments' | 'system' | 'none';
@@ -69,9 +68,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onTabChange,
   activeTab
 }) => {
-  const role = userProfile.role;
-  const hasAccess = (allowedRoles: UserRole[]) => allowedRoles.includes(role);
-
   return (
     <div className="h-full w-full flex flex-col bg-void border-r border-tech-900/50 relative overflow-hidden">
       {/* Decorative Grid Background */}

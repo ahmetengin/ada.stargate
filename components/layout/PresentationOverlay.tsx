@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { Activity, X, FileText, Terminal, Volume2, VolumeX, CheckCircle2, Download, Mail, PieChart, Check, Mic } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';

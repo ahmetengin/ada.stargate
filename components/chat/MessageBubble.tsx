@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Message, MessageRole, VesselIntelligenceProfile } from '../../types';
 import { marinaExpert } from '../../services/agents/marinaAgent';
 import { VesselCard } from './VesselCard';
-import { Terminal, Shield, User, Bot, Cpu } from 'lucide-react';
+import { Terminal, Shield, User, Cpu } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { RegistryEntry, Tender, UserProfile, AgentTraceLog, AisTarget, TenantConfig } from '../../types';
 import { GuestDashboard } from './GuestDashboard';

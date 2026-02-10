@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
     Activity, X, Terminal, Shield, Anchor, Wallet, Scale, Network, Sparkles, Globe, 

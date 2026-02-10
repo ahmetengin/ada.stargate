@@ -1,10 +1,11 @@
-
 import os
 import uvicorn
 import subprocess
 import asyncio
 import json
 import random
+import threading
+import gradio as gr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -14,11 +15,14 @@ from langchain_core.messages import HumanMessage
 # Try to import graph, handle error if not yet generated
 try:
     from architecture_graph import build_graph
+    from vhf_radio import stream as radio_stream
+    from iot_gateway import start_mqtt_listener
 except ImportError:
-    print("Warning: architecture_graph not found. Brain will be offline.")
     build_graph = None
+    radio_stream = type('obj', (object,), {'ui': None})
+    start_mqtt_listener = lambda: None
 
-app = FastAPI(title="Ada Stargate Hyperscale API", version="5.5")
+app = FastAPI(title="Ada Stargate Hyperscale API", version="5.1")
 
 app.add_middleware(
     CORSMiddleware,
@@ -75,6 +79,10 @@ async def simulate_telemetry_stream():
 
 @app.on_event("startup")
 async def startup_event():
+    # Start MQTT Listener in background
+    mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
+    mqtt_thread.start()
+    
     # Start the telemetry background task
     asyncio.create_task(simulate_telemetry_stream())
 
@@ -96,7 +104,7 @@ class ChatRequest(BaseModel):
 def health():
     return {
         "status": "COGNITIVE_SYSTEM_ONLINE", 
-        "modules": ["LangGraph", "MAKER", "RAG", "SEAL"],
+        "modules": ["LangGraph", "MAKER", "RAG", "SEAL", "FastRTC", "MQTT"],
         "brain_loaded": brain_graph is not None
     }
 
@@ -144,6 +152,10 @@ async def chat_endpoint(request: ChatRequest):
     except Exception as e:
         print(f"Graph Execution Error: {e}")
         return {"text": f"System Error: {str(e)}", "traces": []}
+
+# Mount FastRTC Radio at /radio
+if hasattr(radio_stream, 'ui') and radio_stream.ui:
+    app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

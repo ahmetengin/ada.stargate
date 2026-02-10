@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Activity, ShieldCheck, User, Zap, Gauge } from 'lucide-react';
 import { VesselIntelligenceProfile, VesselSystemsStatus } from '../../types';

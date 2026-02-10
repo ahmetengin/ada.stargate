@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Fingerprint, Scan, ShieldCheck, Binary, Briefcase } from 'lucide-react';
 
