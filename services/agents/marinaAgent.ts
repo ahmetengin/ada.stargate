@@ -63,6 +63,10 @@ export const marinaHandlers: Record<string, TaskHandlerFn> = {
 
 export const marinaExpert = {
     getAllFleetVessels: (): VesselIntelligenceProfile[] => FLEET_DB,
+
+    getVesselProfile: (name: string): VesselIntelligenceProfile | undefined => {
+        return FLEET_DB.find(v => v.name.toLowerCase().includes(name.toLowerCase()));
+    },
     
     getVesselTelemetry: async (vesselName: string): Promise<VesselSystemsStatus | null> => {
         try {

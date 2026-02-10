@@ -139,6 +139,7 @@ export interface MasterDataStructure {
   ocean_guardians?: any;
   digital_services?: any;
   protocol_config?: any;
+  enforcement_protocols?: any;
 }
 
 export interface TenantConfig {

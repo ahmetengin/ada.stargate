@@ -107,35 +107,39 @@ const App: React.FC = () => {
   const handleVoiceTranscript = (userText: string, modelText: string) => {
     if (!userText && !modelText) return;
 
-    // 1. Log User Speech
+    const timestamp = Date.now();
+
+    // 1. Log User Speech (Incoming Transmission)
     if (userText) {
         const userMsg: Message = { 
-            id: `vhf_tx_${Date.now()}`, 
+            id: `vhf_tx_${timestamp}`, 
             role: MessageRole.User, 
-            text: `[VHF CH72] ${userText}`, // Tag as VHF transmission
-            timestamp: Date.now() 
+            text: `[VHF CH72] ${userText}`, 
+            timestamp
         };
         setMessages(prev => [...prev, userMsg]);
     }
 
-    // 2. Log Ada Response
+    // 2. Log Ada Response (Outgoing Transmission)
     if (modelText) {
         const modelMsg: Message = { 
-            id: `vhf_rx_${Date.now()}`, 
+            id: `vhf_rx_${timestamp + 10}`, 
             role: MessageRole.Model, 
             text: `[VHF CH72] ${modelText}`, 
-            timestamp: Date.now() 
+            timestamp: timestamp + 10,
+            nodePath: 'ADA.VHF'
         };
         setMessages(prev => [...prev, modelMsg]);
     }
 
     // 3. Push to Neural Observer (Brain Trace)
+    // This makes the voice interaction visible in the "Observer" tab as an event
     const voiceTrace: AgentTraceLog = {
-        id: `tr_vhf_${Date.now()}`,
+        id: `tr_vhf_${timestamp}`,
         timestamp: new Date().toLocaleTimeString(),
         node: 'ada.vhf',
         step: 'OUTPUT',
-        content: `TRANSCRIPT:\nUser: "${userText}"\nAda: "${modelText}"`,
+        content: `VOICE TRANSCRIPT:\nUser: "${userText}"\nAda: "${modelText}"`,
         persona: 'WORKER'
     };
     setAgentTraces(prev => [voiceTrace, ...prev]);

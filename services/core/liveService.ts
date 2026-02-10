@@ -60,8 +60,9 @@ export class LiveSession {
                     },
                     systemInstruction: systemInstruction,
                     tools: tools, 
-                    inputAudioTranscription: {}, 
-                    outputAudioTranscription: {} 
+                    // Enable Transcription
+                    inputAudioTranscription: { model: "google-1.0-transcription" }, 
+                    outputAudioTranscription: { model: "google-1.0-transcription" } 
                 },
                 callbacks: {
                     onopen: () => this.handleSessionOpen(),
@@ -71,6 +72,7 @@ export class LiveSession {
                 }
             });
         } catch (error: any) {
+            console.error("Live connection error:", error);
             this.setStatus('error');
             this.disconnect();
         }
@@ -126,11 +128,20 @@ export class LiveSession {
     }
     
     private async handleSessionMessage(message: LiveServerMessage) {
-        if (message.serverContent?.outputTranscription) this.currentOutputTranscription += message.serverContent.outputTranscription.text;
-        else if (message.serverContent?.inputTranscription) this.currentInputTranscription += message.serverContent.inputTranscription.text;
+        // Accumulate Transcription
+        if (message.serverContent?.outputTranscription?.text) {
+            this.currentOutputTranscription += message.serverContent.outputTranscription.text;
+        } 
+        if (message.serverContent?.inputTranscription?.text) {
+            this.currentInputTranscription += message.serverContent.inputTranscription.text;
+        }
 
+        // Handle Turn Completion
         if (message.serverContent?.turnComplete) {
-            if (this.onTurnComplete) this.onTurnComplete(this.currentInputTranscription, this.currentOutputTranscription);
+            if (this.onTurnComplete && (this.currentInputTranscription || this.currentOutputTranscription)) {
+                this.onTurnComplete(this.currentInputTranscription.trim(), this.currentOutputTranscription.trim());
+            }
+            // Clear buffers after reporting
             this.currentInputTranscription = '';
             this.currentOutputTranscription = '';
         }

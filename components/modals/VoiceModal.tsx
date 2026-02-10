@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { PhoneOff, Mic, Activity, Signal, Zap } from 'lucide-react';
 import { LiveSession } from '../../services/core/liveService';
@@ -29,7 +30,13 @@ export const VoiceModal: React.FC<VoiceModalProps> = ({
         const newSession = new LiveSession();
         newSession.onStatusChange = (s) => setStatus(s as LiveConnectionState);
         newSession.onAudioLevel = (level) => setVolume(level * 100);
-        newSession.onTurnComplete = (u, m) => onTranscriptReceived(u, m);
+        
+        // WIRE TRANSCRIPT CALLBACK
+        newSession.onTurnComplete = (u, m) => {
+            console.log("Turn Complete:", u, m);
+            onTranscriptReceived(u, m);
+        };
+        
         setSession(newSession);
         newSession.connect(userProfile, activeTenantConfig);
     } else {

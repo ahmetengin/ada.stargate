@@ -38,6 +38,19 @@ export const wimMasterData: MasterDataStructure = {
           trigger_distance_max: 7
       }
   },
+  enforcement_protocols: {
+      unauthorized_mooring: {
+          article: "D.4",
+          action: "Immediate Haul-out (Taken Ashore)",
+          description: "Unknown vessel without valid agreement detected in basin.",
+          penalty_multiplier: 2.0
+      },
+      wrong_berth_usage: {
+          article: "E.1.5",
+          action: "Contract Termination",
+          description: "Mooring in a location other than the allocated berth."
+      }
+  },
   assets: {
     tenders: [
         { id: "T-01", name: "ada.sea.wimAlfa", callsign: "WIM-A", status: "Idle", type: "RIB", serviceCount: 124, sensors: ["Depth", "Wind"] },
