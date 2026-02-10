@@ -1,10 +1,11 @@
 
-import { AgentTraceLog, VesselIntelligenceProfile, NodeName, VesselSystemsStatus, AisTarget, TenantConfig, AgentAction } from '../../types';
-import { haversineDistance, getCurrentMaritimeTime } from '../utils/utils';
+import { AgentTraceLog, VesselIntelligenceProfile, NodeName, VesselSystemsStatus, AisTarget, AgentAction } from '../../types';
+import { getCurrentMaritimeTime, haversineDistance } from '../utils/utils';
 import { persistenceService, STORAGE_KEYS } from '../utils/persistence'; 
 import { invokeAgentSkill } from '../api'; 
 import { wimMasterData } from '../data/wimMasterData';
 import { TaskHandlerFn } from '../decomposition/types';
+import { vhfExpert } from './vhfAgent';
 
 const createLog = (node: NodeName, step: AgentTraceLog['step'], content: string, persona: 'ORCHESTRATOR' | 'EXPERT' | 'WORKER' = 'ORCHESTRATOR'): AgentTraceLog => ({
     id: `trace_${Date.now()}_${Math.random()}`,
@@ -47,6 +48,16 @@ export const marinaHandlers: Record<string, TaskHandlerFn> = {
             name: 'marina.tenderDispatched',
             params: { tender: 'Tender Alpha', target: 'Breakwater' }
         }];
+    },
+    'marina.scanForArrivals': async (ctx, obs) => {
+        const { targets } = obs.payload;
+        const result = await marinaExpert.scanForArrivals(targets || [], () => {});
+        return [{
+            id: `act_mar_scan_${Date.now()}`,
+            kind: 'internal',
+            name: 'marina.scanResult',
+            params: result
+        }];
     }
 };
 
@@ -70,5 +81,45 @@ export const marinaExpert = {
         addTrace(createLog('ada.marina', 'THINKING', `Checking charter fleet for ${type} on ${date}...`, 'EXPERT'));
         const fleet = wimMasterData.assets?.charter_fleet || [];
         return fleet.filter((boat: any) => boat.status === 'Available');
+    },
+
+    // Skill: Proactive Hail (Welcome Home Protocol)
+    scanForArrivals: async (targets: AisTarget[], addTrace: (t: AgentTraceLog) => void): Promise<{ hailed: string[] }> => {
+        const wimLoc = wimMasterData.identity.location.coordinates;
+        const protocol = wimMasterData.protocol_config?.welcome_hail;
+        const hailed: string[] = [];
+
+        if (!protocol) return { hailed: [] };
+
+        addTrace(createLog('ada.marina', 'THINKING', `Scanning AIS horizon (20nm) for inbound vessels...`, 'EXPERT'));
+
+        for (const target of targets) {
+            // Calculate distance
+            const dist = haversineDistance(wimLoc.lat, wimLoc.lng, target.coordinates.lat, target.coordinates.lng);
+
+            // Trigger "Welcome Home" if within 20nm
+            if (dist <= 20) {
+                // Simulate intelligent assignment
+                const berth = "C-12"; 
+                const tender = wimMasterData.assets?.tenders[1].callsign || "WIM-Bravo";
+
+                const message = protocol.template
+                    .replace('{distance}', dist.toFixed(1))
+                    .replace('{berth}', berth)
+                    .replace('{tender}', tender);
+
+                addTrace(createLog('ada.marina', 'PLANNING', `Target Acquired: ${target.name} (${dist.toFixed(1)}nm). Triggering 'Welcome Home' Protocol.`, 'ORCHESTRATOR'));
+
+                // Execute VHF Call via VHF Expert
+                await vhfExpert.logTransmission(protocol.channel, `[TO: ${target.name}] ${message}`, addTrace);
+                hailed.push(target.name);
+            }
+        }
+
+        if (hailed.length === 0) {
+             addTrace(createLog('ada.marina', 'OUTPUT', `Sector Scan Complete. No inbound targets found within 20nm.`, 'WORKER'));
+        }
+
+        return { hailed };
     }
 };
