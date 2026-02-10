@@ -1,3 +1,4 @@
+
 import json
 from decimal import Decimal, ROUND_HALF_UP
 
@@ -43,6 +44,26 @@ def calculate_mooring_fee(loa: float, beam: float, days: int, season: str = "HIG
                 "vat_eur": float(round(vat_amount, 2)),
                 "gross_total_eur": float(round(gross_total, 2))
             }
+        })
+    except Exception as e:
+        return json.dumps({"status": "ERROR", "message": str(e)})
+
+def calculate_late_penalty(overstay_days: int, vessel_area: float) -> str:
+    """
+    Calculates penalty for unauthorized overstay (Article H.3).
+    Rate: 4 EUR per m2 per day.
+    """
+    try:
+        # Article H.3 Penalty Rate
+        PENALTY_RATE = Decimal("4.0") 
+        
+        penalty = Decimal(overstay_days) * Decimal(str(vessel_area)) * PENALTY_RATE
+        
+        return json.dumps({
+            "status": "SUCCESS",
+            "penalty_eur": float(round(penalty, 2)),
+            "reference": "Article H.3 (Unauthorized Overstay)",
+            "calculation": f"{overstay_days} days * {vessel_area} m2 * 4.0 EUR"
         })
     except Exception as e:
         return json.dumps({"status": "ERROR", "message": str(e)})
