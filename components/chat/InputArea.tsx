@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, KeyboardEvent, useEffect } from 'react';
-import { ArrowUp, AudioWaveform, ScanLine, Radio, StopCircle, AlertCircle } from 'lucide-react';
+import { ArrowUp, AudioWaveform, ScanLine, Radio, StopCircle, AlertCircle, MicOff } from 'lucide-react';
 import { ModelType, UserRole } from '../../types';
 import { QuickActions } from './QuickActions';
 
@@ -26,21 +27,23 @@ export const InputArea: React.FC<InputAreaProps> = ({
 }) => {
   const [text, setText] = useState('');
   const [isDictating, setIsDictating] = useState(false);
+  const [hasSpeechSupport, setHasSpeechSupport] = useState(false);
   const [dictationError, setDictationError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<any>(null);
 
   const showError = (msg: string) => {
       setDictationError(msg);
-      setTimeout(() => setDictationError(null), 3000);
+      setTimeout(() => setDictationError(null), 4000);
   };
 
   // Initialize Speech Recognition
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      setHasSpeechSupport(true);
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false; // Changed to false for simpler single-command usage
+      recognitionRef.current.continuous = false; 
       recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'tr-TR'; 
 
@@ -51,7 +54,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
           .join('');
         
         setText(transcript);
-        setDictationError(null); // Clear errors on success
+        setDictationError(null); 
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -60,13 +63,16 @@ export const InputArea: React.FC<InputAreaProps> = ({
         
         switch (event.error) {
             case 'not-allowed':
-                showError("Microphone access denied.");
+                showError("Microphone access denied. Check settings.");
                 break;
             case 'no-speech':
-                showError("No speech detected.");
+                showError("No speech detected. Try again.");
+                break;
+            case 'audio-capture':
+                showError("No microphone found.");
                 break;
             case 'network':
-                showError("Network error during dictation.");
+                showError("Network required for voice.");
                 break;
             case 'aborted':
                  // Ignore manual stops
@@ -79,6 +85,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
       recognitionRef.current.onend = () => {
         setIsDictating(false);
       };
+    } else {
+        setHasSpeechSupport(false);
     }
   }, []);
 
@@ -87,7 +95,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
   };
 
   const toggleDictation = () => {
-    if (!recognitionRef.current) {
+    if (!hasSpeechSupport || !recognitionRef.current) {
         showError("Browser does not support speech recognition.");
         return;
     }
@@ -97,7 +105,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
         setIsDictating(false);
     } else {
         try {
-            setText(''); // Clear text on new dictation
+            setText(''); 
             setDictationError(null);
             recognitionRef.current.start();
             setIsDictating(true);
@@ -119,6 +127,13 @@ export const InputArea: React.FC<InputAreaProps> = ({
 
   const handleSend = () => {
     if ((!text.trim()) || isLoading) return;
+    
+    // Stop dictation if active
+    if (isDictating && recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsDictating(false);
+    }
+
     onSend(text, []);
     setText('');
     if (textareaRef.current) {
@@ -140,7 +155,7 @@ export const InputArea: React.FC<InputAreaProps> = ({
       {/* Error Toast */}
       {dictationError && (
           <div className="absolute -top-12 left-0 right-0 flex justify-center z-50 pointer-events-none">
-              <div className="bg-red-500/90 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+              <div className="bg-red-500/90 text-white text-[10px] font-bold px-4 py-2 rounded-full shadow-lg backdrop-blur-md flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 border border-red-400/50">
                   <AlertCircle size={14} />
                   {dictationError}
               </div>
@@ -163,7 +178,8 @@ export const InputArea: React.FC<InputAreaProps> = ({
               <button onClick={onScanClick} disabled={isLoading} className="p-2 text-[var(--text-secondary)] hover:text-tech-500 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-50" title="Scanner">
                   <ScanLine size={18} />
               </button>
-              <button onClick={onRadioClick} disabled={isLoading} className="p-2 text-red-500/80 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors disabled:opacity-50" title="VHF Radio">
+              {/* Note: VHF Radio is distinct from dictation. It uses WebRTC/FastRTC. */}
+              <button onClick={onRadioClick} disabled={isLoading} className="p-2 text-red-500/80 hover:text-red-500 rounded-full hover:bg-red-500/10 transition-colors disabled:opacity-50" title="VHF Radio (Live)">
                   <Radio size={18} />
               </button>
           </div>
@@ -185,11 +201,14 @@ export const InputArea: React.FC<InputAreaProps> = ({
           <div className="flex items-center gap-2 pl-2 mb-1 shrink-0">
               <button 
                 onClick={toggleDictation} 
-                disabled={isLoading}
-                className={`p-2 rounded-full transition-all duration-300 ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-50'}`}
-                title="Voice Input"
+                disabled={isLoading || !hasSpeechSupport}
+                className={`p-2 rounded-full transition-all duration-300 
+                    ${!hasSpeechSupport ? 'opacity-30 cursor-not-allowed text-[var(--text-secondary)]' : ''}
+                    ${isDictating ? 'text-white bg-red-500 shadow-[0_0_15px_red] scale-110' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-black/5 dark:hover:bg-white/5'}
+                `}
+                title={hasSpeechSupport ? "Voice Input" : "Voice Input Not Supported"}
               >
-                  {isDictating ? <StopCircle size={18} /> : <AudioWaveform size={18} />}
+                  {isDictating ? <StopCircle size={18} /> : hasSpeechSupport ? <AudioWaveform size={18} /> : <MicOff size={18} />}
               </button>
               
               <button 
