@@ -22,7 +22,7 @@ except ImportError:
     radio_stream = type('obj', (object,), {'ui': None})
     start_mqtt_listener = lambda: None
 
-app = FastAPI(title="Ada Stargate Hyperscale API", version="5.1")
+app = FastAPI(title="Ada Stargate Hyperscale API", version="5.2")
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,7 +57,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# --- TELEMETRY SIMULATION (Until MQTT is fully linked) ---
+# --- TELEMETRY SIMULATION ---
 async def simulate_telemetry_stream():
     """Simulates live NMEA2000/SignalK data stream for the UI."""
     while True:
@@ -99,6 +99,7 @@ class ChatRequest(BaseModel):
     prompt: str
     user_role: Optional[str] = "GUEST"
     context: Optional[Dict[str, Any]] = {}
+    self_edits: Optional[List[str]] = [] # Carry forward learned rules
 
 @app.get("/health")
 def health():
@@ -135,6 +136,7 @@ async def chat_endpoint(request: ChatRequest):
             "generated_code": "",
             "execution_result": "",
             "memories": [],
+            "self_edits": request.self_edits,
             "final_response": ""
         }
         
@@ -143,19 +145,17 @@ async def chat_endpoint(request: ChatRequest):
         
         return {
             "text": final_state.get("final_response", "System processing error."),
+            "self_edits": final_state.get("self_edits", []),
             "traces": [
                 {"step": "INTENT", "node": "router", "content": final_state.get('intent', 'UNKNOWN')},
-                {"step": "EXECUTION", "node": final_state.get('next_node', 'unknown'), "content": final_state.get('execution_result', 'N/A')}
+                {"step": "KNOWLEDGE", "node": "rag_retriever", "content": f"Found {len(final_state.get('memories', []))} documents."},
+                {"step": "LEARNING", "node": "seal_learner", "content": f"Learned {len(final_state.get('self_edits', []))} rules."}
             ]
         }
         
     except Exception as e:
         print(f"Graph Execution Error: {e}")
         return {"text": f"System Error: {str(e)}", "traces": []}
-
-# Mount FastRTC Radio at /radio
-if hasattr(radio_stream, 'ui') and radio_stream.ui:
-    app = gr.mount_gradio_app(app, radio_stream.ui, path="/radio")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

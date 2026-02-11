@@ -60,9 +60,8 @@ export class LiveSession {
                     },
                     systemInstruction: systemInstruction,
                     tools: tools, 
-                    // Enable Transcription
-                    inputAudioTranscription: { model: "google-1.0-transcription" }, 
-                    outputAudioTranscription: { model: "google-1.0-transcription" } 
+                    inputAudioTranscription: {}, 
+                    outputAudioTranscription: {} 
                 },
                 callbacks: {
                     onopen: () => this.handleSessionOpen(),
@@ -128,20 +127,14 @@ export class LiveSession {
     }
     
     private async handleSessionMessage(message: LiveServerMessage) {
-        // Accumulate Transcription
-        if (message.serverContent?.outputTranscription?.text) {
+        if (message.serverContent?.outputTranscription) {
             this.currentOutputTranscription += message.serverContent.outputTranscription.text;
-        } 
-        if (message.serverContent?.inputTranscription?.text) {
+        } else if (message.serverContent?.inputTranscription) {
             this.currentInputTranscription += message.serverContent.inputTranscription.text;
         }
 
-        // Handle Turn Completion
         if (message.serverContent?.turnComplete) {
-            if (this.onTurnComplete && (this.currentInputTranscription || this.currentOutputTranscription)) {
-                this.onTurnComplete(this.currentInputTranscription.trim(), this.currentOutputTranscription.trim());
-            }
-            // Clear buffers after reporting
+            if (this.onTurnComplete) this.onTurnComplete(this.currentInputTranscription, this.currentOutputTranscription);
             this.currentInputTranscription = '';
             this.currentOutputTranscription = '';
         }
