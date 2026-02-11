@@ -99,6 +99,7 @@ async def executor_node(state: AgentState):
         return {"execution_result": result, "next_node": "generator"}
         
     except Exception as e:
+        sys.stdout = sys.__stdout__ # Reset stdout
         return {"execution_result": f"Error: {str(e)}", "next_node": "generator"}
 
 async def rag_retriever_node(state: AgentState):

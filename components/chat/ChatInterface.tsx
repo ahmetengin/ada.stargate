@@ -1,8 +1,10 @@
-import React, { useRef, useCallback, useEffect } from 'react';
-import { Sun, Moon, Monitor } from 'lucide-react';
+
+import React, { useRef, useCallback, useEffect, useState } from 'react';
+import { Sun, Moon, Monitor, AlertTriangle, X } from 'lucide-react';
 import { Message, ModelType, TenantConfig, ThemeMode, UserRole } from '../../types';
 import { MessageBubble } from './MessageBubble';
 import { InputArea } from './InputArea';
+import { weatherExpert } from '../../services/agents/weatherAgent';
 
 interface ChatInterfaceProps {
     messages: Message[];
@@ -38,6 +40,23 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const isUserAtBottomRef = useRef(true);
+    const [stormAlert, setStormAlert] = useState(false);
+
+    // Weather Monitoring Loop
+    useEffect(() => {
+        const checkWeather = async () => {
+            // Check for storms in the next 4 hours. Pass empty trace to avoid log spam.
+            const isStorm = await weatherExpert.forecastStorm(4, () => {});
+            if (isStorm) {
+                setStormAlert(true);
+            }
+        };
+
+        // Check immediately and then every 30 seconds
+        checkWeather();
+        const interval = setInterval(checkWeather, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleScroll = useCallback(() => {
         const container = scrollContainerRef.current;
@@ -62,7 +81,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <div className="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 w-full h-96 bg-cyan-500/5 blur-[120px] pointer-events-none z-0"></div>
 
             {/* Header - Hidden on Mobile (Handled by App.tsx Top Bar) */}
-            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors">
+            <div className="hidden lg:flex h-16 items-center justify-between px-6 border-b border-[var(--border-color)] bg-[var(--glass-bg)] backdrop-blur-md z-10 flex-shrink-0 transition-colors relative">
                 <div className="flex items-center gap-3 cursor-pointer group" onClick={onTraceClick}>
                     <div className="relative">
                         <div className="w-2.5 h-2.5 bg-teal-500 rounded-full shadow-[0_0_10px_#14b8a6] group-hover:scale-110 transition-transform"></div>
@@ -77,9 +96,19 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-white/50 dark:bg-white/5 rounded-full border border-[var(--border-color)] hover:border-[var(--accent-color)] transition-colors cursor-pointer" onClick={onRadioClick}>
-                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></div>
-                        <span className="text-[9px] font-mono font-bold text-[var(--text-secondary)]">VHF 72</span>
+                    <div 
+                        className={`hidden sm:flex items-center gap-2 px-3 py-1 rounded-full border transition-all cursor-pointer duration-500
+                            ${stormAlert 
+                                ? 'bg-red-600 border-red-500 text-white animate-pulse shadow-[0_0_15px_red]' 
+                                : 'bg-white/50 dark:bg-white/5 border-[var(--border-color)] hover:border-[var(--accent-color)]'
+                            }
+                        `} 
+                        onClick={onRadioClick}
+                    >
+                        <div className={`w-1.5 h-1.5 rounded-full ${stormAlert ? 'bg-white' : 'bg-red-500'} animate-pulse`}></div>
+                        <span className={`text-[9px] font-mono font-bold ${stormAlert ? 'text-white' : 'text-[var(--text-secondary)]'}`}>
+                            {stormAlert ? 'VHF 72 (EMERGENCY)' : 'VHF 72'}
+                        </span>
                     </div>
                     <button 
                         onClick={onToggleTheme}
@@ -89,6 +118,27 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
                     </button>
                 </div>
             </div>
+
+            {/* CRITICAL WEATHER ALERT BANNER */}
+            {stormAlert && (
+                <div className="relative z-20 bg-red-600/90 backdrop-blur-md text-white px-6 py-2 flex items-center justify-between shadow-lg animate-in slide-in-from-top-2 border-b border-red-500">
+                    <div className="flex items-center gap-3">
+                        <div className="p-1 bg-white/20 rounded">
+                            <AlertTriangle size={16} className="animate-pulse" />
+                        </div>
+                        <div>
+                            <span className="font-display font-bold tracking-widest text-xs block">CRITICAL WEATHER ALERT</span>
+                            <span className="font-mono text-[10px] opacity-90">STORM CELL DETECTED IN SECTOR ZULU. MONITOR VHF CH 72.</span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={() => setStormAlert(false)} 
+                        className="p-1 hover:bg-white/20 rounded transition-colors"
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+            )}
 
             {/* Messages Area */}
             <div 
