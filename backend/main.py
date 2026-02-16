@@ -4,25 +4,24 @@ import subprocess
 import asyncio
 import json
 import random
-import threading
-import gradio as gr
-from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, BackgroundTasks, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
 from langchain_core.messages import HumanMessage
 
-# Try to import graph, handle error if not yet generated
+# Graceful Import of the Graph
+# If dependencies are missing, we don't crash the server, we just disable the brain.
 try:
     from architecture_graph import build_graph
-    from vhf_radio import stream as radio_stream
-    from iot_gateway import start_mqtt_listener
-except ImportError:
+    brain_available = True
+except ImportError as e:
+    print(f"⚠️ Warning: Could not load LangGraph: {e}")
+    brain_available = False
     build_graph = None
-    radio_stream = type('obj', (object,), {'ui': None})
-    start_mqtt_listener = lambda: None
 
-app = FastAPI(title="Ada Stargate Hyperscale API", version="5.2")
+app = FastAPI(title="Ada Stargate Hyperscale API", version="5.6")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,8 +31,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Brain if available
-brain_graph = build_graph() if build_graph else None
+# --- GLOBAL ERROR HANDLER ---
+# Prevents Nginx 500 errors by always returning valid JSON
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    print(f"🔥 INTERNAL SERVER ERROR: {str(exc)}")
+    return JSONResponse(
+        status_code=200, # Return 200 so frontend parses the error JSON
+        content={
+            "text": f"**BACKEND CRASH**\n\nInternal Module Error: {str(exc)}", 
+            "error": str(exc),
+            "traces": [{"node": "ada.core", "step": "ERROR", "content": str(exc)}]
+        },
+    )
+
+# Initialize Brain
+brain_graph = build_graph() if (brain_available and build_graph) else None
 
 # --- WEBSOCKET MANAGER ---
 class ConnectionManager:
@@ -45,10 +58,10 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str):
-        # Broadcast to all connected clients (React Frontend)
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
@@ -59,31 +72,28 @@ manager = ConnectionManager()
 
 # --- TELEMETRY SIMULATION ---
 async def simulate_telemetry_stream():
-    """Simulates live NMEA2000/SignalK data stream for the UI."""
     while True:
-        data = {
-            "ts": "LIVE",
-            "type": "VESSEL_TELEMETRY",
-            "severity": "info",
-            "source": "ada.marina.wim",
-            "marina_id": "WIM",
-            "payload": {
-                "battery": { "serviceBank": round(24.0 + random.uniform(0, 1.5), 1), "engineBank": 26.1, "status": "DISCHARGING" },
-                "tanks": { "fuel": 45, "freshWater": 80, "blackWater": int(15 + random.uniform(0, 1)) },
-                "shorePower": { "connected": True, "voltage": int(220 + random.uniform(-5, 5)), "amperage": 12.5 },
-                "environment": { "windSpeed": round(12 + random.uniform(-2, 5), 1), "windDir": "NW" }
+        try:
+            data = {
+                "ts": "LIVE",
+                "type": "VESSEL_TELEMETRY",
+                "severity": "info",
+                "source": "ada.marina.wim",
+                "marina_id": "WIM",
+                "payload": {
+                    "battery": { "serviceBank": round(24.0 + random.uniform(0, 1.5), 1), "engineBank": 26.1, "status": "DISCHARGING" },
+                    "tanks": { "fuel": 45, "freshWater": 80, "blackWater": int(15 + random.uniform(0, 1)) },
+                    "shorePower": { "connected": True, "voltage": int(220 + random.uniform(-5, 5)), "amperage": 12.5 },
+                    "environment": { "windSpeed": round(12 + random.uniform(-2, 5), 1), "windDir": "NW" }
+                }
             }
-        }
-        await manager.broadcast(json.dumps(data))
+            await manager.broadcast(json.dumps(data))
+        except Exception:
+            pass
         await asyncio.sleep(2)
 
 @app.on_event("startup")
 async def startup_event():
-    # Start MQTT Listener in background
-    mqtt_thread = threading.Thread(target=start_mqtt_listener, daemon=True)
-    mqtt_thread.start()
-    
-    # Start the telemetry background task
     asyncio.create_task(simulate_telemetry_stream())
 
 @app.websocket("/ws/telemetry")
@@ -99,18 +109,17 @@ class ChatRequest(BaseModel):
     prompt: str
     user_role: Optional[str] = "GUEST"
     context: Optional[Dict[str, Any]] = {}
-    self_edits: Optional[List[str]] = [] # Carry forward learned rules
+    self_edits: Optional[List[str]] = []
 
 @app.get("/health")
 def health():
     return {
         "status": "COGNITIVE_SYSTEM_ONLINE", 
-        "modules": ["LangGraph", "MAKER", "RAG", "SEAL", "FastRTC", "MQTT"],
+        "modules": ["LangGraph", "MAKER", "RAG", "SEAL"],
         "brain_loaded": brain_graph is not None
     }
 
 def run_ingestion_task():
-    print("Triggering background memory ingestion...")
     try:
         subprocess.run(["python", "ingest.py"], check=True)
     except Exception as e:
@@ -124,10 +133,13 @@ async def trigger_learning(background_tasks: BackgroundTasks):
 @app.post("/api/v1/chat")
 async def chat_endpoint(request: ChatRequest):
     if not brain_graph:
-        return {"text": "Brain not initialized. Please check backend logs.", "traces": []}
+        # Graceful fallback if graph failed to load
+        return {
+            "text": "**CORE OFFLINE**\n\nThe Python Brain could not initialize (likely missing API_KEY or Dependencies).", 
+            "traces": [{"node": "ada.core", "step": "ERROR", "content": "Brain Graph is None"}]
+        }
 
     try:
-        # Prepare Input State for LangGraph
         inputs = {
             "messages": [HumanMessage(content=request.prompt)],
             "context": request.context,
@@ -140,7 +152,6 @@ async def chat_endpoint(request: ChatRequest):
             "final_response": ""
         }
         
-        # Execute the Graph
         final_state = await brain_graph.ainvoke(inputs)
         
         return {
@@ -155,7 +166,11 @@ async def chat_endpoint(request: ChatRequest):
         
     except Exception as e:
         print(f"Graph Execution Error: {e}")
-        return {"text": f"System Error: {str(e)}", "traces": []}
+        # Return a valid JSON even on error so frontend doesn't hang
+        return {
+            "text": f"**COGNITIVE ERROR**\n\nI encountered an error while processing your request in the Python Core: {str(e)}", 
+            "traces": [{"node": "ada.core", "step": "CRITICAL", "content": str(e)}]
+        }
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

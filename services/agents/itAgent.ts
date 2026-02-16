@@ -20,7 +20,7 @@ export const itExpert = {
         const latency = Date.now() - start;
 
         if (diagnostics) {
-            const infra = diagnostics.infrastructure || {};
+            const infra = diagnostics.infrastructure || { orchestrator: 'UNKNOWN' };
             addTrace(createLog('ada.it', 'OUTPUT', `System Green. Latency: ${latency}ms.`, 'WORKER'));
             return { 
                 status: 'ONLINE', 
